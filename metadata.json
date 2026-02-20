@@ -1,0 +1,7 @@
+{
+  "name": "[MUMULAB][HO]Feng Shui Grand Master AI",
+  "description": "A premium AI-powered Feng Shui analysis tool that provides spatial diagnosis and interior solutions based on 40 years of expert mastery.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
