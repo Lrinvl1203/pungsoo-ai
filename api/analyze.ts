@@ -1,5 +1,5 @@
 
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { buildSystemPrompt } from "../constants";
 import { buildMingongContext } from "../utils/fengshui";
 
@@ -15,7 +15,7 @@ export default async function handler(req: any, res: any) {
     return res.status(500).json({ error: 'API Key not configured' });
   }
 
-  const genAI = new GoogleGenAI(apiKey);
+  const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({
     model: "gemini-1.5-pro-latest",
     systemInstruction: buildSystemPrompt(),
