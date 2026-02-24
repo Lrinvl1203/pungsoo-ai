@@ -296,6 +296,47 @@ export default function App() {
                   </div>
                 </div>
 
+                {/* 출생연도 + 성별 입력 - 본명궁 계산용 */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-[#8c8273] uppercase mb-1">
+                      출생연도
+                    </label>
+                    <input
+                      type="number"
+                      min={1940}
+                      max={2010}
+                      placeholder="예: 1985"
+                      value={metadata.birthDate ? metadata.birthDate.slice(0, 4) : ''}
+                      onChange={(e) => setMetadata({ ...metadata, birthDate: e.target.value })}
+                      className="w-full bg-[#faf9f6] border border-[#e5e1da] rounded-lg px-3 py-2 outline-none focus:border-[#d4af37]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-[#8c8273] uppercase mb-1">
+                      성별
+                    </label>
+                    <div className="flex gap-2 h-[38px]">
+                      <button
+                        type="button"
+                        onClick={() => setMetadata({ ...metadata, gender: 'male' })}
+                        className={`flex-1 rounded-lg border text-sm font-bold transition-all ${metadata.gender === 'male'
+                            ? 'bg-[#d4af37] text-white border-[#d4af37] shadow-md'
+                            : 'bg-[#faf9f6] text-[#6b6256] border-[#e5e1da] hover:border-[#d4af37]'
+                          }`}
+                      >남성</button>
+                      <button
+                        type="button"
+                        onClick={() => setMetadata({ ...metadata, gender: 'female' })}
+                        className={`flex-1 rounded-lg border text-sm font-bold transition-all ${metadata.gender === 'female'
+                            ? 'bg-[#d4af37] text-white border-[#d4af37] shadow-md'
+                            : 'bg-[#faf9f6] text-[#6b6256] border-[#e5e1da] hover:border-[#d4af37]'
+                          }`}
+                      >여성</button>
+                    </div>
+                  </div>
+                </div>
+
                 <div>
                   <label className="block text-xs font-semibold text-[#8c8273] uppercase mb-1">기본 비방 아트 스타일</label>
                   <div className="grid grid-cols-3 gap-2">
