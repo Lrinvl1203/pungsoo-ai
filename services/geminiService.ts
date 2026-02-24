@@ -2,13 +2,18 @@
 import { UserMetadata, AnalysisResult, SolutionItem } from "../types";
 
 export const analyzeFengShui = async (
-  base64Image: string,
+  inputData: { base64Image?: string; address?: string },
   metadata: UserMetadata
 ): Promise<AnalysisResult> => {
-  const response = await fetch('/api/analyze', {
+  const endpoint = metadata.analysisType === 'external' ? '/api/analyze-location' : '/api/analyze';
+  const bodyData = metadata.analysisType === 'external'
+    ? { address: inputData.address, metadata }
+    : { image: inputData.base64Image, metadata };
+
+  const response = await fetch(endpoint, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ image: base64Image, metadata }),
+    body: JSON.stringify(bodyData),
   });
 
   if (!response.ok) {

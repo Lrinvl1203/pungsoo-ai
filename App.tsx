@@ -27,12 +27,12 @@ export default function App() {
   }, []);
 
   const [metadata, setMetadata] = useState<UserMetadata>({
+    analysisType: 'internal',
     roomType: '침실',
-    direction: '남향',
+    address: '',
     birthDate: '',
     gender: 'male',
     concern: '',
-    location: '',
     artStyle: 'modern'
   });
 
@@ -53,8 +53,12 @@ export default function App() {
   };
 
   const handleAnalyze = async () => {
-    if (!image) {
+    if (metadata.analysisType === 'internal' && !image) {
       alert("분석할 이미지를 업로드해주세요.");
+      return;
+    }
+    if (metadata.analysisType === 'external' && !metadata.address) {
+      alert("지리적 입지 분석을 위한 주소를 입력해주세요.");
       return;
     }
 
@@ -64,24 +68,32 @@ export default function App() {
     setRemedyArt(null);
 
     try {
-      const analysis = await analyzeFengShui(image, metadata);
+      const analysis = await analyzeFengShui({ base64Image: image || undefined, address: metadata.address }, metadata);
       setResult(analysis);
 
       setGeneratingVisuals(true);
 
-      const [visual, remedy] = await Promise.allSettled([
-        generateToBeImage(image, analysis.solution_items),
+      const promises = [
         generateRemedyArtImage(analysis.remedy_art.image_generation_prompt, metadata.artStyle)
-      ]);
+      ];
 
-      if (visual.status === 'fulfilled') setToBeImage(visual.value);
-      if (remedy.status === 'fulfilled') {
-        setRemedyArt(remedy.value);
+      if (metadata.analysisType === 'internal' && image) {
+        promises.push(generateToBeImage(image, analysis.solution_items));
+      }
+
+      const settled = await Promise.allSettled(promises);
+
+      let remedyObj = settled[0];
+      let visualObj = metadata.analysisType === 'internal' ? settled[1] : null;
+
+      if (visualObj && visualObj.status === 'fulfilled') setToBeImage(visualObj.value);
+      if (remedyObj && remedyObj.status === 'fulfilled') {
+        setRemedyArt(remedyObj.value);
         // Save to history
         const newHistory = [{
           result: analysis,
-          image,
-          remedyArt: remedy.value
+          image: metadata.analysisType === 'internal' ? (image || '') : 'https://images.unsplash.com/photo-1524813686514-a57563d77965?auto=format&fit=crop&q=80&w=400',
+          remedyArt: remedyObj.value
         }, ...history].slice(0, 10); // Keep last 10
         setHistory(newHistory);
         localStorage.setItem('pungsoo_history', JSON.stringify(newHistory));
@@ -227,40 +239,77 @@ export default function App() {
 
           {/* Input Section */}
           <div className="space-y-8">
-            <section className="bg-white rounded-2xl p-6 shadow-sm border border-[#e5e1da]">
-              <h2 className="serif-font text-xl font-bold mb-6 flex items-center gap-2">
-                <Home className="w-5 h-5 text-[#d4af37]" /> 공간 이미지 업로드
-              </h2>
+            {/* Analysis Type Toggle */}
+            <div className="flex bg-[#e5e1da] p-1 rounded-xl shadow-inner">
+              <button
+                onClick={() => setMetadata({ ...metadata, analysisType: 'internal' })}
+                className={`flex-1 py-3 rounded-lg font-bold text-sm transition-all ${metadata.analysisType === 'internal' ? 'bg-white text-[#d4af37] shadow-sm' : 'text-[#8c8273] hover:text-[#4a443b]'}`}
+              >
+                내부 공간 (인테리어)
+              </button>
+              <button
+                onClick={() => setMetadata({ ...metadata, analysisType: 'external' })}
+                className={`flex-1 py-3 rounded-lg font-bold text-sm transition-all ${metadata.analysisType === 'external' ? 'bg-white text-[#d4af37] shadow-sm' : 'text-[#8c8273] hover:text-[#4a443b]'}`}
+              >
+                외부 공간 (지리적 입지)
+              </button>
+            </div>
 
-              <div className="relative group">
-                <div className={`w-full aspect-video rounded-xl border-2 border-dashed transition-all duration-300 flex flex-col items-center justify-center bg-[#faf9f6] ${image ? 'border-transparent' : 'border-[#d4af37]'}`}>
-                  {image ? (
-                    <img src={image} alt="Upload preview" className="w-full h-full object-cover rounded-xl" />
-                  ) : (
-                    <div className="text-center p-8">
-                      <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
-                        <Sparkles className="text-[#d4af37] w-6 h-6" />
+            {metadata.analysisType === 'internal' ? (
+              <section className="bg-white rounded-2xl p-6 shadow-sm border border-[#e5e1da] animate-in slide-in-from-left-4 duration-300">
+                <h2 className="serif-font text-xl font-bold mb-6 flex items-center gap-2">
+                  <Home className="w-5 h-5 text-[#d4af37]" /> 공간 이미지 업로드
+                </h2>
+
+                <div className="relative group">
+                  <div className={`w-full aspect-video rounded-xl border-2 border-dashed transition-all duration-300 flex flex-col items-center justify-center bg-[#faf9f6] ${image ? 'border-transparent' : 'border-[#d4af37]'}`}>
+                    {image ? (
+                      <img src={image} alt="Upload preview" className="w-full h-full object-cover rounded-xl" />
+                    ) : (
+                      <div className="text-center p-8">
+                        <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
+                          <Sparkles className="text-[#d4af37] w-6 h-6" />
+                        </div>
+                        <p className="text-[#8c8273] text-sm">공간의 사진을 올려주세요</p>
                       </div>
-                      <p className="text-[#8c8273] text-sm">공간의 사진을 올려주세요</p>
-                    </div>
+                    )}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      className="absolute inset-0 opacity-0 cursor-pointer"
+                    />
+                  </div>
+                  {image && !loading && (
+                    <button
+                      onClick={() => { setImage(null); setResult(null); setToBeImage(null); setRemedyArt(null); }}
+                      className="absolute top-2 right-2 bg-black/50 text-white p-1 rounded-full hover:bg-black/70"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
                   )}
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                    className="absolute inset-0 opacity-0 cursor-pointer"
-                  />
                 </div>
-                {image && !loading && (
-                  <button
-                    onClick={() => { setImage(null); setResult(null); setToBeImage(null); setRemedyArt(null); }}
-                    className="absolute top-2 right-2 bg-black/50 text-white p-1 rounded-full hover:bg-black/70"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                  </button>
-                )}
-              </div>
-            </section>
+              </section>
+            ) : (
+              <section className="bg-white rounded-2xl p-6 shadow-sm border border-[#e5e1da] animate-in slide-in-from-right-4 duration-300">
+                <h2 className="serif-font text-xl font-bold mb-6 flex items-center gap-2">
+                  <MapPin className="w-5 h-5 text-[#d4af37]" /> 지리적 입지 주소 입력
+                </h2>
+                <div>
+                  <label className="block text-xs font-semibold text-[#8c8273] uppercase mb-1">분석할 공간의 주소</label>
+                  <input
+                    type="text"
+                    placeholder="예: 서울시 강남구 테헤란로 123"
+                    value={metadata.address || ''}
+                    onChange={(e) => setMetadata({ ...metadata, address: e.target.value })}
+                    className="w-full bg-[#faf9f6] border border-[#e5e1da] rounded-lg px-3 py-3 outline-none focus:border-[#d4af37] transition-all"
+                  />
+                  <p className="text-[#8c8273] text-[11px] mt-3 bg-[#faf9f6] p-2 rounded border border-[#e5e1da]">
+                    * 주변 산맥과 도로망의 모습을 위성 지도로 가져와 배산임수, 노충살 등의 길흉화복을 분석합니다.
+                  </p>
+                </div>
+              </section>
+            )}
 
             <section className="bg-white rounded-2xl p-6 shadow-sm border border-[#e5e1da]">
               <h2 className="serif-font text-xl font-bold mb-6 flex items-center gap-2">
@@ -269,31 +318,22 @@ export default function App() {
 
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-[#8c8273] uppercase mb-1">장소 구분</label>
-                    <select
-                      value={metadata.roomType}
-                      onChange={(e) => setMetadata({ ...metadata, roomType: e.target.value })}
-                      className="w-full bg-[#faf9f6] border border-[#e5e1da] rounded-lg px-3 py-2 outline-none focus:border-[#d4af37]"
-                    >
-                      <option>침실</option>
-                      <option>거실</option>
-                      <option>현관</option>
-                      <option>주방</option>
-                      <option>사무실</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-[#8c8273] uppercase mb-1">방위</label>
-                    <select
-                      value={metadata.direction}
-                      onChange={(e) => setMetadata({ ...metadata, direction: e.target.value })}
-                      className="w-full bg-[#faf9f6] border border-[#e5e1da] rounded-lg px-3 py-2 outline-none focus:border-[#d4af37]"
-                    >
-                      <option>남향</option><option>동향</option><option>서향</option><option>북향</option>
-                      <option>남동향</option><option>남서향</option><option>북동향</option><option>북서향</option>
-                    </select>
-                  </div>
+                  {metadata.analysisType === 'internal' && (
+                    <div className="col-span-2">
+                      <label className="block text-xs font-semibold text-[#8c8273] uppercase mb-1">장소 구분</label>
+                      <select
+                        value={metadata.roomType}
+                        onChange={(e) => setMetadata({ ...metadata, roomType: e.target.value })}
+                        className="w-full bg-[#faf9f6] border border-[#e5e1da] rounded-lg px-3 py-2 outline-none focus:border-[#d4af37]"
+                      >
+                        <option>침실</option>
+                        <option>거실</option>
+                        <option>현관</option>
+                        <option>주방</option>
+                        <option>사무실</option>
+                      </select>
+                    </div>
+                  )}
                 </div>
 
                 {/* 출생연도 + 성별 입력 - 본명궁 계산용 */}
@@ -321,16 +361,16 @@ export default function App() {
                         type="button"
                         onClick={() => setMetadata({ ...metadata, gender: 'male' })}
                         className={`flex-1 rounded-lg border text-sm font-bold transition-all ${metadata.gender === 'male'
-                            ? 'bg-[#d4af37] text-white border-[#d4af37] shadow-md'
-                            : 'bg-[#faf9f6] text-[#6b6256] border-[#e5e1da] hover:border-[#d4af37]'
+                          ? 'bg-[#d4af37] text-white border-[#d4af37] shadow-md'
+                          : 'bg-[#faf9f6] text-[#6b6256] border-[#e5e1da] hover:border-[#d4af37]'
                           }`}
                       >남성</button>
                       <button
                         type="button"
                         onClick={() => setMetadata({ ...metadata, gender: 'female' })}
                         className={`flex-1 rounded-lg border text-sm font-bold transition-all ${metadata.gender === 'female'
-                            ? 'bg-[#d4af37] text-white border-[#d4af37] shadow-md'
-                            : 'bg-[#faf9f6] text-[#6b6256] border-[#e5e1da] hover:border-[#d4af37]'
+                          ? 'bg-[#d4af37] text-white border-[#d4af37] shadow-md'
+                          : 'bg-[#faf9f6] text-[#6b6256] border-[#e5e1da] hover:border-[#d4af37]'
                           }`}
                       >여성</button>
                     </div>
@@ -413,8 +453,8 @@ export default function App() {
 
             <button
               onClick={handleAnalyze}
-              disabled={loading || !image}
-              className={`w-full py-4 rounded-xl font-bold text-white shadow-lg transition-all flex items-center justify-center gap-2 ${loading || !image ? 'bg-[#c9c5bd] cursor-not-allowed' : 'gold-gradient hover:scale-[1.02] active:scale-95'}`}
+              disabled={loading || (metadata.analysisType === 'internal' && !image) || (metadata.analysisType === 'external' && !metadata.address)}
+              className={`w-full py-4 rounded-xl font-bold text-white shadow-lg transition-all flex items-center justify-center gap-2 ${loading || (metadata.analysisType === 'internal' && !image) || (metadata.analysisType === 'external' && !metadata.address) ? 'bg-[#c9c5bd] cursor-not-allowed' : 'gold-gradient hover:scale-[1.02] active:scale-95'}`}
             >
               {loading ? <><Loader2 className="w-5 h-5 animate-spin" /> 감명 중...</> : <><Send className="w-5 h-5" /> 풍수 감정 & 비방 생성</>}
             </button>
@@ -629,6 +669,22 @@ export default function App() {
                     "{result.overall_advice}"
                   </p>
                 </div>
+
+                {/* PRO DETAILED REPORT */}
+                {result.detailed_report && (
+                  <section className="bg-white rounded-2xl p-8 shadow-md border-t-8 border-[#4a443b] mt-8 mb-12 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
+                      <Compass className="w-32 h-32" />
+                    </div>
+                    <h3 className="serif-font text-2xl font-bold text-[#4a443b] mb-6 border-b border-[#e5e1da] pb-4 flex items-center gap-3">
+                      <Sparkles className="w-6 h-6 text-[#d4af37]" />
+                      초정밀 도사 감명서 (Full Documentation)
+                    </h3>
+                    <div className="prose prose-sm max-w-none text-[#4a443b] leading-[1.8] whitespace-pre-wrap font-medium">
+                      {result.detailed_report}
+                    </div>
+                  </section>
+                )}
 
               </div>
             )}

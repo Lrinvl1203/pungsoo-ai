@@ -21,6 +21,7 @@ export interface RemedyArt {
 
 export interface AnalysisResult {
   analysis_summary: string;
+  detailed_report: string; // A4 3-page sized very detailed markdown report
   spatial_features: string[];
   feng_shui_score: number;
   diagnosis: FengShuiDiagnosis[];
@@ -30,11 +31,11 @@ export interface AnalysisResult {
 }
 
 export interface UserMetadata {
-  roomType: string;
-  direction: string;
+  analysisType: 'internal' | 'external';
+  roomType?: string; // Only for internal
+  address?: string; // Only for external
   birthDate: string;
   gender: 'male' | 'female';
   concern: string;
-  location?: string;
   artStyle: 'modern' | 'buddhist' | 'modern_buddhist';
 }

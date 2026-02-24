@@ -17,7 +17,7 @@ export default async function handler(req: any, res: any) {
 
   const genAI = new GoogleGenAI(apiKey);
   const model = genAI.getGenerativeModel({
-    model: "gemini-3-pro-preview",
+    model: "gemini-1.5-pro-latest",
     systemInstruction: buildSystemPrompt(),
   });
 
@@ -37,9 +37,7 @@ export default async function handler(req: any, res: any) {
   const userPrompt = `
     [메타 정보]
     - 촬영 장소: ${metadata.roomType}
-    - 방위: ${metadata.direction}
     - 사용자 생년월일: ${metadata.birthDate} (${metadata.gender === 'male' ? '남성' : '여성'})
-    - 위치: ${metadata.location || '미지정'}
     - 고민: ${metadata.concern}
 
     ${mingongSection}
