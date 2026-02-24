@@ -100,7 +100,11 @@ export default async function handler(req: any, res: any) {
         return res.status(200).json(JSON.parse(cleanedText));
 
     } catch (error: any) {
-        console.error(error);
-        return res.status(500).json({ error: error.message || 'External analysis failed' });
+        console.error("VERCEL FUNCTION CRASH LOG:", error);
+        return res.status(500).json({
+            error: error.message || 'External analysis failed',
+            stack: error.stack,
+            name: error.name
+        });
     }
 }
