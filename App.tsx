@@ -14,6 +14,12 @@ export default function App() {
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [history, setHistory] = useState<{ result: AnalysisResult, image: string, remedyArt: string }[]>([]);
 
+  // Address Autocomplete States
+  const [addressQuery, setAddressQuery] = useState('');
+  const [addressSuggestions, setAddressSuggestions] = useState<Array<{ place_name: string; address_name: string }>>([]);
+  const [isSearchingAddress, setIsSearchingAddress] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+
   // Load history from localStorage on mount
   React.useEffect(() => {
     const savedHistory = localStorage.getItem('pungsoo_history');
@@ -35,6 +41,32 @@ export default function App() {
     concern: '',
     artStyle: 'modern'
   });
+
+  // Handle address input change with debounce
+  React.useEffect(() => {
+    const timer = setTimeout(async () => {
+      if (addressQuery.trim().length > 1) {
+        setIsSearchingAddress(true);
+        try {
+          const res = await fetch(`/api/search-address?q=${encodeURIComponent(addressQuery)}`);
+          if (res.ok) {
+            const data = await res.json();
+            setAddressSuggestions(data.results || []);
+            setShowSuggestions(true);
+          }
+        } catch (error) {
+          console.error("Failed to search address", error);
+        } finally {
+          setIsSearchingAddress(false);
+        }
+      } else {
+        setAddressSuggestions([]);
+        setShowSuggestions(false);
+      }
+    }, 300); // 300ms debounce
+
+    return () => clearTimeout(timer);
+  }, [addressQuery]);
 
   const [isInquiryModalOpen, setIsInquiryModalOpen] = useState(false);
 
@@ -61,6 +93,8 @@ export default function App() {
       alert("지리적 입지 분석을 위한 주소를 입력해주세요.");
       return;
     }
+
+    setShowSuggestions(false);
 
     setLoading(true);
     setResult(null);
@@ -295,15 +329,56 @@ export default function App() {
                 <h2 className="serif-font text-xl font-bold mb-6 flex items-center gap-2">
                   <MapPin className="w-5 h-5 text-[#d4af37]" /> 지리적 입지 주소 입력
                 </h2>
-                <div>
-                  <label className="block text-xs font-semibold text-[#8c8273] uppercase mb-1">분석할 공간의 주소</label>
+                <div className="relative">
+                  <label className="block text-xs font-semibold text-[#8c8273] uppercase mb-1">분석할 장소명 또는 주소</label>
                   <input
                     type="text"
-                    placeholder="예: 서울시 강남구 테헤란로 123"
-                    value={metadata.address || ''}
-                    onChange={(e) => setMetadata({ ...metadata, address: e.target.value })}
+                    placeholder="예: 강남역, 스타벅스 성수점, 테헤란로 123"
+                    value={addressQuery || metadata.address || ''}
+                    onChange={(e) => {
+                      setAddressQuery(e.target.value);
+                      setMetadata({ ...metadata, address: e.target.value });
+                      setShowSuggestions(true);
+                    }}
+                    onFocus={() => {
+                      if (addressSuggestions.length > 0) setShowSuggestions(true);
+                    }}
+                    onBlur={() => {
+                      // Delay hiding suggestions to allow click events to register
+                      setTimeout(() => setShowSuggestions(false), 200);
+                    }}
                     className="w-full bg-[#faf9f6] border border-[#e5e1da] rounded-lg px-3 py-3 outline-none focus:border-[#d4af37] transition-all"
                   />
+                  {isSearchingAddress && (
+                    <div className="absolute right-3 top-9">
+                      <Loader2 className="w-5 h-5 text-[#d4af37] animate-spin" />
+                    </div>
+                  )}
+                  {showSuggestions && addressSuggestions.length > 0 && (
+                    <ul className="absolute z-10 w-full mt-1 bg-white border border-[#e5e1da] rounded-lg shadow-lg max-h-60 overflow-auto custom-scrollbar">
+                      {addressSuggestions.map((suggestion, idx) => (
+                        <li
+                          key={idx}
+                          onMouseDown={(e) => {
+                            e.preventDefault(); // Prevent onBlur from firing before onClick
+                            const fullAddress = suggestion.place_name !== suggestion.address_name ?
+                              `${suggestion.place_name} (${suggestion.address_name})` :
+                              suggestion.address_name;
+
+                            setMetadata({ ...metadata, address: fullAddress });
+                            setAddressQuery(fullAddress);
+                            setShowSuggestions(false);
+                          }}
+                          className="px-4 py-3 hover:bg-[#faf9f6] cursor-pointer border-b border-[#e5e1da] last:border-b-0"
+                        >
+                          <div className="font-bold text-[#4a443b] text-sm">{suggestion.place_name}</div>
+                          {suggestion.address_name !== suggestion.place_name && (
+                            <div className="text-xs text-[#8c8273] mt-0.5">{suggestion.address_name}</div>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                   <p className="text-[#8c8273] text-[11px] mt-3 bg-[#faf9f6] p-2 rounded border border-[#e5e1da]">
                     * 주변 산맥과 도로망의 모습을 위성 지도로 가져와 배산임수, 노충살 등의 길흉화복을 분석합니다.
                   </p>
