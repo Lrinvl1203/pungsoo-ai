@@ -1,6 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { buildExternalSystemPrompt } from "../constants";
-import { buildMingongContext } from "../utils/fengshui";
+import { buildExternalSystemPrompt } from "../constants.js";
+import { buildMingongContext } from "../utils/fengshui.js";
 
 export default async function handler(req: any, res: any) {
     if (req.method !== 'POST') {
