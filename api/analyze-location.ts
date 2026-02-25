@@ -46,20 +46,41 @@ export default async function handler(req: any, res: any) {
             y = keywordData.documents[0].y;
         }
 
-        // 2. 좌표를 바탕으로 Kakao Static Map 이미지 2장 가져오기
-        const fetchMapAsBase64 = async (mapType: 'ROADMAP' | 'SKYVIEW') => {
-            // level=3 or 4 is good for neighborhood view
-            const url = `https://dapi.kakao.com/v2/local/staticmap?map_type=${mapType}&x=${x}&y=${y}&level=4&marker=type:d|size:mid|pos:${x}%20${y}`;
-            const imgRes = await fetch(url, {
-                headers: { Authorization: `KakaoAK ${kakaoKey}` }
-            });
-            if (!imgRes.ok) throw new Error(`지도 이미지를 가져오는데 실패했습니다 (${mapType})`);
+        // 2. 좌표를 바탕으로 정적 지도 이미지 2장 가져오기 (Esri ArcGIS REST API - API 키 불필요)
+        const lng = parseFloat(x);
+        const lat = parseFloat(y);
+        const delta = 0.008; // bbox 범위 (약 800m)
+
+        const fetchMapAsBase64 = async (service: string): Promise<string> => {
+            const bbox = `${lng - delta},${lat - delta * 0.7},${lng + delta},${lat + delta * 0.7}`;
+            const url = `https://server.arcgisonline.com/ArcGIS/rest/services/${service}/MapServer/export?bbox=${bbox}&bboxSR=4326&imageSR=4326&size=600,400&f=image&format=jpg`;
+            const imgRes = await fetch(url);
+            if (!imgRes.ok) throw new Error(`지도 이미지를 가져오는데 실패했습니다 (${service})`);
             const arrayBuffer = await imgRes.arrayBuffer();
             return Buffer.from(arrayBuffer).toString('base64');
         };
 
-        const mapRoadmapBase64 = await fetchMapAsBase64('ROADMAP');
-        const mapSkyviewBase64 = await fetchMapAsBase64('SKYVIEW');
+        // 위성 이미지
+        const mapSkyviewBase64 = await fetchMapAsBase64('World_Imagery');
+
+        // 도로 지도 - OSM 타일 기반 정적 이미지 생성
+        const fetchOsmRoadmapBase64 = async (): Promise<string> => {
+            // 줌 레벨 15에서 타일 좌표 계산
+            const zoom = 15;
+            const tileX = Math.floor((lng + 180) / 360 * Math.pow(2, zoom));
+            const tileY = Math.floor((1 - Math.log(Math.tan(lat * Math.PI / 180) + 1 / Math.cos(lat * Math.PI / 180)) / Math.PI) / 2 * Math.pow(2, zoom));
+
+            // 중앙 타일 1장 가져오기 (256x256)
+            const tileUrl = `https://tile.openstreetmap.org/${zoom}/${tileX}/${tileY}.png`;
+            const tileRes = await fetch(tileUrl, {
+                headers: { 'User-Agent': 'PungsooAI/1.0 (Feng Shui Analysis)' }
+            });
+            if (!tileRes.ok) throw new Error('도로 지도 타일을 가져오는데 실패했습니다');
+            const arrayBuffer = await tileRes.arrayBuffer();
+            return Buffer.from(arrayBuffer).toString('base64');
+        };
+
+        const mapRoadmapBase64 = await fetchOsmRoadmapBase64();
 
         // 3. Gemini Vision 분석
         const genAI = new GoogleGenerativeAI(apiKey);
@@ -94,7 +115,7 @@ export default async function handler(req: any, res: any) {
         const imageParts = [
             {
                 inlineData: {
-                    mimeType: "image/jpeg",
+                    mimeType: "image/png",
                     data: mapRoadmapBase64,
                 },
             },
