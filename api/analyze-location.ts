@@ -26,11 +26,25 @@ export default async function handler(req: any, res: any) {
         });
         const geocodeData = await geocodeRes.json();
 
-        if (!geocodeData.documents || geocodeData.documents.length === 0) {
-            return res.status(400).json({ error: '입력하신 주소의 좌표를 찾을 수 없습니다. 정확한 주소를 입력해주세요.' });
-        }
+        let x: string, y: string;
 
-        const { x, y } = geocodeData.documents[0]; // x: longitude, y: latitude
+        if (geocodeData.documents && geocodeData.documents.length > 0) {
+            x = geocodeData.documents[0].x;
+            y = geocodeData.documents[0].y;
+        } else {
+            // 주소 검색 실패 시 키워드 검색으로 폴백 (장소명, 건물명 등 지원)
+            const keywordUrl = `https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(address)}`;
+            const keywordRes = await fetch(keywordUrl, {
+                headers: { Authorization: `KakaoAK ${kakaoKey}` }
+            });
+            const keywordData = await keywordRes.json();
+
+            if (!keywordData.documents || keywordData.documents.length === 0) {
+                return res.status(400).json({ error: '입력하신 주소의 좌표를 찾을 수 없습니다. 정확한 주소를 입력해주세요.' });
+            }
+            x = keywordData.documents[0].x;
+            y = keywordData.documents[0].y;
+        }
 
         // 2. 좌표를 바탕으로 Kakao Static Map 이미지 2장 가져오기
         const fetchMapAsBase64 = async (mapType: 'ROADMAP' | 'SKYVIEW') => {
