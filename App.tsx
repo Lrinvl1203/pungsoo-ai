@@ -75,10 +75,32 @@ export default function App() {
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setImage(reader.result as string);
-        setToBeImage(null);
-        setRemedyArt(null);
-        setResult(null);
+        // 이미지를 Canvas로 리사이즈/압축하여 Vercel 4.5MB 제한 방지
+        const img = new Image();
+        img.onload = () => {
+          const MAX_SIZE = 1024;
+          let { width, height } = img;
+          if (width > MAX_SIZE || height > MAX_SIZE) {
+            const ratio = Math.min(MAX_SIZE / width, MAX_SIZE / height);
+            width = Math.round(width * ratio);
+            height = Math.round(height * ratio);
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, width, height);
+            const compressed = canvas.toDataURL('image/jpeg', 0.8);
+            setImage(compressed);
+          } else {
+            setImage(reader.result as string); // fallback
+          }
+          setToBeImage(null);
+          setRemedyArt(null);
+          setResult(null);
+        };
+        img.src = reader.result as string;
       };
       reader.readAsDataURL(file);
     }
