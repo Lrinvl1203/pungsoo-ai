@@ -135,7 +135,10 @@ export default async function handler(req: any, res: any) {
         const text = response.text();
         const cleanedText = text.replace(/```json/g, "").replace(/```/g, "").trim();
 
-        return res.status(200).json(JSON.parse(cleanedText));
+        // Remove control characters (0x00-0x1F except \n, \r, \t) that break JSON.parse
+        const sanitizedText = cleanedText.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, "");
+
+        return res.status(200).json(JSON.parse(sanitizedText));
 
     } catch (error: any) {
         console.error("VERCEL FUNCTION CRASH LOG:", error);

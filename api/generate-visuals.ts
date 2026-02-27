@@ -9,7 +9,8 @@ export default async function handler(req: any, res: any) {
     const falKey = process.env.FAL_KEY;
 
     if (!falKey) {
-        return res.status(500).json({ error: 'FAL_KEY not configured' });
+        console.error("FAL_KEY is missing from environment variables!");
+        return res.status(500).json({ error: 'FAL_KEY not configured. Please add FAL_KEY to Vercel Environment Variables.' });
     }
 
     // Configure fal client with the API key from environment
@@ -61,7 +62,7 @@ export default async function handler(req: any, res: any) {
             result = await fal.subscribe("fal-ai/bytedance/seedream/v4.5/text-to-image", {
                 input: {
                     prompt: t2iPrompt,
-                    image_size: "portrait_3_4", // Or portrait_4_3 depending on what gives a standard mobile aspect
+                    image_size: "portrait_4_3",
                     num_images: 1,
                     enable_safety_checker: true
                 },
@@ -80,14 +81,27 @@ export default async function handler(req: any, res: any) {
             });
         }
 
-        if (result && result.data && result.data.images && result.data.images.length > 0) {
-            // fal returns URL directly. We send it back as the 'image' field for frontend
-            return res.status(200).json({ image: result.data.images[0].url });
+        console.log("Fal.ai raw result keys:", result ? Object.keys(result) : "null");
+
+        // Handle both possible response structures: result.data.images or result.images
+        const images = result?.data?.images || result?.images;
+
+        if (images && images.length > 0) {
+            return res.status(200).json({ image: images[0].url });
         }
 
+        console.error("Fal.ai unexpected result structure:", JSON.stringify(result).slice(0, 500));
         throw new Error("Image not generated properly by fal.ai");
     } catch (error: any) {
-        console.error("Fal.ai Generation Error:", error);
+        console.error("Fal.ai Generation Error:", error?.message || error);
+        console.error("Error details:", JSON.stringify({
+            type,
+            hasImage: !!image,
+            errorName: error?.name,
+            errorBody: error?.body,
+            errorStatus: error?.status
+        }));
         return res.status(500).json({ error: error.message || 'Image generation failed via fal.ai' });
     }
 }
+
