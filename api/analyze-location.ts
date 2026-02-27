@@ -87,6 +87,9 @@ export default async function handler(req: any, res: any) {
         const model = genAI.getGenerativeModel({
             model: "gemini-2.5-flash",
             systemInstruction: buildExternalSystemPrompt(),
+            generationConfig: {
+                responseMimeType: "application/json",
+            }
         });
 
         const birthYear = metadata.birthDate ? parseInt(String(metadata.birthDate).slice(0, 4), 10) : 0;
