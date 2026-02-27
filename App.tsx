@@ -507,32 +507,135 @@ export default function App() {
             )}
 
             {result && (
-              <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+              <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700 relative mt-8">
 
-                {/* 1. Remedy Art Section (PORTRAIT TALISMAN) */}
-                <section className="bg-white rounded-2xl overflow-hidden shadow-xl border border-[#d4af37]/30">
-                  <div className="gold-gradient p-4 text-[#4a443b] flex justify-between items-center">
-                    <h3 className="serif-font font-bold flex items-center gap-2">
-                      <Sparkles className="w-5 h-5" /> AI 풍수 처방: 디지털 비방(Remedy Art)
+                {/* 1. Score & Summary */}
+                <section className="bg-white rounded-2xl p-6 shadow-xl border border-[#d4af37]/30 relative overflow-hidden">
+                  <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
+                    <Compass className="w-40 h-40" />
+                  </div>
+                  <h3 className="serif-font text-2xl font-bold text-[#4a443b] mb-4 flex items-center gap-2">
+                    <Sparkles className="w-6 h-6 text-[#d4af37]" /> 종합 점수: <span className="text-[#d4af37] text-3xl ml-1">{result.feng_shui_score}점</span>
+                  </h3>
+                  <p className="text-[#8c8273] text-[17px] mb-6 leading-relaxed font-medium">{result.analysis_summary}</p>
+                  <div className="space-y-3 relative z-10">
+                    {result.diagnosis.map((diag, idx) => (
+                      <div key={idx} className={`p-4 rounded-xl border-l-4 shadow-sm bg-white border ${diag.type.includes('길') ? 'border-l-green-500 border-gray-100' : 'border-l-red-500 border-gray-100'}`}>
+                        <div className="flex items-center gap-2 mb-1.5">
+                          {diag.type.includes('길') ? <CheckCircle2 className="w-5 h-5 text-green-500" /> : <AlertTriangle className="w-5 h-5 text-red-500" />}
+                          <span className="font-bold text-[15px] text-[#4a443b]">{diag.keyword}</span>
+                        </div>
+                        <p className="text-[14px] text-[#6b6256] leading-relaxed">{diag.description}</p>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+
+                {/* 2. Detailed Report (Full Documentation) */}
+                {result.detailed_report && (
+                  <section className="bg-[#4a443b] rounded-2xl p-8 shadow-2xl border border-[#d4af37]/30 relative overflow-hidden text-white mt-10 mb-10">
+                    <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
+                      <MapPin className="w-40 h-40 text-[#d4af37]" />
+                    </div>
+                    <div className="absolute -left-10 -bottom-10 opacity-10 pointer-events-none">
+                      <Compass className="w-56 h-56 text-[#d4af37]" />
+                    </div>
+                    <h3 className="serif-font text-2xl font-bold mb-8 border-b border-[#d4af37]/30 pb-4 flex items-center gap-3">
+                      <Sparkles className="w-6 h-6 text-[#d4af37]" />
+                      초정밀 도사 감명서 <span className="text-[#d4af37] text-sm font-medium tracking-widest uppercase ml-2 opacity-80">(Full Documentation)</span>
+                    </h3>
+                    <div className="prose prose-sm max-w-none text-white/95 leading-[1.9] whitespace-pre-wrap font-medium relative z-10 text-[15px]">
+                      {result.detailed_report}
+                    </div>
+                  </section>
+                )}
+
+                {/* 3. Feng Shui Interior Prescription */}
+                {result.solution_items && result.solution_items.length > 0 && (
+                  <section className="bg-white rounded-2xl overflow-hidden shadow-xl border border-[#e5e1da]">
+                    <div className="bg-[#fdfbf7] p-5 border-b border-[#e5e1da] flex justify-between items-center">
+                      <h3 className="serif-font font-bold text-[#4a443b] flex items-center gap-2 text-xl">
+                        <ShoppingBag className="w-6 h-6 text-[#d4af37]" /> 풍수 인테리어 처방
+                      </h3>
+                    </div>
+                    <div className="p-6">
+                      <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                        {result.solution_items.map((item, idx) => (
+                          <div key={idx} className="bg-[#faf9f6] rounded-xl p-5 border border-[#e5e1da] transition-all hover:border-[#d4af37]/50 hover:shadow-md">
+                            <h5 className="font-bold text-[#4a443b] text-[16px] mb-1">{item.item_name}</h5>
+                            <p className="text-[14px] text-[#8c8273] mb-4">{item.target_problem}</p>
+                            <div className="bg-white p-4 rounded-xl border border-[#e5e1da] mb-4">
+                              <p className="text-[14px] text-[#6b6256] leading-relaxed flex items-start gap-2.5">
+                                <MapPin className="w-4 h-4 text-[#d4af37] mt-1 shrink-0" />
+                                {item.placement_guide}
+                              </p>
+                            </div>
+                            <a
+                              href={`https://ohou.se/productions/feed?query=${encodeURIComponent(item.product_search_keyword)}`}
+                              target="_blank" rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 text-[14px] text-[#d4af37] font-bold hover:text-[#b4922b] transition-colors"
+                            >
+                              <ExternalLink className="w-4 h-4" /> 추천 상품 보러가기
+                            </a>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </section>
+                )}
+
+                {/* 4. To-Be Visualization */}
+                {metadata.analysisType === 'internal' && image && (
+                  <section className="bg-white rounded-2xl overflow-hidden shadow-xl border border-[#e5e1da]">
+                    <div className="bg-[#fdfbf7] p-5 border-b border-[#e5e1da] flex justify-between items-center">
+                      <h3 className="serif-font font-bold text-[#4a443b] flex items-center gap-2 text-xl">
+                        <ImageIcon className="w-6 h-6 text-[#d4af37]" /> 공간 비보풍수 시각화 (To-Be)
+                      </h3>
+                    </div>
+                    <div className="grid grid-cols-2 gap-0.5 bg-[#e5e1da]">
+                      <div className="relative aspect-square">
+                        <img src={image} alt="Before" className="w-full h-full object-cover" />
+                        <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-md text-white px-3 py-1.5 rounded-lg font-bold tracking-widest text-xs shadow-lg">BEFORE</div>
+                      </div>
+                      <div className="relative aspect-square bg-[#faf9f6] flex items-center justify-center">
+                        {toBeImage ? (
+                          <img src={toBeImage} alt="After" className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="text-center p-4">
+                            <Loader2 className="w-8 h-8 animate-spin mx-auto mb-3 text-[#d4af37]" />
+                            <p className="text-sm text-[#8c8273] font-medium">공간 비보 적용 중...</p>
+                          </div>
+                        )}
+                        <div className="absolute top-3 right-3 bg-gradient-to-r from-[#d4af37] to-[#f9f295] text-[#4a443b] px-3 py-1.5 rounded-lg font-extrabold tracking-widest text-xs shadow-lg">AFTER</div>
+                      </div>
+                    </div>
+                  </section>
+                )}
+
+                {/* 5. Digital Remedy Art */}
+                <section className="bg-white rounded-2xl overflow-hidden shadow-2xl border border-[#d4af37]/40 ring-4 ring-[#d4af37]/10 mt-10">
+                  <div className="gold-gradient p-5 text-[#4a443b] flex justify-between items-center shadow-sm">
+                    <h3 className="serif-font font-bold flex items-center gap-2 text-xl">
+                      <Sparkles className="w-6 h-6 text-[#4a443b]" /> AI 풍수 처방: 디지털 비방
                     </h3>
                   </div>
-                  <div className="p-6">
+                  <div className="p-6 md:p-8">
                     <div className="flex flex-col gap-8">
-                      <div className="w-full max-w-sm mx-auto aspect-[9/16] bg-gray-100 rounded-xl overflow-hidden relative shadow-inner">
+                      <div className="w-full max-w-sm mx-auto aspect-[9/16] bg-[#fcfbfa] rounded-2xl overflow-hidden relative shadow-inner ring-1 ring-black/5">
                         {remedyArt ? (
                           <img src={remedyArt} alt="Remedy Art" className="w-full h-full object-cover" />
                         ) : (
-                          <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4">
-                            <Loader2 className="w-10 h-10 animate-spin text-[#d4af37] mb-2" />
-                            <p className="text-sm text-[#8c8273]">부족한 '{result.remedy_art.deficiency}'의 기운을<br />
-                              {metadata.artStyle === 'buddhist' ? '레트로 예술' : metadata.artStyle === 'modern_buddhist' ? '모던 레트로 예술' : '모던 아트'}로 승화시키는 중입니다...</p>
+                          <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6">
+                            <Loader2 className="w-12 h-12 animate-spin text-[#d4af37] mb-4" />
+                            <p className="text-[15px] text-[#8c8273] leading-relaxed">부족한 <span className="font-bold text-[#d4af37]">'{result.remedy_art.deficiency}'</span>의 기운을<br />
+                              <span className="font-bold text-[#4a443b]">{metadata.artStyle === 'buddhist' ? '레트로 예술' : metadata.artStyle === 'modern_buddhist' ? '모던 레트로 예술' : '모던 아트'}</span>로 승화시키는 중입니다...</p>
                           </div>
                         )}
                         {remedyArt && (
                           <div className="absolute bottom-4 right-4 flex gap-2">
                             <button
                               onClick={() => downloadImage(remedyArt, 'FengShui_Remedy.png')}
-                              className="bg-white/90 p-2 rounded-full shadow-lg text-[#4a443b] hover:bg-white transition-colors"
+                              className="bg-white/95 backdrop-blur shadow-xl p-3 rounded-full text-[#4a443b] hover:bg-white hover:scale-105 transition-all"
                               title="이미지 다운로드"
                             >
                               <Download className="w-5 h-5" />
@@ -540,65 +643,69 @@ export default function App() {
                           </div>
                         )}
                       </div>
-                      <div className="flex-1 flex flex-col justify-center space-y-4">
-                        <div className="bg-[#fdfbf7] p-4 rounded-xl border border-[#d4af37]/20">
-                          <div className="flex justify-between items-center mb-2">
-                            <h4 className="text-[#d4af37] font-bold text-sm uppercase tracking-tighter">처방 키워드</h4>
+                      <div className="flex-1 flex flex-col justify-center space-y-5">
+                        <div className="bg-[#fdfbf7] p-5 rounded-xl border border-[#d4af37]/30 shadow-sm relative overflow-hidden">
+                          <div className="absolute top-0 right-0 w-20 h-20 bg-[#d4af37]/5 rounded-full blur-xl"></div>
+                          <div className="flex justify-between items-center mb-3">
+                            <h4 className="text-[#d4af37] font-bold text-[13px] uppercase tracking-widest">처방 키워드</h4>
                           </div>
-                          <p className="text-[#4a443b] font-bold text-lg">{result.remedy_art.deficiency}</p>
-                          <div className="flex flex-wrap gap-2 mt-2">
+                          <p className="text-[#4a443b] font-extrabold text-2xl relative z-10">{result.remedy_art.deficiency}</p>
+                          <div className="flex flex-wrap gap-2 mt-3 relative z-10">
                             {result.remedy_art.solution_keyword.split(',').map((kw, i) => (
-                              <span key={i} className="text-[10px] bg-white border border-[#e5e1da] px-2 py-1 rounded-md text-[#8c8273]">#{kw.trim()}</span>
+                              <span key={i} className="text-[12px] bg-white border border-[#e5e1da] px-3 py-1.5 rounded-lg text-[#8c8273] shadow-sm font-medium">#{kw.trim()}</span>
                             ))}
                           </div>
                         </div>
 
                         {/* Style Controls for Regeneration */}
-                        <div className="p-4 bg-white rounded-xl border border-[#e5e1da] shadow-sm space-y-3">
-                          <h5 className="text-xs font-bold text-[#8c8273] flex items-center gap-1">
-                            <Palette className="w-3 h-3" /> 비방 스타일 변경 (옵션 선택)
+                        <div className="p-5 bg-white rounded-xl border border-[#e5e1da] shadow-sm space-y-4">
+                          <h5 className="text-[14px] font-bold text-[#8c8273] flex items-center gap-2">
+                            <Palette className="w-4 h-4" /> 비방 스타일 변경 <span className="text-[11px] font-normal px-2 py-0.5 bg-[#fdfbf7] rounded text-[#d4af37] border border-[#d4af37]/30">옵션</span>
                           </h5>
-                          <div className="grid grid-cols-3 gap-2">
+                          <div className="grid grid-cols-3 gap-2.5">
                             <button
                               onClick={() => setMetadata({ ...metadata, artStyle: 'modern' })}
-                              className={`py-2 text-[10px] font-bold rounded-lg transition-colors flex items-center justify-center gap-1 ${metadata.artStyle === 'modern' ? 'bg-[#4a443b] text-white ring-2 ring-[#d4af37] ring-offset-1' : 'bg-[#faf9f6] text-[#6b6256] hover:bg-[#e5e1da]'}`}
+                              className={`py-3 text-[13px] font-bold rounded-xl transition-all flex items-center justify-center gap-1 ${metadata.artStyle === 'modern' ? 'bg-[#4a443b] text-white shadow-md shadow-[#4a443b]/20 scale-[1.02]' : 'bg-[#faf9f6] text-[#6b6256] hover:bg-[#e5e1da]'}`}
                             >
                               모던
                             </button>
                             <button
                               onClick={() => setMetadata({ ...metadata, artStyle: 'buddhist' })}
-                              className={`py-2 text-[10px] font-bold rounded-lg transition-colors flex items-center justify-center gap-1 ${metadata.artStyle === 'buddhist' ? 'bg-[#4a443b] text-white ring-2 ring-[#d4af37] ring-offset-1' : 'bg-[#faf9f6] text-[#6b6256] hover:bg-[#e5e1da]'}`}
+                              className={`py-3 text-[13px] font-bold rounded-xl transition-all flex items-center justify-center gap-1 ${metadata.artStyle === 'buddhist' ? 'bg-[#4a443b] text-white shadow-md shadow-[#4a443b]/20 scale-[1.02]' : 'bg-[#faf9f6] text-[#6b6256] hover:bg-[#e5e1da]'}`}
                             >
                               레트로
                             </button>
                             <button
                               onClick={() => setMetadata({ ...metadata, artStyle: 'modern_buddhist' })}
-                              className={`py-2 text-[10px] font-bold rounded-lg transition-colors flex items-center justify-center gap-1 ${metadata.artStyle === 'modern_buddhist' ? 'bg-[#4a443b] text-white ring-2 ring-[#d4af37] ring-offset-1' : 'bg-[#faf9f6] text-[#6b6256] hover:bg-[#e5e1da]'}`}
+                              className={`py-3 text-[13px] font-bold rounded-xl transition-all flex items-center justify-center gap-1 ${metadata.artStyle === 'modern_buddhist' ? 'bg-[#4a443b] text-white shadow-md shadow-[#4a443b]/20 scale-[1.02]' : 'bg-[#faf9f6] text-[#6b6256] hover:bg-[#e5e1da]'}`}
                             >
-                              모던 + 레트로
+                              모던+레트로
                             </button>
                           </div>
 
                           <button
                             onClick={handleRegenerateArt}
                             disabled={isRegeneratingArt}
-                            className="w-full py-3 bg-[#d4af37] text-white text-sm font-bold rounded-lg hover:bg-[#c29d2f] transition-all flex items-center justify-center gap-2 shadow-sm"
+                            className="w-full py-3.5 bg-gradient-to-r from-[#d4af37] to-[#c29d2f] text-white text-[15px] font-bold rounded-xl hover:shadow-lg transition-all flex items-center justify-center gap-2"
                           >
-                            {isRegeneratingArt ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                            {isRegeneratingArt ? <Loader2 className="w-5 h-5 animate-spin" /> : <RefreshCw className="w-5 h-5" />}
                             선택한 스타일로 비방 재생성
                           </button>
                         </div>
 
-                        <div className="bg-[#4a443b] p-5 rounded-xl text-white italic text-sm leading-relaxed shadow-lg">
-                          " {result.remedy_art.art_story} "
+                        <div className="bg-[#4a443b] p-6 rounded-xl text-white italic text-[16px] leading-relaxed shadow-lg relative">
+                          <div className="absolute top-2 left-3 text-4xl text-white/10 serif-font">"</div>
+                          {result.remedy_art.art_story}
+                          <div className="absolute bottom-[-10px] right-3 text-4xl text-white/10 serif-font">"</div>
                         </div>
-                        <div className="space-y-2">
+                        <div className="space-y-3 pt-2">
                           <button
                             disabled={!remedyArt}
                             onClick={() => setIsInquiryModalOpen(true)}
-                            className="w-full py-3 border border-[#d4af37] text-[#d4af37] font-bold rounded-lg hover:bg-[#d4af37]/10 transition-colors flex items-center justify-center gap-2"
+                            className="w-full py-4 border-2 border-[#d4af37] text-[#d4af37] font-bold rounded-xl hover:bg-[#d4af37]/5 transition-all flex items-center justify-center gap-2 shadow-sm relative overflow-hidden group"
                           >
-                            <ShoppingBag className="w-4 h-4" /> 실물 액자 제작 문의
+                            <div className="absolute inset-0 bg-[#d4af37]/10 w-0 group-hover:w-full transition-all duration-300 ease-out"></div>
+                            <ShoppingBag className="w-5 h-5 relative z-10" /> <span className="relative z-10">실물 프리미엄 액자 제작 문의</span>
                           </button>
                         </div>
                       </div>
@@ -606,56 +713,30 @@ export default function App() {
                   </div>
                 </section>
 
-                {/* 2. Before/After Space Visualization */}
-                <div className="bg-white rounded-2xl overflow-hidden shadow-md border border-[#e5e1da]">
-                  <div className="bg-[#4a443b] p-4 text-white flex justify-between items-center">
-                    <h3 className="serif-font font-bold flex items-center gap-2">
-                      <ImageIcon className="w-5 h-5" /> 공간 비보풍수 시각화 (To-Be)
-                    </h3>
-                  </div>
-                  <div className="grid grid-cols-2 gap-0.5 bg-[#e5e1da]">
-                    <div className="relative aspect-square">
-                      <img src={image!} alt="Before" className="w-full h-full object-cover" />
-                      <div className="absolute top-2 left-2 bg-black/50 text-white text-[10px] px-2 py-0.5 rounded font-bold">BEFORE</div>
-                    </div>
-                    <div className="relative aspect-square bg-[#faf9f6] flex items-center justify-center">
-                      {toBeImage ? (
-                        <img src={toBeImage} alt="After" className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="text-center p-4">
-                          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2 text-[#d4af37]" />
-                          <p className="text-xs text-[#8c8273]">공간 비보 적용 중...</p>
-                        </div>
-                      )}
-                      <div className="absolute top-2 right-2 bg-[#d4af37] text-white text-[10px] px-2 py-0.5 rounded font-bold">AFTER</div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* 2.5 12 Zodiac Animal Object Recommendation */}
+                {/* 6. Zodiac Remedy Object */}
                 {result.zodiac_remedy_object && (
-                  <section className="bg-white rounded-2xl overflow-hidden shadow-xl border border-[#d4af37]/30 mt-8">
-                    <div className="gold-gradient p-4 text-[#4a443b] flex justify-between items-center">
-                      <h3 className="serif-font font-bold flex items-center gap-2">
-                        <Box className="w-5 h-5" /> AI 풍수 처방: 12간지 비방 오브제
+                  <section className="bg-white rounded-2xl overflow-hidden shadow-2xl border border-[#d4af37]/40 ring-4 ring-[#d4af37]/10 mt-10">
+                    <div className="gold-gradient p-5 text-[#4a443b] flex justify-between items-center shadow-sm">
+                      <h3 className="serif-font font-bold flex items-center gap-2 text-xl">
+                        <Box className="w-6 h-6 text-[#4a443b]" /> AI 풍수 처방: 12간지 비방 오브제
                       </h3>
                     </div>
-                    <div className="p-6">
+                    <div className="p-6 md:p-8">
                       <div className="flex flex-col gap-8">
-                        <div className="w-full max-w-sm mx-auto aspect-square bg-gray-100 rounded-xl overflow-hidden relative shadow-inner">
+                        <div className="w-full max-w-sm mx-auto aspect-square bg-[#fcfbfa] rounded-2xl overflow-hidden relative shadow-inner ring-1 ring-black/5">
                           {zodiacImage ? (
                             <img src={zodiacImage} alt="Zodiac Remedy Object" className="w-full h-full object-cover" />
                           ) : (
-                            <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4">
-                              <Loader2 className="w-10 h-10 animate-spin text-[#d4af37] mb-2" />
-                              <p className="text-sm text-[#8c8273]">맞춤형 12간지 비방 오브제를<br />생성 중입니다...</p>
+                            <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6">
+                              <Loader2 className="w-12 h-12 animate-spin text-[#d4af37] mb-4" />
+                              <p className="text-[15px] text-[#8c8273] leading-relaxed">맞춤형 <span className="font-bold text-[#d4af37]">12간지 비방 오브제</span>를<br />생성 중입니다...</p>
                             </div>
                           )}
                           {zodiacImage && (
                             <div className="absolute bottom-4 right-4 flex gap-2">
                               <button
                                 onClick={() => downloadImage(zodiacImage, 'FengShui_Zodiac_Object.png')}
-                                className="bg-white/90 p-2 rounded-full shadow-lg text-[#4a443b] hover:bg-white transition-colors"
+                                className="bg-white/95 backdrop-blur shadow-xl p-3 rounded-full text-[#4a443b] hover:bg-white hover:scale-105 transition-all"
                                 title="이미지 다운로드"
                               >
                                 <Download className="w-5 h-5" />
@@ -663,42 +744,46 @@ export default function App() {
                             </div>
                           )}
                         </div>
-                        <div className="flex-1 flex flex-col justify-center space-y-4">
-                          <div className="bg-[#fdfbf7] p-4 rounded-xl border border-[#d4af37]/20">
-                            <h4 className="text-[#d4af37] font-bold text-sm uppercase tracking-tighter mb-2">추천 오브제</h4>
-                            <p className="text-[#4a443b] font-bold text-xl">{result.zodiac_remedy_object.animal}</p>
-                            <p className="text-sm text-[#8c8273] mt-1">재질 및 색상: {result.zodiac_remedy_object.material_and_color}</p>
-                            <p className="text-sm text-[#8c8273]">특징: {result.zodiac_remedy_object.specific_pose_or_feature}</p>
+                        <div className="flex-1 flex flex-col justify-center space-y-5">
+                          <div className="bg-[#fdfbf7] p-6 rounded-xl border border-[#d4af37]/30 shadow-sm relative overflow-hidden">
+                            <div className="absolute top-0 right-0 w-24 h-24 bg-[#d4af37]/5 rounded-full blur-xl"></div>
+                            <h4 className="text-[#d4af37] font-bold text-[13px] uppercase tracking-widest mb-2 relative z-10">추천 오브제</h4>
+                            <p className="text-[#4a443b] font-extrabold text-3xl mb-4 relative z-10">{result.zodiac_remedy_object.animal}</p>
+                            <div className="space-y-2 relative z-10">
+                              <p className="text-[14px] text-[#6b6256] flex items-center gap-2 bg-white/60 p-2 rounded-lg"><span className="font-bold text-[#8c8273] w-20 shrink-0">재질 및 색상</span> {result.zodiac_remedy_object.material_and_color}</p>
+                              <p className="text-[14px] text-[#6b6256] flex items-center gap-2 bg-white/60 p-2 rounded-lg"><span className="font-bold text-[#8c8273] w-20 shrink-0">선별 특징</span> {result.zodiac_remedy_object.specific_pose_or_feature}</p>
+                            </div>
                           </div>
 
-                          <div className="bg-white p-4 rounded-xl border border-[#e5e1da] shadow-sm">
-                            <h4 className="text-[#4a443b] font-bold text-sm mb-2">추천 이유</h4>
-                            <p className="text-[#6b6256] text-sm leading-relaxed">{result.zodiac_remedy_object.reason}</p>
+                          <div className="bg-white p-6 rounded-xl border border-[#e5e1da] shadow-sm hover:border-[#d4af37]/30 transition-colors">
+                            <h4 className="text-[#4a443b] font-bold text-[16px] mb-3 flex items-center gap-2"><Sparkles className="w-4 h-4 text-[#d4af37]" /> 추천 이유</h4>
+                            <p className="text-[#6b6256] text-[15px] leading-relaxed font-medium">{result.zodiac_remedy_object.reason}</p>
                           </div>
 
-                          <div className="bg-[#white] p-4 rounded-xl border border-[#e5e1da] shadow-sm">
-                            <h4 className="text-[#4a443b] font-bold text-sm mb-2 flex items-center gap-1">
+                          <div className="bg-white p-6 rounded-xl border border-[#e5e1da] shadow-sm hover:border-[#d4af37]/30 transition-colors">
+                            <h4 className="text-[#4a443b] font-bold text-[16px] mb-3 flex items-center gap-2">
                               <MapPin className="w-4 h-4 text-[#d4af37]" /> 배치 가이드
                             </h4>
-                            <p className="text-[#6b6256] text-sm leading-relaxed">{result.zodiac_remedy_object.placement_guide}</p>
+                            <p className="text-[#6b6256] text-[15px] leading-relaxed font-medium">{result.zodiac_remedy_object.placement_guide}</p>
                           </div>
 
-                          <div className="space-y-2 pt-2">
+                          <div className="space-y-3 pt-3">
                             <a
                               href={`https://search.shopping.naver.com/search/all?query=${encodeURIComponent(result.zodiac_remedy_object.animal + ' 장식품 ' + result.zodiac_remedy_object.material_and_color)}`}
                               target="_blank" rel="noopener noreferrer"
-                              className="w-full py-3 border border-[#d4af37] text-[#d4af37] font-bold rounded-lg hover:bg-[#d4af37]/10 transition-colors flex items-center justify-center gap-2"
+                              className="w-full py-4 border-2 border-[#d4af37] text-[#d4af37] font-bold text-[15px] rounded-xl hover:bg-[#d4af37]/5 transition-all flex items-center justify-center gap-2 shadow-sm relative overflow-hidden group"
                             >
-                              <ExternalLink className="w-4 h-4" /> 유사한 장식품 찾아보기
+                              <div className="absolute inset-0 bg-[#d4af37]/10 w-0 group-hover:w-full transition-all duration-300 ease-out"></div>
+                              <ExternalLink className="w-5 h-5 relative z-10" /> <span className="relative z-10">유사한 장식품 찾아보기</span>
                             </a>
                             <button
                               onClick={() => {
                                 alert('3D 프린팅 맞춤 제작 서비스는 현재 준비 중입니다. 카카오톡 채널로 문의해주시면 상세히 안내해 드리겠습니다.');
                                 setIsInquiryModalOpen(true);
                               }}
-                              className="w-full py-3 bg-[#d4af37] text-white font-bold rounded-lg hover:bg-[#c29d2f] transition-all flex items-center justify-center gap-2 shadow-sm"
+                              className="w-full py-4 bg-gradient-to-r from-[#d4af37] to-[#b4922b] text-white font-bold text-[15px] rounded-xl hover:shadow-lg transition-all flex items-center justify-center gap-2"
                             >
-                              <Box className="w-4 h-4" /> 3D 프린팅 맞춤 제작 문의
+                              <Box className="w-5 h-5" /> 3D 프린팅 맞춤 제작 문의
                             </button>
                           </div>
                         </div>
@@ -707,70 +792,15 @@ export default function App() {
                   </section>
                 )}
 
-                {/* 3. Detailed Diagnosis & Solutions */}
-                <div className="flex flex-col gap-8">
-                  <section className="bg-white rounded-2xl p-6 shadow-md border-t-4 border-t-[#d4af37]">
-                    <h3 className="serif-font text-xl font-bold text-[#4a443b] mb-4">종합 점수: {result.feng_shui_score}점</h3>
-                    <p className="text-sm text-[#8c8273] mb-4">{result.analysis_summary}</p>
-                    <div className="space-y-3">
-                      {result.diagnosis.map((diag, idx) => (
-                        <div key={idx} className={`p-3 rounded-lg border-l-4 ${diag.type.includes('길') ? 'bg-green-50 border-l-green-400' : 'bg-red-50 border-l-red-400'}`}>
-                          <div className="flex items-center gap-2 mb-1">
-                            {diag.type.includes('길') ? <CheckCircle2 className="w-4 h-4 text-green-500" /> : <AlertTriangle className="w-4 h-4 text-red-500" />}
-                            <span className="font-bold text-xs text-[#4a443b]">{diag.keyword}</span>
-                          </div>
-                          <p className="text-[11px] text-[#6b6256]">{diag.description}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </section>
-
-                  <section className="bg-[#4a443b] rounded-2xl p-6 text-white shadow-md">
-                    <h3 className="serif-font text-xl font-bold mb-4 flex items-center gap-2">
-                      <ShoppingBag className="w-5 h-5 text-[#d4af37]" /> 풍수 인테리어 처방
-                    </h3>
-                    <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-                      {result.solution_items.map((item, idx) => (
-                        <div key={idx} className="bg-white/10 rounded-xl p-3 border border-white/5">
-                          <h5 className="font-bold text-[#d4af37] text-sm">{item.item_name}</h5>
-                          <p className="text-[10px] text-white/60 mb-2">{item.target_problem}</p>
-                          <p className="text-[11px] bg-black/20 p-2 rounded mb-3">{item.placement_guide}</p>
-                          <a
-                            href={`https://ohou.se/productions/feed?query=${encodeURIComponent(item.product_search_keyword)}`}
-                            target="_blank" rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-[11px] text-[#d4af37] hover:underline"
-                          >
-                            <ExternalLink className="w-3 h-3" /> 추천 상품 보러가기
-                          </a>
-                        </div>
-                      ))}
-                    </div>
-                  </section>
-                </div>
-
-                {/* Overall Advice Footer */}
-                <div className="bg-[#f9f295]/20 rounded-2xl p-6 border border-[#f9f295]/50 text-center">
-                  <Heart className="w-8 h-8 text-[#d4af37] mx-auto mb-3" />
-                  <p className="text-[#4a443b] serif-font text-lg italic leading-relaxed">
+                {/* 7. Overall Advice Footer */}
+                <div className="bg-[#fdfbf7] rounded-xl p-10 border-2 border-[#d4af37]/30 text-center shadow-lg mt-12 mb-8 relative overflow-hidden group">
+                  <div className="absolute top-0 left-0 w-full h-1.5 gold-gradient"></div>
+                  <div className="absolute bottom-0 left-0 w-full h-1.5 gold-gradient opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                  <Heart className="w-10 h-10 text-[#d4af37] mx-auto mb-5 drop-shadow-sm" />
+                  <p className="text-[#4a443b] serif-font text-2xl italic leading-[1.8] font-bold max-w-xl mx-auto">
                     "{result.overall_advice}"
                   </p>
                 </div>
-
-                {/* PRO DETAILED REPORT */}
-                {result.detailed_report && (
-                  <section className="bg-white rounded-2xl p-8 shadow-md border-t-8 border-[#4a443b] mt-8 mb-12 relative overflow-hidden">
-                    <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
-                      <Compass className="w-32 h-32" />
-                    </div>
-                    <h3 className="serif-font text-2xl font-bold text-[#4a443b] mb-6 border-b border-[#e5e1da] pb-4 flex items-center gap-3">
-                      <Sparkles className="w-6 h-6 text-[#d4af37]" />
-                      초정밀 도사 감명서 (Full Documentation)
-                    </h3>
-                    <div className="prose prose-sm max-w-none text-[#4a443b] leading-[1.8] whitespace-pre-wrap font-medium">
-                      {result.detailed_report}
-                    </div>
-                  </section>
-                )}
 
               </div>
             )}
