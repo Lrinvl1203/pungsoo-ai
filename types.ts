@@ -19,6 +19,14 @@ export interface RemedyArt {
   art_story: string;
 }
 
+export interface ZodiacRemedyObject {
+  animal: string;
+  material_and_color: string;
+  specific_pose_or_feature: string;
+  reason: string;
+  placement_guide: string;
+}
+
 export interface AnalysisResult {
   analysis_summary: string;
   detailed_report: string; // A4 3-page sized very detailed markdown report
@@ -27,6 +35,7 @@ export interface AnalysisResult {
   diagnosis: FengShuiDiagnosis[];
   solution_items: SolutionItem[];
   remedy_art: RemedyArt;
+  zodiac_remedy_object: ZodiacRemedyObject;
   overall_advice: string;
 }
 

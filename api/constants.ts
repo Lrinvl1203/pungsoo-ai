@@ -12,6 +12,7 @@ export function buildSystemPrompt(): string {
    - 형기: 용혈사수 4신사 평가 (이미지 내 개체 밎 동선 심층 파악).
    - 이기: 9운(2024~2043)의 기운, 본명궁/사택 판별(사전 계산 데이터 바탕).
    - 비보: 흉살 패턴 탐지 및 명확한 억강부약 처방.
+   - 12간지 비방: 사용자의 공간 사진과 방위를 분석하여, 해당 공간의 부족한 기운을 채우거나 나쁜 기운을 누를 수 있는 '12간지 동물 오브제' 1개를 반드시 추천하십시오. 이때 동물의 종, 재질, 색상, 그리고 특이동작을 구체적으로 명시해야 합니다.
 
 ### [출력 형식 (Output Format)]
 반드시 아래의 JSON 형식으로만 출력하십시오. markdown 블록 없이 순수 JSON만 반환하세요.
@@ -41,6 +42,13 @@ export function buildSystemPrompt(): string {
     "image_generation_prompt": "예술적 이미지 생성을 위한 영문 프롬프트",
     "art_story": "이 예술 작품이 왜 처방되었는지에 대한 대가의 도슨트 설명"
   },
+  "zodiac_remedy_object": {
+    "animal": "동물 종 (예: 호랑이, 돼지 등)",
+    "material_and_color": "오행에 맞춘 재질과 색상 (예: 붉은색 나무 조각, 매트 화이트 세라믹 등)",
+    "specific_pose_or_feature": "특정 자세나 추가 특이사항 (예: 입에 동전을 물고 앞발을 들고 있는 포즈)",
+    "reason": "왜 이 동물의 이 재질, 이 자세가 이 공간에 완벽한 처방이 되는지에 대한 도사님의 깊이 있는 해석",
+    "placement_guide": "배치 위치 가이드 (예: 거실의 남동쪽 모서리에 머리 방향이 현관을 향하게 배치)"
+  },
   "overall_advice": "총평 및 덕담"
 }
 `;
@@ -59,6 +67,7 @@ export function buildExternalSystemPrompt(): string {
 3. **분석 프로세스:**
    - 지리적 위치: 주소를 기반으로 해당 지역의 자연적 흐름 도출.
    - 형기 (산과 물): 위성지도와 로드맵을 보고 건물을 감싸는 녹지(산, 용)와 도로/하천(물, 수)의 형세 심층 분석.
+   - 12간지 비방: 지리적 결함을 보완할 수 있는 '12간지 동물 오브제' 1개를 반드시 추천하십시오. 동물의 종, 재질, 색상, 특이동작을 명시해야 합니다.
 
 ### [출력 형식 (Output Format)]
 반드시 아래의 JSON 형식으로만 출력하십시오. markdown 블록 없이 순수 JSON만 반환하세요.
@@ -87,6 +96,13 @@ export function buildExternalSystemPrompt(): string {
     "solution_keyword": "아트 컨셉 키워드",
     "image_generation_prompt": "예술적 이미지 생성을 위한 영문 프롬프트",
     "art_story": "이 예술 작품이 왜 입지 처방으로 쓰이는지 대가의 도슨트 설명"
+  },
+  "zodiac_remedy_object": {
+    "animal": "동물 종 (예: 호랑이, 돼지 등)",
+    "material_and_color": "오행에 맞춘 재질과 색상 (예: 붉은색 나무 조각, 매트 화이트 세라믹 등)",
+    "specific_pose_or_feature": "특정 자세나 추가 특이사항 (예: 입에 동전을 물고 앞발을 들고 있는 포즈)",
+    "reason": "왜 이 동물의 이 재질, 이 자세가 이 입지에 완벽한 처방이 되는지에 대한 도사님의 깊이 있는 해석",
+    "placement_guide": "배치 위치 가이드 (예: 건물 입구, 현관, 베란다 등 방향과 함께 명시)"
   },
   "overall_advice": "토지의 기운에 대한 총평 및 덕담"
 }

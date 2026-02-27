@@ -62,3 +62,21 @@ export const generateRemedyArtImage = async (
   return data.image;
 };
 
+
+export const generateZodiacArtImage = async (
+  zodiacObj: any
+): Promise<string> => {
+  const response = await fetch('/api/generate-visuals', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ type: 'zodiac', zodiacObj }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error || "12간지 비방 생성 실패");
+  }
+
+  const data = await response.json();
+  return data.image;
+};

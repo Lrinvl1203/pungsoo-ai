@@ -1,18 +1,19 @@
 
 import React, { useState } from 'react';
-import { Sparkles, Home, MapPin, Heart, Send, Loader2, Compass, AlertTriangle, CheckCircle2, ShoppingBag, Download, ExternalLink, ImageIcon, Palette, RefreshCw, Flower2 } from 'lucide-react';
+import { Sparkles, Home, MapPin, Heart, Send, Loader2, Compass, AlertTriangle, CheckCircle2, ShoppingBag, Download, ExternalLink, ImageIcon, Palette, RefreshCw, Flower2, Box } from 'lucide-react';
 import { UserMetadata, AnalysisResult } from './types';
-import { analyzeFengShui, generateToBeImage, generateRemedyArtImage } from './services/geminiService';
+import { analyzeFengShui, generateToBeImage, generateRemedyArtImage, generateZodiacArtImage } from './services/geminiService';
 
 export default function App() {
   const [image, setImage] = useState<string | null>(null);
   const [toBeImage, setToBeImage] = useState<string | null>(null);
   const [remedyArt, setRemedyArt] = useState<string | null>(null);
+  const [zodiacImage, setZodiacImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [generatingVisuals, setGeneratingVisuals] = useState(false);
   const [isRegeneratingArt, setIsRegeneratingArt] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
-  const [history, setHistory] = useState<{ result: AnalysisResult, image: string, remedyArt: string }[]>([]);
+  const [history, setHistory] = useState<{ result: AnalysisResult, image: string, remedyArt: string, zodiacImage: string | null }[]>([]);
 
   // Address Autocomplete States
   const [addressQuery, setAddressQuery] = useState('');
@@ -98,6 +99,7 @@ export default function App() {
           }
           setToBeImage(null);
           setRemedyArt(null);
+          setZodiacImage(null);
           setResult(null);
         };
         img.src = reader.result as string;
@@ -122,6 +124,7 @@ export default function App() {
     setResult(null);
     setToBeImage(null);
     setRemedyArt(null);
+    setZodiacImage(null);
 
     try {
       const analysis = await analyzeFengShui({ base64Image: image || undefined, address: metadata.address }, metadata);
@@ -130,8 +133,14 @@ export default function App() {
       setGeneratingVisuals(true);
 
       const promises = [
-        generateRemedyArtImage(analysis.remedy_art.image_generation_prompt, metadata.artStyle)
+        generateRemedyArtImage(analysis.remedy_art.image_generation_prompt, metadata.artStyle),
       ];
+
+      if (analysis.zodiac_remedy_object) {
+        promises.push(generateZodiacArtImage(analysis.zodiac_remedy_object));
+      } else {
+        promises.push(Promise.resolve(""));
+      }
 
       if (metadata.analysisType === 'internal' && image) {
         promises.push(generateToBeImage(image, analysis.solution_items));
@@ -140,16 +149,21 @@ export default function App() {
       const settled = await Promise.allSettled(promises);
 
       let remedyObj = settled[0];
-      let visualObj = metadata.analysisType === 'internal' ? settled[1] : null;
+      let zodiacObjRes = settled[1];
+      let visualObj = metadata.analysisType === 'internal' ? settled[2] : null;
 
       if (visualObj && visualObj.status === 'fulfilled') setToBeImage(visualObj.value);
+      let newZodiacImage = zodiacObjRes && zodiacObjRes.status === 'fulfilled' && zodiacObjRes.value ? zodiacObjRes.value : null;
+      if (newZodiacImage) setZodiacImage(newZodiacImage);
+
       if (remedyObj && remedyObj.status === 'fulfilled') {
         setRemedyArt(remedyObj.value);
         // Save to history
         const newHistory = [{
           result: analysis,
           image: metadata.analysisType === 'internal' ? (image || '') : 'https://images.unsplash.com/photo-1524813686514-a57563d77965?auto=format&fit=crop&q=80&w=400',
-          remedyArt: remedyObj.value
+          remedyArt: remedyObj.value,
+          zodiacImage: newZodiacImage
         }, ...history].slice(0, 10); // Keep last 10
         setHistory(newHistory);
         localStorage.setItem('pungsoo_history', JSON.stringify(newHistory));
@@ -338,7 +352,7 @@ export default function App() {
                   </div>
                   {image && !loading && (
                     <button
-                      onClick={() => { setImage(null); setResult(null); setToBeImage(null); setRemedyArt(null); }}
+                      onClick={() => { setImage(null); setResult(null); setToBeImage(null); setRemedyArt(null); setZodiacImage(null); }}
                       className="absolute top-2 right-2 bg-black/50 text-white p-1 rounded-full hover:bg-black/70"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
@@ -523,6 +537,7 @@ export default function App() {
                         setResult(item.result);
                         setImage(item.image);
                         setRemedyArt(item.remedyArt);
+                        setZodiacImage(item.zodiacImage || null);
                         setToBeImage(null);
                         window.scrollTo({ top: 0, behavior: 'smooth' });
                       }}
@@ -717,6 +732,81 @@ export default function App() {
                     </div>
                   </div>
                 </div>
+
+                {/* 2.5 12 Zodiac Animal Object Recommendation */}
+                {result.zodiac_remedy_object && (
+                  <section className="bg-white rounded-2xl overflow-hidden shadow-xl border border-[#d4af37]/30 mt-8">
+                    <div className="gold-gradient p-4 text-[#4a443b] flex justify-between items-center">
+                      <h3 className="serif-font font-bold flex items-center gap-2">
+                        <Box className="w-5 h-5" /> AI 풍수 처방: 12간지 비방 오브제
+                      </h3>
+                    </div>
+                    <div className="p-6">
+                      <div className="flex flex-col md:flex-row gap-6">
+                        <div className="w-full md:w-1/2 aspect-square bg-gray-100 rounded-xl overflow-hidden relative shadow-inner">
+                          {zodiacImage ? (
+                            <img src={zodiacImage} alt="Zodiac Remedy Object" className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4">
+                              <Loader2 className="w-10 h-10 animate-spin text-[#d4af37] mb-2" />
+                              <p className="text-sm text-[#8c8273]">맞춤형 12간지 비방 오브제를<br />생성 중입니다...</p>
+                            </div>
+                          )}
+                          {zodiacImage && (
+                            <div className="absolute bottom-4 right-4 flex gap-2">
+                              <button
+                                onClick={() => downloadImage(zodiacImage, 'FengShui_Zodiac_Object.png')}
+                                className="bg-white/90 p-2 rounded-full shadow-lg text-[#4a443b] hover:bg-white transition-colors"
+                                title="이미지 다운로드"
+                              >
+                                <Download className="w-5 h-5" />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex-1 flex flex-col justify-center space-y-4">
+                          <div className="bg-[#fdfbf7] p-4 rounded-xl border border-[#d4af37]/20">
+                            <h4 className="text-[#d4af37] font-bold text-sm uppercase tracking-tighter mb-2">추천 오브제</h4>
+                            <p className="text-[#4a443b] font-bold text-xl">{result.zodiac_remedy_object.animal}</p>
+                            <p className="text-sm text-[#8c8273] mt-1">재질 및 색상: {result.zodiac_remedy_object.material_and_color}</p>
+                            <p className="text-sm text-[#8c8273]">특징: {result.zodiac_remedy_object.specific_pose_or_feature}</p>
+                          </div>
+
+                          <div className="bg-white p-4 rounded-xl border border-[#e5e1da] shadow-sm">
+                            <h4 className="text-[#4a443b] font-bold text-sm mb-2">추천 이유</h4>
+                            <p className="text-[#6b6256] text-sm leading-relaxed">{result.zodiac_remedy_object.reason}</p>
+                          </div>
+
+                          <div className="bg-[#white] p-4 rounded-xl border border-[#e5e1da] shadow-sm">
+                            <h4 className="text-[#4a443b] font-bold text-sm mb-2 flex items-center gap-1">
+                              <MapPin className="w-4 h-4 text-[#d4af37]" /> 배치 가이드
+                            </h4>
+                            <p className="text-[#6b6256] text-sm leading-relaxed">{result.zodiac_remedy_object.placement_guide}</p>
+                          </div>
+
+                          <div className="space-y-2 pt-2">
+                            <a
+                              href={`https://search.shopping.naver.com/search/all?query=${encodeURIComponent(result.zodiac_remedy_object.animal + ' 장식품 ' + result.zodiac_remedy_object.material_and_color)}`}
+                              target="_blank" rel="noopener noreferrer"
+                              className="w-full py-3 border border-[#d4af37] text-[#d4af37] font-bold rounded-lg hover:bg-[#d4af37]/10 transition-colors flex items-center justify-center gap-2"
+                            >
+                              <ExternalLink className="w-4 h-4" /> 유사한 장식품 찾아보기
+                            </a>
+                            <button
+                              onClick={() => {
+                                alert('3D 프린팅 맞춤 제작 서비스는 현재 준비 중입니다. 카카오톡 채널로 문의해주시면 상세히 안내해 드리겠습니다.');
+                                setIsInquiryModalOpen(true);
+                              }}
+                              className="w-full py-3 bg-[#d4af37] text-white font-bold rounded-lg hover:bg-[#c29d2f] transition-all flex items-center justify-center gap-2 shadow-sm"
+                            >
+                              <Box className="w-4 h-4" /> 3D 프린팅 맞춤 제작 문의
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </section>
+                )}
 
                 {/* 3. Detailed Diagnosis & Solutions */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
