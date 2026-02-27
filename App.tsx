@@ -202,93 +202,6 @@ export default function App() {
     link.click();
   };
 
-  const downloadForInstagram = () => {
-    if (!remedyArt || !result) return;
-
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    const img = new Image();
-
-    img.onload = () => {
-      // Set canvas to 1080x1920 (Instagram Story size)
-      canvas.width = 1080;
-      canvas.height = 1920;
-      if (!ctx) return;
-
-      // Draw background
-      ctx.fillStyle = '#fdfbf7';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      // Draw Remedy Art centered (maintain 9:16)
-      const artWidth = 900;
-      const artHeight = 1600;
-      const x = (1080 - artWidth) / 2;
-      const y = 100;
-      ctx.drawImage(img, x, y, artWidth, artHeight);
-
-      // Add branding overlay
-      ctx.fillStyle = 'rgba(74, 68, 59, 0.8)';
-      ctx.fillRect(x, y + artHeight - 200, artWidth, 200);
-
-      ctx.fillStyle = '#d4af37';
-      ctx.font = 'bold 60px serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('풍수지리 AI 대가', 540, y + artHeight - 110);
-
-      ctx.fillStyle = 'white';
-      ctx.font = '40px sans-serif';
-      ctx.fillText(`${result.remedy_art.deficiency} 처방 비방`, 540, y + artHeight - 50);
-
-      // Score Badge
-      ctx.fillStyle = '#d4af37';
-      ctx.beginPath();
-      ctx.arc(900, 200, 80, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.fillStyle = 'white';
-      ctx.font = 'bold 50px serif';
-      ctx.fillText(`${result.feng_shui_score}점`, 900, 215);
-
-      const link = document.createElement('a');
-      link.href = canvas.toDataURL('image/png');
-      link.download = 'FengShui_Instagram_Story.png';
-      link.click();
-    };
-    img.src = remedyArt;
-  };
-
-  const shareToKakao = () => {
-    if (window.Kakao) {
-      if (!window.Kakao.isInitialized()) {
-        window.Kakao.init('PLACEHOLDER_KAKAO_KEY'); // Should be replaced by user
-      }
-
-      window.Kakao.Share.sendDefault({
-        objectType: 'feed',
-        content: {
-          title: '내 공간의 풍수 분석 결과',
-          description: result ? `${result.analysis_summary} (점수: ${result.feng_shui_score}점)` : 'AI가 분석하는 우리 집 풍수 명당',
-          imageUrl: remedyArt || 'https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6',
-          link: {
-            mobileWebUrl: window.location.href,
-            webUrl: window.location.href,
-          },
-        },
-        buttons: [
-          {
-            title: '나도 분석하기',
-            link: {
-              mobileWebUrl: window.location.href,
-              webUrl: window.location.href,
-            },
-          },
-        ],
-      });
-    } else {
-      alert('카카오 SDK 로딩 중입니다. 잠시 후 다시 시도해주세요.');
-    }
-  };
-
   return (
     <div className="min-h-screen bg-[#fdfbf7]">
       {/* Header */}
@@ -304,8 +217,8 @@ export default function App() {
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-4 py-12 pb-24">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+      <main className="max-w-2xl mx-auto px-4 py-12 pb-24">
+        <div className="flex flex-col gap-16">
 
           {/* Input Section */}
           <div className="space-y-8">
@@ -604,8 +517,8 @@ export default function App() {
                     </h3>
                   </div>
                   <div className="p-6">
-                    <div className="flex flex-col md:flex-row gap-6">
-                      <div className="w-full md:w-1/2 aspect-[9/16] bg-gray-100 rounded-xl overflow-hidden relative shadow-inner">
+                    <div className="flex flex-col gap-8">
+                      <div className="w-full max-w-sm mx-auto aspect-[9/16] bg-gray-100 rounded-xl overflow-hidden relative shadow-inner">
                         {remedyArt ? (
                           <img src={remedyArt} alt="Remedy Art" className="w-full h-full object-cover" />
                         ) : (
@@ -623,20 +536,6 @@ export default function App() {
                               title="이미지 다운로드"
                             >
                               <Download className="w-5 h-5" />
-                            </button>
-                            <button
-                              onClick={downloadForInstagram}
-                              className="bg-white/90 p-2 rounded-full shadow-lg text-[#4a443b] hover:bg-white transition-colors"
-                              title="인스타그램 스토리용 저장"
-                            >
-                              <ImageIcon className="w-5 h-5 text-pink-500" />
-                            </button>
-                            <button
-                              onClick={shareToKakao}
-                              className="bg-yellow-400 p-2 rounded-full shadow-lg text-black hover:bg-yellow-300 transition-colors"
-                              title="카카오톡 공유"
-                            >
-                              <Send className="w-5 h-5" />
                             </button>
                           </div>
                         )}
@@ -742,8 +641,8 @@ export default function App() {
                       </h3>
                     </div>
                     <div className="p-6">
-                      <div className="flex flex-col md:flex-row gap-6">
-                        <div className="w-full md:w-1/2 aspect-square bg-gray-100 rounded-xl overflow-hidden relative shadow-inner">
+                      <div className="flex flex-col gap-8">
+                        <div className="w-full max-w-sm mx-auto aspect-square bg-gray-100 rounded-xl overflow-hidden relative shadow-inner">
                           {zodiacImage ? (
                             <img src={zodiacImage} alt="Zodiac Remedy Object" className="w-full h-full object-cover" />
                           ) : (
@@ -809,7 +708,7 @@ export default function App() {
                 )}
 
                 {/* 3. Detailed Diagnosis & Solutions */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="flex flex-col gap-8">
                   <section className="bg-white rounded-2xl p-6 shadow-md border-t-4 border-t-[#d4af37]">
                     <h3 className="serif-font text-xl font-bold text-[#4a443b] mb-4">종합 점수: {result.feng_shui_score}점</h3>
                     <p className="text-sm text-[#8c8273] mb-4">{result.analysis_summary}</p>
