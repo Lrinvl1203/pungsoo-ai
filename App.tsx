@@ -21,6 +21,20 @@ export default function App() {
   const [isSearchingAddress, setIsSearchingAddress] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
 
+  // Test Mode State
+  const [isTestMode, setIsTestMode] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('PUNGSOO_TEST_MODE') === 'true';
+    }
+    return false;
+  });
+
+  const toggleTestMode = () => {
+    const newVal = !isTestMode;
+    setIsTestMode(newVal);
+    localStorage.setItem('PUNGSOO_TEST_MODE', newVal.toString());
+  };
+
   // Load history from localStorage on mount
   React.useEffect(() => {
     const savedHistory = localStorage.getItem('pungsoo_history');
@@ -70,6 +84,46 @@ export default function App() {
   }, [addressQuery]);
 
   const [isInquiryModalOpen, setIsInquiryModalOpen] = useState(false);
+  const [orderType, setOrderType] = useState<'frame' | 'object'>('frame');
+  const [orderFormData, setOrderFormData] = useState({ name: '', contact: '', message: '' });
+  const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
+  const isLoggedIn = false; // 향후 로그인 기능 추가 시 변경
+
+  const handleOrderSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmittingOrder(true);
+
+    try {
+      const response = await fetch('/api/send-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orderType,
+          name: orderFormData.name,
+          contact: orderFormData.contact,
+          message: orderFormData.message,
+          analysisData: result ? {
+            remedyArtKeyword: result.remedy_art?.solution_keyword,
+            deficiency: result.remedy_art?.deficiency,
+            zodiacAnimal: result.zodiac_remedy_object?.animal
+          } : null
+        })
+      });
+
+      if (response.ok) {
+        alert('의뢰가 성공적으로 접수되었습니다. 곧 연락드리겠습니다.');
+        setIsInquiryModalOpen(false);
+        setOrderFormData({ name: '', contact: '', message: '' });
+      } else {
+        alert('의뢰 전송에 실패했습니다. 관리자에게 문의해주세요.');
+      }
+    } catch (error) {
+      console.error(error);
+      alert('오류가 발생했습니다. 다시 시도해주세요.');
+    } finally {
+      setIsSubmittingOrder(false);
+    }
+  };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -205,8 +259,16 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#fdfbf7]">
       {/* Header */}
-      <header className="bg-white border-b border-[#e5e1da] py-8 px-4 text-center">
-        <div className="max-w-4xl mx-auto">
+      <header className="bg-white border-b border-[#e5e1da] py-8 px-4 text-center relative">
+        <div className="absolute top-4 right-4 z-10">
+          <button
+            onClick={toggleTestMode}
+            className={`text-xs px-3 py-1.5 rounded-full border transition-colors shadow-sm ${isTestMode ? 'bg-indigo-50 text-indigo-600 border-indigo-200 font-bold' : 'bg-gray-50 text-gray-400 border-gray-200 hover:bg-gray-100'}`}
+          >
+            {isTestMode ? '🧪 테스트 모드 ON' : '🧪 테스트 모드 OFF'}
+          </button>
+        </div>
+        <div className="max-w-4xl mx-auto mt-4">
           <div className="flex justify-center mb-4">
             <div className="w-16 h-16 rounded-full gold-gradient flex items-center justify-center shadow-lg">
               <Compass className="text-white w-8 h-8" />
@@ -698,14 +760,13 @@ export default function App() {
                           {result.remedy_art.art_story}
                           <div className="absolute bottom-[-10px] right-3 text-4xl text-white/10 serif-font">"</div>
                         </div>
-                        <div className="space-y-3 pt-2">
+                        <div className="space-y-2">
                           <button
                             disabled={!remedyArt}
-                            onClick={() => setIsInquiryModalOpen(true)}
-                            className="w-full py-4 border-2 border-[#d4af37] text-[#d4af37] font-bold rounded-xl hover:bg-[#d4af37]/5 transition-all flex items-center justify-center gap-2 shadow-sm relative overflow-hidden group"
+                            onClick={() => { setOrderType('frame'); setIsInquiryModalOpen(true); }}
+                            className="w-full py-3 border border-[#d4af37] text-[#d4af37] font-bold rounded-lg hover:bg-[#d4af37]/10 transition-colors flex items-center justify-center gap-2"
                           >
-                            <div className="absolute inset-0 bg-[#d4af37]/10 w-0 group-hover:w-full transition-all duration-300 ease-out"></div>
-                            <ShoppingBag className="w-5 h-5 relative z-10" /> <span className="relative z-10">실물 프리미엄 액자 제작 문의</span>
+                            <ShoppingBag className="w-4 h-4" /> 천지인 거사님께 액자 제작 의뢰하기
                           </button>
                         </div>
                       </div>
@@ -767,23 +828,22 @@ export default function App() {
                             <p className="text-[#6b6256] text-[15px] leading-relaxed font-medium">{result.zodiac_remedy_object.placement_guide}</p>
                           </div>
 
-                          <div className="space-y-3 pt-3">
+                          <div className="space-y-2 pt-2">
                             <a
                               href={`https://search.shopping.naver.com/search/all?query=${encodeURIComponent(result.zodiac_remedy_object.animal + ' 장식품 ' + result.zodiac_remedy_object.material_and_color)}`}
                               target="_blank" rel="noopener noreferrer"
-                              className="w-full py-4 border-2 border-[#d4af37] text-[#d4af37] font-bold text-[15px] rounded-xl hover:bg-[#d4af37]/5 transition-all flex items-center justify-center gap-2 shadow-sm relative overflow-hidden group"
+                              className="w-full py-3 border border-[#d4af37] text-[#d4af37] font-bold rounded-lg hover:bg-[#d4af37]/10 transition-colors flex items-center justify-center gap-2"
                             >
-                              <div className="absolute inset-0 bg-[#d4af37]/10 w-0 group-hover:w-full transition-all duration-300 ease-out"></div>
-                              <ExternalLink className="w-5 h-5 relative z-10" /> <span className="relative z-10">유사한 장식품 찾아보기</span>
+                              <ExternalLink className="w-4 h-4" /> 유사한 장식품 찾아보기
                             </a>
                             <button
                               onClick={() => {
-                                alert('3D 프린팅 맞춤 제작 서비스는 현재 준비 중입니다. 카카오톡 채널로 문의해주시면 상세히 안내해 드리겠습니다.');
+                                setOrderType('object');
                                 setIsInquiryModalOpen(true);
                               }}
-                              className="w-full py-4 bg-gradient-to-r from-[#d4af37] to-[#b4922b] text-white font-bold text-[15px] rounded-xl hover:shadow-lg transition-all flex items-center justify-center gap-2"
+                              className="w-full py-3 bg-[#d4af37] text-white font-bold rounded-lg hover:bg-[#c29d2f] transition-all flex items-center justify-center gap-2 shadow-sm"
                             >
-                              <Box className="w-5 h-5" /> 3D 프린팅 맞춤 제작 문의
+                              <Box className="w-4 h-4" /> 천지인 거사님께 오브제 제작 의뢰하기
                             </button>
                           </div>
                         </div>
@@ -812,32 +872,67 @@ export default function App() {
       {isInquiryModalOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-md w-full p-8 shadow-2xl animate-in zoom-in-95 duration-200">
-            <h3 className="serif-font text-2xl font-bold text-[#4a443b] mb-2">실물 비방 액자 제작 문의</h3>
-            <p className="text-[#8c8273] text-sm mb-6">AI가 처방한 당신만의 디지털 비방을 최고급 린텐 캔버스 액자로 간직하세요. 기운을 가장 잘 보존하는 명당에 걸어두시면 좋습니다.</p>
+            <h3 className="serif-font text-2xl font-bold text-[#4a443b] mb-2">
+              {orderType === 'frame' ? '액자 제작 의뢰' : '오브제 제작 의뢰'}
+            </h3>
+            <p className="text-[#8c8273] text-sm mb-6 leading-relaxed">
+              {orderType === 'frame'
+                ? 'AI가 처방한 당신만의 디지털 비방을 최고급 린넨 캔버스 액자로 간직하세요. 기운을 가장 잘 보존하는 명당에 걸어두시면 좋습니다.'
+                : '추천받은 12간지 비방 오브제를 3D 프린팅으로 맞춤 제작해 드립니다.'}
+            </p>
 
-            <div className="space-y-4 mb-8">
-              <div className="flex justify-between items-center py-2 border-b border-[#e5e1da]">
-                <span className="text-[#8c8273] text-sm">액자 사이즈</span>
-                <span className="text-[#4a443b] font-bold">A3 (297x420mm)</span>
-              </div>
-              <div className="flex justify-between items-center py-2 border-b border-[#e5e1da]">
-                <span className="text-[#8c8273] text-sm">제작 비용</span>
-                <span className="text-[#4a443b] font-bold">59,000원 (배송비 무료)</span>
-              </div>
-            </div>
+            <form onSubmit={handleOrderSubmit} className="space-y-4 mb-6">
+              {!isLoggedIn && (
+                <>
+                  <div>
+                    <label className="block text-xs font-semibold text-[#8c8273] mb-1">이름</label>
+                    <input
+                      type="text"
+                      required
+                      value={orderFormData.name}
+                      onChange={(e) => setOrderFormData({ ...orderFormData, name: e.target.value })}
+                      className="w-full bg-[#faf9f6] border border-[#e5e1da] rounded-lg px-3 py-2 outline-none focus:border-[#d4af37]"
+                      placeholder="의뢰자 성함"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-[#8c8273] mb-1">연락처 (이메일 또는 전화번호)</label>
+                    <input
+                      type="text"
+                      required
+                      value={orderFormData.contact}
+                      onChange={(e) => setOrderFormData({ ...orderFormData, contact: e.target.value })}
+                      className="w-full bg-[#faf9f6] border border-[#e5e1da] rounded-lg px-3 py-2 outline-none focus:border-[#d4af37]"
+                      placeholder="회신 받으실 연락처"
+                    />
+                  </div>
+                </>
+              )}
 
-            <button
-              onClick={() => {
-                alert('현재 준비 중인 서비스입니다. 카카오톡 채널로 문의해주시면 상세히 안내해 드리겠습니다.');
-                setIsInquiryModalOpen(false);
-              }}
-              className="w-full py-4 gold-gradient text-white font-bold rounded-xl shadow-lg hover:scale-[1.02] active:scale-95 transition-all mb-3"
-            >
-              카카오톡으로 예약 문의하기
-            </button>
+              <div>
+                <label className="block text-xs font-semibold text-[#8c8273] mb-1">추가 요청사항 (선택사항)</label>
+                <textarea
+                  value={orderFormData.message}
+                  onChange={(e) => setOrderFormData({ ...orderFormData, message: e.target.value })}
+                  className="w-full bg-[#faf9f6] border border-[#e5e1da] rounded-lg px-3 py-2 outline-none focus:border-[#d4af37] resize-none h-20"
+                  placeholder={isLoggedIn ? "요청하실 사항을 적어주세요." : "그 외 요청하실 사항을 적어주세요."}
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={isSubmittingOrder}
+                className={`w-full py-4 font-bold rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 ${isSubmittingOrder ? 'bg-[#c9c5bd] text-white cursor-not-allowed' : 'gold-gradient text-white hover:scale-[1.02] active:scale-95'
+                  }`}
+              >
+                {isSubmittingOrder ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+                천지인 거사님께 의뢰 보내기
+              </button>
+            </form>
+
             <button
               onClick={() => setIsInquiryModalOpen(false)}
-              className="w-full py-4 bg-[#faf9f6] text-[#8c8273] font-bold rounded-xl hover:bg-[#e5e1da] transition-all"
+              className="w-full py-3 bg-[#faf9f6] text-[#8c8273] font-bold rounded-xl hover:bg-[#e5e1da] transition-all"
             >
               닫기
             </button>
