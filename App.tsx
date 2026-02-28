@@ -3,6 +3,9 @@ import React, { useState } from 'react';
 import { Sparkles, Home, MapPin, Heart, Send, Loader2, Compass, AlertTriangle, CheckCircle2, ShoppingBag, Download, ExternalLink, ImageIcon, Palette, RefreshCw, Flower2, Box } from 'lucide-react';
 import { UserMetadata, AnalysisResult } from './types';
 import { analyzeFengShui, generateToBeImage, generateRemedyArtImage, generateZodiacArtImage } from './services/geminiService';
+import { useAuth } from './contexts/AuthContext';
+import LoginButton from './components/LoginButton';
+import PaymentButton from './components/PaymentButton';
 
 export default function App() {
   const [image, setImage] = useState<string | null>(null);
@@ -87,7 +90,8 @@ export default function App() {
   const [orderType, setOrderType] = useState<'frame' | 'object'>('frame');
   const [orderFormData, setOrderFormData] = useState({ name: '', contact: '', message: '' });
   const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
-  const isLoggedIn = false; // 향후 로그인 기능 추가 시 변경
+  const { user } = useAuth();
+  const isLoggedIn = !!user;
 
   const handleOrderSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -102,6 +106,7 @@ export default function App() {
           name: orderFormData.name,
           contact: orderFormData.contact,
           message: orderFormData.message,
+          userId: user?.id,
           analysisData: result ? {
             remedyArtKeyword: result.remedy_art?.solution_keyword,
             deficiency: result.remedy_art?.deficiency,
@@ -123,6 +128,11 @@ export default function App() {
     } finally {
       setIsSubmittingOrder(false);
     }
+  };
+
+  const handlePaymentFail = () => {
+    alert('결제가 실패했거나 취소되었습니다.');
+    setIsInquiryModalOpen(false);
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -260,7 +270,8 @@ export default function App() {
     <div className="min-h-screen bg-[#fdfbf7]">
       {/* Header */}
       <header className="bg-white border-b border-[#e5e1da] py-8 px-4 text-center relative">
-        <div className="absolute top-4 right-4 z-10">
+        <div className="absolute top-4 right-4 z-10 flex gap-2 items-center">
+          <LoginButton />
           <button
             onClick={toggleTestMode}
             className={`text-xs px-3 py-1.5 rounded-full border transition-colors shadow-sm ${isTestMode ? 'bg-indigo-50 text-indigo-600 border-indigo-200 font-bold' : 'bg-gray-50 text-gray-400 border-gray-200 hover:bg-gray-100'}`}
@@ -915,19 +926,33 @@ export default function App() {
                   value={orderFormData.message}
                   onChange={(e) => setOrderFormData({ ...orderFormData, message: e.target.value })}
                   className="w-full bg-[#faf9f6] border border-[#e5e1da] rounded-lg px-3 py-2 outline-none focus:border-[#d4af37] resize-none h-20"
-                  placeholder={isLoggedIn ? "요청하실 사항을 적어주세요." : "그 외 요청하실 사항을 적어주세요."}
+                  placeholder={isLoggedIn ? `연락받으실 번호와 요청사항을 적어주세요.\n(예: 010-1234-5678, 배송은 주말에 해주세요.)` : "그 외 요청하실 사항을 적어주세요."}
                 />
               </div>
 
-              <button
-                type="submit"
-                disabled={isSubmittingOrder}
-                className={`w-full py-4 font-bold rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 ${isSubmittingOrder ? 'bg-[#c9c5bd] text-white cursor-not-allowed' : 'gold-gradient text-white hover:scale-[1.02] active:scale-95'
-                  }`}
-              >
-                {isSubmittingOrder ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
-                천지인 거사님께 의뢰 보내기
-              </button>
+              <div className="pt-4">
+                <PaymentButton
+                  amount={orderType === 'frame' ? 49000 : 79000}
+                  orderName={`[풍수AI] ${orderType === 'frame' ? '디지털 액자' : '12간지 비방 오브제'} 제작 의뢰`}
+                  orderType={orderType}
+                  onSuccess={() => {
+                    localStorage.setItem('temp_order_name', orderFormData.name);
+                    localStorage.setItem('temp_order_contact', orderFormData.contact);
+                    localStorage.setItem('temp_order_message', orderFormData.message);
+                    localStorage.setItem('temp_order_type', orderType);
+                    localStorage.setItem('temp_order_userId', user?.id || '');
+                    if (result) {
+                      localStorage.setItem('temp_order_analysisData', JSON.stringify({
+                        remedyArtKeyword: result.remedy_art?.solution_keyword,
+                        deficiency: result.remedy_art?.deficiency,
+                        zodiacAnimal: result.zodiac_remedy_object?.animal
+                      }));
+                    }
+                  }}
+                  onFail={handlePaymentFail}
+                  disabled={!isLoggedIn ? (!orderFormData.name || !orderFormData.contact) : false}
+                />
+              </div>
             </form>
 
             <button
