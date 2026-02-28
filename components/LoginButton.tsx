@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { LogOut, User, Key, ChevronDown } from 'lucide-react';
+import { LogOut, User, Key, ChevronDown, UserCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 export default function LoginButton() {
     const { user, signInWithKakao, signInWithGoogle, signOut, loading } = useAuth();
+    const navigate = useNavigate();
     const [isOpen, setIsOpen] = useState(false);
     const [isSigningIn, setIsSigningIn] = useState(false);
 
@@ -86,6 +88,13 @@ export default function LoginButton() {
                                 <p className="text-xs font-bold text-[#4a443b]">{displayName}</p>
                                 <p className="text-[10px] text-[#8c8273] truncate" title={user.email}>{user.email}</p>
                             </div>
+                            <button
+                                onClick={() => { setIsOpen(false); navigate('/mypage'); }}
+                                className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-[#4a443b] hover:bg-[#faf9f6] font-medium transition-colors rounded-lg"
+                            >
+                                <UserCircle className="w-4 h-4" />
+                                마이페이지
+                            </button>
                             <button
                                 onClick={handleSignOut}
                                 className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 font-medium transition-colors rounded-lg"

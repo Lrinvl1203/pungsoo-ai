@@ -1,13 +1,16 @@
 
 import React, { useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Sparkles, Home, MapPin, Heart, Send, Loader2, Compass, AlertTriangle, CheckCircle2, ShoppingBag, Download, ExternalLink, ImageIcon, Palette, RefreshCw, Flower2, Box } from 'lucide-react';
 import { UserMetadata, AnalysisResult } from './types';
 import { analyzeFengShui, generateToBeImage, generateRemedyArtImage, generateZodiacArtImage } from './services/geminiService';
 import { useAuth } from './contexts/AuthContext';
+import { useUserSettings } from './hooks/useUserSettings';
 import LoginButton from './components/LoginButton';
 import PaymentButton from './components/PaymentButton';
 
 export default function App() {
+  const location = useLocation();
   const [image, setImage] = useState<string | null>(null);
   const [toBeImage, setToBeImage] = useState<string | null>(null);
   const [remedyArt, setRemedyArt] = useState<string | null>(null);
@@ -43,22 +46,50 @@ export default function App() {
     const savedHistory = localStorage.getItem('pungsoo_history');
     if (savedHistory) {
       try {
-        setHistory(JSON.parse(savedHistory));
+        const parsedHistory = JSON.parse(savedHistory);
+        setHistory(parsedHistory);
+
+        // Check if we came from MyPage with a specific history item to load
+        if (location.state && typeof location.state.loadHistoryItem === 'number') {
+          const idx = location.state.loadHistoryItem;
+          if (parsedHistory[idx]) {
+            const item = parsedHistory[idx];
+            setResult(item.result);
+            setImage(item.image);
+            setRemedyArt(item.remedyArt);
+            setZodiacImage(item.zodiacImage || null);
+            setToBeImage(null);
+
+            // Clean up state so refreshing doesn't reload it
+            window.history.replaceState({}, document.title);
+          }
+        }
       } catch (e) {
         console.error('Failed to parse history', e);
       }
     }
-  }, []);
+  }, [location.state]);
+
+  const { settings, updateSettings } = useUserSettings();
 
   const [metadata, setMetadata] = useState<UserMetadata>({
     analysisType: 'internal',
     roomType: '침실',
     address: '',
-    birthDate: '',
-    gender: 'male',
+    birthDate: settings.birthDate,
+    gender: settings.gender,
     concern: '',
-    artStyle: 'modern'
+    artStyle: settings.artStyle
   });
+
+  // Save specific settings when they change
+  React.useEffect(() => {
+    updateSettings({
+      birthDate: metadata.birthDate,
+      gender: metadata.gender,
+      artStyle: metadata.artStyle
+    });
+  }, [metadata.birthDate, metadata.gender, metadata.artStyle]);
 
   // Handle address input change with debounce
   React.useEffect(() => {
