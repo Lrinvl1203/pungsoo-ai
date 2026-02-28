@@ -39,6 +39,14 @@ export interface AnalysisResult {
   overall_advice: string;
 }
 
+export type ImageSizeOption = '1:1' | '9:16' | '16:9' | '4:3' | '3:4' | 'custom';
+
+export interface ImageSizeConfig {
+  preset: ImageSizeOption;
+  customWidth?: number;
+  customHeight?: number;
+}
+
 export interface UserMetadata {
   analysisType: 'internal' | 'external';
   roomType?: string; // Only for internal
@@ -47,4 +55,5 @@ export interface UserMetadata {
   gender: 'male' | 'female';
   concern: string;
   artStyle: 'modern' | 'buddhist' | 'modern_buddhist';
+  imageSize: ImageSizeConfig;
 }

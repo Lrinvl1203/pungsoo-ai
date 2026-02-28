@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Sparkles, Home, MapPin, Heart, Send, Loader2, Compass, AlertTriangle, CheckCircle2, ShoppingBag, Download, ExternalLink, ImageIcon, Palette, RefreshCw, Flower2, Box } from 'lucide-react';
-import { UserMetadata, AnalysisResult } from './types';
+import { UserMetadata, AnalysisResult, ImageSizeOption } from './types';
 import { analyzeFengShui, generateToBeImage, generateRemedyArtImage, generateZodiacArtImage } from './services/geminiService';
 import { useAuth } from './contexts/AuthContext';
 import { useUserSettings } from './hooks/useUserSettings';
@@ -79,7 +79,8 @@ export default function App() {
     birthDate: settings.birthDate,
     gender: settings.gender,
     concern: '',
-    artStyle: settings.artStyle
+    artStyle: settings.artStyle,
+    imageSize: { preset: '4:3' }
   });
 
   // Save specific settings when they change
@@ -228,7 +229,7 @@ export default function App() {
       setGeneratingVisuals(true);
 
       const promises = [
-        generateRemedyArtImage(analysis.remedy_art.image_generation_prompt, metadata.artStyle),
+        generateRemedyArtImage(analysis.remedy_art.image_generation_prompt, metadata.artStyle, metadata.imageSize),
       ];
 
       if (analysis.zodiac_remedy_object) {
@@ -280,7 +281,7 @@ export default function App() {
     setRemedyArt(null); // Clear current image to show loader
 
     try {
-      const newImage = await generateRemedyArtImage(result.remedy_art.image_generation_prompt, metadata.artStyle);
+      const newImage = await generateRemedyArtImage(result.remedy_art.image_generation_prompt, metadata.artStyle, metadata.imageSize);
       setRemedyArt(newImage);
     } catch (error) {
       console.error(error);
@@ -529,6 +530,47 @@ export default function App() {
                   </div>
                 </div>
 
+                {/* Digital Art Image Size Section */}
+                <div>
+                  <label className="block text-xs font-semibold text-[#8c8273] uppercase mb-1">비방 이미지 비율 (사이즈)</label>
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {(['1:1', '9:16', '16:9', '3:4', '4:3', 'custom'] as ImageSizeOption[]).map((size) => (
+                      <button
+                        key={size}
+                        onClick={() => setMetadata({ ...metadata, imageSize: { ...metadata.imageSize, preset: size } })}
+                        className={`px-3 py-1.5 rounded-lg border text-xs font-bold transition-all ${metadata.imageSize.preset === size ? 'bg-[#d4af37] text-white border-[#d4af37] shadow-md' : 'bg-[#faf9f6] text-[#6b6256] border-[#e5e1da] hover:border-[#d4af37]'}`}
+                      >
+                        {size === 'custom' ? '직접 입력' : size}
+                      </button>
+                    ))}
+                  </div>
+                  {metadata.imageSize.preset === 'custom' && (
+                    <div className="flex items-center gap-2 mt-2 bg-[#faf9f6] p-2 rounded-lg border border-[#e5e1da]">
+                      <div className="flex-1 flex items-center gap-2">
+                        <span className="text-xs text-[#8c8273] font-semibold">가로:</span>
+                        <input
+                          type="number"
+                          placeholder="px"
+                          value={metadata.imageSize.customWidth || ''}
+                          onChange={(e) => setMetadata({ ...metadata, imageSize: { ...metadata.imageSize, customWidth: parseInt(e.target.value) || undefined } })}
+                          className="w-full bg-white border border-[#e5e1da] rounded px-2 py-1 text-sm outline-none focus:border-[#d4af37]"
+                        />
+                      </div>
+                      <span className="text-[#8c8273] text-sm">x</span>
+                      <div className="flex-1 flex items-center gap-2">
+                        <span className="text-xs text-[#8c8273] font-semibold">세로:</span>
+                        <input
+                          type="number"
+                          placeholder="px"
+                          value={metadata.imageSize.customHeight || ''}
+                          onChange={(e) => setMetadata({ ...metadata, imageSize: { ...metadata.imageSize, customHeight: parseInt(e.target.value) || undefined } })}
+                          className="w-full bg-white border border-[#e5e1da] rounded px-2 py-1 text-sm outline-none focus:border-[#d4af37]"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 <div>
                   <label className="block text-xs font-semibold text-[#8c8273] uppercase mb-1">고민사항</label>
                   <textarea
@@ -725,7 +767,7 @@ export default function App() {
                   </div>
                   <div className="p-6 md:p-8">
                     <div className="flex flex-col gap-8">
-                      <div className="w-full max-w-sm mx-auto aspect-[9/16] bg-[#fcfbfa] rounded-2xl overflow-hidden relative shadow-inner ring-1 ring-black/5">
+                      <div className={`w-full max-w-sm mx-auto ${metadata.imageSize.preset === '1:1' ? 'aspect-square' : metadata.imageSize.preset === '9:16' ? 'aspect-[9/16]' : metadata.imageSize.preset === '16:9' ? 'aspect-video w-full max-w-lg' : metadata.imageSize.preset === '3:4' ? 'aspect-[3/4]' : metadata.imageSize.preset === '4:3' ? 'aspect-[4/3] w-full max-w-md' : metadata.imageSize.customWidth && metadata.imageSize.customHeight ? `aspect-[${metadata.imageSize.customWidth}/${metadata.imageSize.customHeight}]` : 'aspect-[3/4]'} bg-[#fcfbfa] rounded-2xl overflow-hidden relative shadow-inner ring-1 ring-black/5 transition-all duration-300`}>
                         {remedyArt ? (
                           <img src={remedyArt} alt="Remedy Art" className="w-full h-full object-cover" />
                         ) : (
@@ -762,29 +804,73 @@ export default function App() {
                         </div>
 
                         {/* Style Controls for Regeneration */}
-                        <div className="p-5 bg-white rounded-xl border border-[#e5e1da] shadow-sm space-y-4">
-                          <h5 className="text-[14px] font-bold text-[#8c8273] flex items-center gap-2">
-                            <Palette className="w-4 h-4" /> 비방 스타일 변경 <span className="text-[11px] font-normal px-2 py-0.5 bg-[#fdfbf7] rounded text-[#d4af37] border border-[#d4af37]/30">옵션</span>
-                          </h5>
-                          <div className="grid grid-cols-3 gap-2.5">
-                            <button
-                              onClick={() => setMetadata({ ...metadata, artStyle: 'modern' })}
-                              className={`py-3 text-[13px] font-bold rounded-xl transition-all flex items-center justify-center gap-1 ${metadata.artStyle === 'modern' ? 'bg-[#4a443b] text-white shadow-md shadow-[#4a443b]/20 scale-[1.02]' : 'bg-[#faf9f6] text-[#6b6256] hover:bg-[#e5e1da]'}`}
-                            >
-                              모던
-                            </button>
-                            <button
-                              onClick={() => setMetadata({ ...metadata, artStyle: 'buddhist' })}
-                              className={`py-3 text-[13px] font-bold rounded-xl transition-all flex items-center justify-center gap-1 ${metadata.artStyle === 'buddhist' ? 'bg-[#4a443b] text-white shadow-md shadow-[#4a443b]/20 scale-[1.02]' : 'bg-[#faf9f6] text-[#6b6256] hover:bg-[#e5e1da]'}`}
-                            >
-                              레트로
-                            </button>
-                            <button
-                              onClick={() => setMetadata({ ...metadata, artStyle: 'modern_buddhist' })}
-                              className={`py-3 text-[13px] font-bold rounded-xl transition-all flex items-center justify-center gap-1 ${metadata.artStyle === 'modern_buddhist' ? 'bg-[#4a443b] text-white shadow-md shadow-[#4a443b]/20 scale-[1.02]' : 'bg-[#faf9f6] text-[#6b6256] hover:bg-[#e5e1da]'}`}
-                            >
-                              모던+레트로
-                            </button>
+                        <div className="p-5 bg-white rounded-xl border border-[#e5e1da] shadow-sm space-y-5">
+                          <div>
+                            <h5 className="text-[14px] font-bold text-[#8c8273] flex items-center gap-2 mb-3">
+                              <Palette className="w-4 h-4" /> 옵션 변경하여 재생성 (스타일/사이즈)
+                            </h5>
+
+                            <div className="space-y-4">
+                              {/* Style Options */}
+                              <div>
+                                <label className="block text-[11px] font-semibold text-[#b0a99f] uppercase mb-1.5">스타일</label>
+                                <div className="grid grid-cols-3 gap-2">
+                                  <button
+                                    onClick={() => setMetadata({ ...metadata, artStyle: 'modern' })}
+                                    className={`py-2.5 text-[12px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 ${metadata.artStyle === 'modern' ? 'bg-[#4a443b] text-white shadow-md' : 'bg-[#faf9f6] text-[#6b6256] hover:bg-[#e5e1da]'}`}
+                                  >
+                                    모던
+                                  </button>
+                                  <button
+                                    onClick={() => setMetadata({ ...metadata, artStyle: 'buddhist' })}
+                                    className={`py-2.5 text-[12px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 ${metadata.artStyle === 'buddhist' ? 'bg-[#4a443b] text-white shadow-md' : 'bg-[#faf9f6] text-[#6b6256] hover:bg-[#e5e1da]'}`}
+                                  >
+                                    레트로
+                                  </button>
+                                  <button
+                                    onClick={() => setMetadata({ ...metadata, artStyle: 'modern_buddhist' })}
+                                    className={`py-2.5 text-[12px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 ${metadata.artStyle === 'modern_buddhist' ? 'bg-[#4a443b] text-white shadow-md' : 'bg-[#faf9f6] text-[#6b6256] hover:bg-[#e5e1da]'}`}
+                                  >
+                                    모던+레트로
+                                  </button>
+                                </div>
+                              </div>
+
+                              {/* Size Options */}
+                              <div>
+                                <label className="block text-[11px] font-semibold text-[#b0a99f] uppercase mb-1.5">비율 (사이즈)</label>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {(['1:1', '9:16', '16:9', '3:4', '4:3', 'custom'] as ImageSizeOption[]).map((size) => (
+                                    <button
+                                      key={size}
+                                      onClick={() => setMetadata({ ...metadata, imageSize: { ...metadata.imageSize, preset: size } })}
+                                      className={`px-2.5 py-1.5 rounded-md text-[11px] font-bold transition-all ${metadata.imageSize.preset === size ? 'bg-[#d4af37] text-white shadow-md' : 'bg-[#faf9f6] text-[#6b6256] border border-[#e5e1da] hover:border-[#d4af37]'}`}
+                                    >
+                                      {size === 'custom' ? '직접입력' : size}
+                                    </button>
+                                  ))}
+                                </div>
+                                {metadata.imageSize.preset === 'custom' && (
+                                  <div className="flex items-center gap-2 mt-2 bg-[#faf9f6] p-2 rounded-lg border border-[#e5e1da]">
+                                    <input
+                                      type="number"
+                                      placeholder="가로 px"
+                                      value={metadata.imageSize.customWidth || ''}
+                                      onChange={(e) => setMetadata({ ...metadata, imageSize: { ...metadata.imageSize, customWidth: parseInt(e.target.value) || undefined } })}
+                                      className="w-full bg-white border border-[#e5e1da] rounded px-2 py-1 text-[11px] outline-none focus:border-[#d4af37]"
+                                    />
+                                    <span className="text-[#8c8273] text-[10px]">x</span>
+                                    <input
+                                      type="number"
+                                      placeholder="세로 px"
+                                      value={metadata.imageSize.customHeight || ''}
+                                      onChange={(e) => setMetadata({ ...metadata, imageSize: { ...metadata.imageSize, customHeight: parseInt(e.target.value) || undefined } })}
+                                      className="w-full bg-white border border-[#e5e1da] rounded px-2 py-1 text-[11px] outline-none focus:border-[#d4af37]"
+                                    />
+                                  </div>
+                                )}
+                              </div>
+                            </div>
                           </div>
 
                           <button
@@ -793,7 +879,7 @@ export default function App() {
                             className="w-full py-3.5 bg-gradient-to-r from-[#d4af37] to-[#c29d2f] text-white text-[15px] font-bold rounded-xl hover:shadow-lg transition-all flex items-center justify-center gap-2"
                           >
                             {isRegeneratingArt ? <Loader2 className="w-5 h-5 animate-spin" /> : <RefreshCw className="w-5 h-5" />}
-                            선택한 스타일로 비방 재생성
+                            위 옵션으로 비방 다시 그리기
                           </button>
                         </div>
 
@@ -1003,7 +1089,7 @@ export default function App() {
             본 서비스는 40년 대가의 풍수 이론을 학습한 AI가 제공하는 분석 결과입니다.
             엔터테인먼트 및 인테리어 참고용으로 활용하시길 권장하며, 개인의 선택과 결과에 대한 법적 책임은 사용자에게 있습니다.
           </p>
-          <p className="text-[#b0a99f] text-[10px]">© 2024 Feng Shui Grand Master AI. All rights reserved.</p>
+          <p className="text-[#b0a99f] text-[10px]">© Feng Shui Grand Master AI. All rights reserved.</p>
         </div>
       </footer>
 

@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { Loader2, CreditCard } from 'lucide-react';
 
 // TODO: Replace with your actual Toss client key
-const clientKey = import.meta.env.VITE_TOSS_CLIENT_KEY || 'test_ck_D5GePWvyJnrK0W0k6q8gLzN97Eoq';
+const clientKey = import.meta.env.VITE_TOSS_CLIENT_KEY || 'test_gck_docs_Ovk5rk1EwkEbP0W43n07xlzm';
 const customerKey = 'test_customer_key'; // In production, use user's unique ID if logged in
 
 interface PaymentButtonProps {

@@ -5,7 +5,7 @@ export default async function handler(req: any, res: any) {
         return res.status(405).json({ error: 'Method Not Allowed' });
     }
 
-    const { type, image, prompt, artStyle, solutions, zodiacObj } = req.body;
+    const { type, image, prompt, artStyle, solutions, zodiacObj, imageSize } = req.body;
     const falKey = process.env.FAL_KEY;
 
     if (!falKey) {
@@ -59,10 +59,31 @@ export default async function handler(req: any, res: any) {
       
       The image must be suitable for a mobile wallpaper or framed wall art. High resolution, 8k.`;
 
+            let finalImageSize: any = "portrait_4_3"; // Default
+
+            if (imageSize) {
+                if (imageSize.preset === 'custom' && imageSize.customWidth && imageSize.customHeight) {
+                    finalImageSize = {
+                        width: imageSize.customWidth,
+                        height: imageSize.customHeight
+                    };
+                } else if (imageSize.preset !== 'custom') {
+                    // Map presets to Fal AI predefined sizes
+                    switch (imageSize.preset) {
+                        case '1:1': finalImageSize = "square_hd"; break;
+                        case '9:16': finalImageSize = "portrait_16_9"; break;
+                        case '16:9': finalImageSize = "landscape_16_9"; break;
+                        case '4:3': finalImageSize = "landscape_4_3"; break;
+                        case '3:4': finalImageSize = "portrait_4_3"; break;
+                        default: finalImageSize = "portrait_4_3";
+                    }
+                }
+            }
+
             result = await fal.subscribe("fal-ai/bytedance/seedream/v4.5/text-to-image", {
                 input: {
                     prompt: t2iPrompt,
-                    image_size: "portrait_4_3",
+                    image_size: finalImageSize,
                     num_images: 1,
                     enable_safety_checker: true
                 },

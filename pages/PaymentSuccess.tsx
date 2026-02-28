@@ -52,9 +52,20 @@ export default function PaymentSuccess() {
                     localStorage.removeItem('temp_order_userId');
                     localStorage.removeItem('temp_order_analysisData');
                 } else {
-                    const data = await response.json();
+                    let errorMsg = '결제 승인 중 오류가 발생했습니다.';
+                    try {
+                        const data = await response.json();
+                        if (data.error) errorMsg = data.error;
+                    } catch (e) {
+                        // Handle cases where response is not JSON (e.g., 404 HTML from Vite dev server)
+                        if (response.status === 404) {
+                            errorMsg = '개발 모드(npm run dev)에서는 결제 승인 API가 실행되지 않습니다. Vercel 환경에서 테스트해주세요.';
+                        } else {
+                            errorMsg = `서버 오류 (${response.status})`;
+                        }
+                    }
                     setStatus('fail');
-                    setErrorMessage(data.error || '결제 승인 중 오류가 발생했습니다.');
+                    setErrorMessage(errorMsg);
                 }
             } catch (error) {
                 console.error(error);

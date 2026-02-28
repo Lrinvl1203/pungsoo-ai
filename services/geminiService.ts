@@ -1,5 +1,5 @@
 
-import { UserMetadata, AnalysisResult, SolutionItem } from "../types";
+import { UserMetadata, AnalysisResult, SolutionItem, ImageSizeConfig } from "../types";
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 const isTestMode = () => {
@@ -108,7 +108,8 @@ export const generateToBeImage = async (
 
 export const generateRemedyArtImage = async (
   prompt: string,
-  style: 'modern' | 'buddhist' | 'modern_buddhist' = 'modern'
+  style: 'modern' | 'buddhist' | 'modern_buddhist' = 'modern',
+  imageSize?: ImageSizeConfig
 ): Promise<string> => {
   if (isTestMode()) {
     await delay(1500);
@@ -118,7 +119,7 @@ export const generateRemedyArtImage = async (
   const response = await fetch('/api/generate-visuals', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ type: 'remedy', prompt, artStyle: style }),
+    body: JSON.stringify({ type: 'remedy', prompt, artStyle: style, imageSize }),
   });
 
   if (!response.ok) {
