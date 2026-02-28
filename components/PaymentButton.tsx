@@ -98,7 +98,7 @@ export default function PaymentButton({ amount, orderName, orderType, onSuccess,
     return (
         <div className="w-full flex flex-col gap-4">
             {/* Toss Payment Widget Containers */}
-            <div className={showWidget ? 'block' : 'hidden'}>
+            <div className={`w-full overflow-y-auto max-h-[50vh] custom-scrollbar rounded-xl border border-[#e5e1da] ${showWidget ? 'block' : 'hidden'}`}>
                 <div id="payment-widget" className="w-full" />
                 <div id="agreement" className="w-full" />
             </div>
