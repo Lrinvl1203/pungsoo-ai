@@ -999,7 +999,7 @@ export default function App() {
       {/* Inquiry Modal */}
       {isInquiryModalOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full p-8 shadow-2xl animate-in zoom-in-95 duration-200">
+          <div className="bg-white rounded-3xl max-w-md w-full p-8 shadow-2xl animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto custom-scrollbar">
             <h3 className="serif-font text-2xl font-bold text-[#4a443b] mb-2">
               {orderType === 'frame' ? '액자 제작 의뢰' : '오브제 제작 의뢰'}
             </h3>
