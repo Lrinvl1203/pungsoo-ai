@@ -13,7 +13,7 @@ export default async function handler(req: any, res: any) {
         }
 
         const resend = new Resend(resendKey);
-        const { orderType, name, contact, message, analysisData } = req.body;
+        const { orderType, name, contact, message, analysisData, objectSize } = req.body;
 
         if (!orderType || !name || !contact) {
             return res.status(400).json({ error: 'Missing required fields' });
@@ -42,6 +42,17 @@ export default async function handler(req: any, res: any) {
             }
         } else {
             emailHtml += `<p>분석 데이터 없음</p>`;
+        }
+
+        if (orderType === 'object' && objectSize) {
+            emailHtml += `
+      <hr />
+      <h3>제작 사이즈</h3>
+      <p><strong>가로 (W):</strong> ${objectSize.width} cm</p>
+      <p><strong>세로 (D):</strong> ${objectSize.height} cm</p>
+      <p><strong>높이 (H):</strong> ${objectSize.depth} cm</p>
+      <p style="color:#888;">※ 최종 사이즈는 상담 후 확정됩니다.</p>
+    `;
         }
 
         const data = await resend.emails.send({

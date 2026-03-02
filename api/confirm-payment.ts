@@ -5,7 +5,7 @@ export default async function handler(req: any, res: any) {
         return res.status(405).json({ error: 'Method Not Allowed' });
     }
 
-    const { paymentKey, orderId, amount, name, contact, message, orderType, analysisData, userId } = req.body;
+    const { paymentKey, orderId, amount, name, contact, message, orderType, analysisData, userId, objectSize } = req.body;
 
     if (!paymentKey || !orderId || !amount) {
         return res.status(400).json({ error: 'Missing payment information' });
@@ -60,6 +60,17 @@ export default async function handler(req: any, res: any) {
                 if (orderType === 'object' && analysisData.zodiacAnimal) emailHtml += `<p><strong>추천 12간지 동물:</strong> ${analysisData.zodiacAnimal}</p>`;
             } else {
                 emailHtml += `<p>분석 데이터 없음</p>`;
+            }
+
+            if (orderType === 'object' && objectSize) {
+                emailHtml += `
+        <hr />
+        <h3>제작 사이즈</h3>
+        <p><strong>가로 (W):</strong> ${objectSize.width} cm</p>
+        <p><strong>세로 (D):</strong> ${objectSize.height} cm</p>
+        <p><strong>높이 (H):</strong> ${objectSize.depth} cm</p>
+        <p style="color:#888;">※ 최종 사이즈는 상담 후 확정됩니다.</p>
+      `;
             }
 
             await resend.emails.send({

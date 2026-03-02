@@ -120,7 +120,7 @@ export default function App() {
 
   const [isInquiryModalOpen, setIsInquiryModalOpen] = useState(false);
   const [orderType, setOrderType] = useState<'frame' | 'object'>('frame');
-  const [orderFormData, setOrderFormData] = useState({ name: '', contact: '', message: '' });
+  const [orderFormData, setOrderFormData] = useState({ name: '', contact: '', message: '', objectSize: { width: 5, height: 5, depth: 5 } });
   const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
   const { user } = useAuth();
   const isLoggedIn = !!user;
@@ -139,6 +139,7 @@ export default function App() {
           contact: orderFormData.contact,
           message: orderFormData.message,
           userId: user?.id,
+          objectSize: orderType === 'object' ? orderFormData.objectSize : undefined,
           analysisData: result ? {
             remedyArtKeyword: result.remedy_art?.solution_keyword,
             deficiency: result.remedy_art?.deficiency,
@@ -150,7 +151,7 @@ export default function App() {
       if (response.ok) {
         alert('의뢰가 성공적으로 접수되었습니다. 곧 연락드리겠습니다.');
         setIsInquiryModalOpen(false);
-        setOrderFormData({ name: '', contact: '', message: '' });
+        setOrderFormData({ name: '', contact: '', message: '', objectSize: { width: 5, height: 5, depth: 5 } });
       } else {
         alert('의뢰 전송에 실패했습니다. 관리자에게 문의해주세요.');
       }
@@ -248,7 +249,12 @@ export default function App() {
       let zodiacObjRes = settled[1];
       let visualObj = metadata.analysisType === 'internal' ? settled[2] : null;
 
-      if (visualObj && visualObj.status === 'fulfilled') setToBeImage(visualObj.value);
+      if (visualObj && visualObj.status === 'fulfilled') {
+        setToBeImage(visualObj.value);
+      } else if (visualObj && visualObj.status === 'rejected') {
+        console.error("To-Be image generation failed:", visualObj.reason);
+        setToBeImage('error');
+      }
       let newZodiacImage = zodiacObjRes && zodiacObjRes.status === 'fulfilled' && zodiacObjRes.value ? zodiacObjRes.value : null;
       if (newZodiacImage) setZodiacImage(newZodiacImage);
 
@@ -744,8 +750,14 @@ export default function App() {
                         <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-md text-white px-3 py-1.5 rounded-lg font-bold tracking-widest text-xs shadow-lg">BEFORE</div>
                       </div>
                       <div className="relative aspect-square bg-[#faf9f6] flex items-center justify-center">
-                        {toBeImage ? (
+                        {toBeImage && toBeImage !== 'error' ? (
                           <img src={toBeImage} alt="After" className="w-full h-full object-cover" />
+                        ) : toBeImage === 'error' ? (
+                          <div className="text-center p-4">
+                            <AlertTriangle className="w-8 h-8 mx-auto mb-3 text-red-400" />
+                            <p className="text-sm text-[#8c8273] font-medium">이미지 생성에 실패했습니다.</p>
+                            <p className="text-xs text-[#b0a99f] mt-1">다시 분석을 시도해주세요.</p>
+                          </div>
                         ) : (
                           <div className="text-center p-4">
                             <Loader2 className="w-8 h-8 animate-spin mx-auto mb-3 text-[#d4af37]" />
@@ -1037,6 +1049,83 @@ export default function App() {
                 </>
               )}
 
+              {/* 오브제 제작 사이즈 입력 */}
+              {orderType === 'object' && (
+                <div className="bg-[#fdfbf7] rounded-xl border border-[#d4af37]/30 p-4 space-y-3">
+                  <label className="block text-xs font-semibold text-[#8c8273] uppercase mb-1 flex items-center gap-1.5">
+                    <Box className="w-3.5 h-3.5 text-[#d4af37]" /> 제작 사이즈 (cm)
+                  </label>
+
+                  {/* 프리셋 버튼 */}
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      { label: '소형 (5×5×5)', w: 5, h: 5, d: 5 },
+                      { label: '중형 (10×10×10)', w: 10, h: 10, d: 10 },
+                      { label: '대형 (15×15×15)', w: 15, h: 15, d: 15 },
+                    ].map((preset) => (
+                      <button
+                        key={preset.label}
+                        type="button"
+                        onClick={() => setOrderFormData({ ...orderFormData, objectSize: { width: preset.w, height: preset.h, depth: preset.d } })}
+                        className={`px-3 py-1.5 rounded-lg border text-[11px] font-bold transition-all ${orderFormData.objectSize.width === preset.w &&
+                          orderFormData.objectSize.height === preset.h &&
+                          orderFormData.objectSize.depth === preset.d
+                          ? 'bg-[#d4af37] text-white border-[#d4af37] shadow-md'
+                          : 'bg-white text-[#6b6256] border-[#e5e1da] hover:border-[#d4af37]'
+                          }`}
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* 직접 입력 */}
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { label: '가로 (W)', key: 'width' as const },
+                      { label: '세로 (D)', key: 'height' as const },
+                      { label: '높이 (H)', key: 'depth' as const },
+                    ].map(({ label, key }) => (
+                      <div key={key}>
+                        <label className="block text-[10px] font-semibold text-[#b0a99f] mb-1">{label}</label>
+                        <div className="flex items-center gap-1 bg-white border border-[#e5e1da] rounded-lg px-2 py-1.5 focus-within:border-[#d4af37] transition-colors">
+                          <input
+                            type="number"
+                            min={1}
+                            max={100}
+                            value={orderFormData.objectSize[key]}
+                            onChange={(e) => setOrderFormData({
+                              ...orderFormData,
+                              objectSize: { ...orderFormData.objectSize, [key]: parseInt(e.target.value) || 1 }
+                            })}
+                            className="w-full outline-none text-sm text-[#4a443b] font-bold bg-transparent"
+                          />
+                          <span className="text-[10px] text-[#b0a99f] shrink-0">cm</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* 크기 비교 안내 */}
+                  <div className="bg-white rounded-lg border border-[#e5e1da] px-3 py-2.5">
+                    <p className="text-[10px] font-bold text-[#8c8273] uppercase mb-1.5">📐 크기 비교</p>
+                    {(() => {
+                      const vol = orderFormData.objectSize.width * orderFormData.objectSize.height * orderFormData.objectSize.depth;
+                      const maxDim = Math.max(orderFormData.objectSize.width, orderFormData.objectSize.height, orderFormData.objectSize.depth);
+                      if (maxDim <= 5) return <p className="text-[11px] text-[#6b6256] leading-relaxed">🧊 골프공 (4cm) ~ 탁구공 (4cm) 정도의 크기입니다.</p>;
+                      if (maxDim <= 8) return <p className="text-[11px] text-[#6b6256] leading-relaxed">🍎 사과 하나 정도의 크기입니다.</p>;
+                      if (maxDim <= 12) return <p className="text-[11px] text-[#6b6256] leading-relaxed">☕ 머그컵 또는 스마트폰 정도의 크기입니다.</p>;
+                      if (maxDim <= 18) return <p className="text-[11px] text-[#6b6256] leading-relaxed">📚 A5 노트 또는 두꺼운 책 정도의 크기입니다.</p>;
+                      if (maxDim <= 25) return <p className="text-[11px] text-[#6b6256] leading-relaxed">🖥️ A4 용지 또는 소형 화분 정도의 크기입니다.</p>;
+                      return <p className="text-[11px] text-[#6b6256] leading-relaxed">🪴 대형 화분이나 책상 소품 수준의 크기입니다. 제작 전 별도 상담이 진행됩니다.</p>;
+                    })()}
+                    <p className="text-[10px] text-[#b0a99f] mt-1.5">
+                      현재 입력: {orderFormData.objectSize.width}cm × {orderFormData.objectSize.height}cm × {orderFormData.objectSize.depth}cm
+                    </p>
+                  </div>
+                </div>
+              )}
+
               <div>
                 <label className="block text-xs font-semibold text-[#8c8273] mb-1">추가 요청사항 (선택사항)</label>
                 <textarea
@@ -1058,6 +1147,9 @@ export default function App() {
                     localStorage.setItem('temp_order_message', orderFormData.message);
                     localStorage.setItem('temp_order_type', orderType);
                     localStorage.setItem('temp_order_userId', user?.id || '');
+                    if (orderType === 'object') {
+                      localStorage.setItem('temp_order_objectSize', JSON.stringify(orderFormData.objectSize));
+                    }
                     if (result) {
                       localStorage.setItem('temp_order_analysisData', JSON.stringify({
                         remedyArtKeyword: result.remedy_art?.solution_keyword,

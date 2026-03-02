@@ -38,7 +38,8 @@ export default function PaymentSuccess() {
                         message: localStorage.getItem('temp_order_message') || '',
                         orderType: localStorage.getItem('temp_order_type') || 'frame',
                         userId: localStorage.getItem('temp_order_userId') || '',
-                        analysisData: JSON.parse(localStorage.getItem('temp_order_analysisData') || 'null')
+                        analysisData: JSON.parse(localStorage.getItem('temp_order_analysisData') || 'null'),
+                        objectSize: JSON.parse(localStorage.getItem('temp_order_objectSize') || 'null')
                     }),
                 });
 
@@ -51,6 +52,7 @@ export default function PaymentSuccess() {
                     localStorage.removeItem('temp_order_type');
                     localStorage.removeItem('temp_order_userId');
                     localStorage.removeItem('temp_order_analysisData');
+                    localStorage.removeItem('temp_order_objectSize');
                 } else {
                     let errorMsg = '결제 승인 중 오류가 발생했습니다.';
                     try {

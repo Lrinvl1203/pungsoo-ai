@@ -21,22 +21,19 @@ export default async function handler(req: any, res: any) {
 
         if (type === 'to-be') {
             const itemsText = solutions.map((item: any) => `${item.item_name} (${item.placement_guide})`).join(", ");
-            const editPrompt = `
-        Modify this original room image. 
-        Maintain EXACT camera angle and room structure. 
-        Add these items naturally: ${itemsText}. 
-        Style: Photo-realistic, interior design photography.
-      `;
+            const editPrompt = `Look at Figure 1. Modify this room image by adding these interior items naturally into the scene: ${itemsText}. Maintain the EXACT same camera angle, room structure, walls, floor, and existing furniture. Only add the new items in appropriate locations. Style: Photo-realistic interior design photography, natural lighting.`;
 
-            // For to-be, use Seedream edit model. 
-            // image is expected to be a data URI (e.g. data:image/jpeg;base64,...) 
-            // from the frontend. We pass it directly to image_urls.
-            const imageUrlToEdit = image.startsWith('data:') ? image : `data:image/jpeg;base64,${image}`;
+            // Upload image to fal storage first to avoid Vercel 4.5MB body size limit
+            const base64Data = image.replace(/^data:image\/\w+;base64,/, '');
+            const imageBuffer = Buffer.from(base64Data, 'base64');
+            const blob = new Blob([imageBuffer], { type: 'image/jpeg' });
+            const uploadedUrl = await fal.storage.upload(blob);
+            console.log("Uploaded image to fal storage:", uploadedUrl);
 
             result = await fal.subscribe("fal-ai/bytedance/seedream/v4.5/edit", {
                 input: {
                     prompt: editPrompt,
-                    image_urls: [imageUrlToEdit],
+                    image_urls: [uploadedUrl],
                     image_size: "landscape_4_3",
                     num_images: 1,
                     enable_safety_checker: true
