@@ -2,14 +2,70 @@
 import React, { useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Sparkles, Home, MapPin, Heart, Send, Loader2, Compass, AlertTriangle, CheckCircle2, ShoppingBag, Download, ExternalLink, ImageIcon, Palette, RefreshCw, Flower2, Box } from 'lucide-react';
-import { UserMetadata, AnalysisResult, ImageSizeOption } from './types';
-import { analyzeFengShui, generateToBeImage, generateRemedyArtImage, generateZodiacArtImage } from './services/geminiService';
-import { useAuth } from './contexts/AuthContext';
-import { useUserSettings } from './hooks/useUserSettings';
-import LoginButton from './components/LoginButton';
-import PaymentButton from './components/PaymentButton';
+import { UserMetadata, AnalysisResult, ImageSizeOption } from '../types';
+import { analyzeFengShui, generateToBeImage, generateRemedyArtImage, generateZodiacArtImage } from '../services/geminiService';
+import { useAuth } from '../contexts/AuthContext';
+import { useUserSettings } from '../hooks/useUserSettings';
+import LoginButton from '../components/LoginButton';
+import PaymentButton from '../components/PaymentButton';
 
-export default function App() {
+export default function ConceptApp() {
+  React.useEffect(() => {
+    // Inject Google Fonts
+    const link1 = document.createElement('link');
+    link1.href = 'https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800;900&display=swap';
+    link1.rel = 'stylesheet';
+    document.head.appendChild(link1);
+
+    const link2 = document.createElement('link');
+    link2.href = 'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap';
+    link2.rel = 'stylesheet';
+    document.head.appendChild(link2);
+
+    // Inject Tailwind classes specifically for this test page dynamically
+    const script1 = document.createElement('script');
+    script1.src = 'https://cdn.tailwindcss.com?plugins=forms,container-queries';
+    document.head.appendChild(script1);
+
+    const script2 = document.createElement('script');
+    script2.innerHTML = `
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#f2b90d",
+                        "background-light": "#f8f8f5",
+                        "background-dark": "#221e10",
+                    },
+                    fontFamily: {
+                        "display": ["Plus Jakarta Sans", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    `;
+    document.head.appendChild(script2);
+
+    // Store original class
+    const originalHtmlClass = document.documentElement.className;
+    document.documentElement.className = 'dark';
+
+    return () => {
+      if (document.head.contains(link1)) document.head.removeChild(link1);
+      if (document.head.contains(link2)) document.head.removeChild(link2);
+      if (document.head.contains(script1)) document.head.removeChild(script1);
+      if (document.head.contains(script2)) document.head.removeChild(script2);
+      document.documentElement.className = originalHtmlClass;
+    };
+  }, []);
+
   const location = useLocation();
   const [image, setImage] = useState<string | null>(null);
   const [toBeImage, setToBeImage] = useState<string | null>(null);

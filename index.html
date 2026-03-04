@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html class="dark" lang="ko">
 
 <head>
     <meta charset="UTF-8">
@@ -10,7 +10,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
-        href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;700&family=Pretendard:wght@300;400;600;700&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800;900&family=Noto+Serif+KR:wght@400;700&family=Pretendard:wght@300;400;600;700&display=swap"
         rel="stylesheet">
 
     <!-- OpenGraph Tags -->
@@ -20,9 +20,9 @@
     <meta property="og:url" content="https://pungsoo-ai.vercel.app">
     <style>
         body {
-            font-family: 'Pretendard', sans-serif;
-            background-color: #fdfbf7;
-            color: #2d2d2d;
+            font-family: 'Plus Jakarta Sans', 'Pretendard', sans-serif;
+            background-color: #221e10;
+            color: #f1f5f9;
         }
 
         .serif-font {
@@ -44,6 +44,23 @@
   }
 }
 </script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        'primary': '#f2b90d',
+                        'background-light': '#f8f8f5',
+                        'background-dark': '#221e10',
+                    },
+                    fontFamily: {
+                        'display': ['Plus Jakarta Sans', 'Pretendard', 'sans-serif']
+                    },
+                },
+            },
+        }
+    </script>
     <link rel="stylesheet" href="/index.css">
 </head>
 
