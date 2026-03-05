@@ -9,6 +9,7 @@ import PaymentFail from './pages/PaymentFail';
 import MyPage from './pages/MyPage';
 import ConceptTest from './pages/ConceptTest';
 import ConceptApp from './pages/ConceptApp';
+import LandingTest from './pages/LandingTest';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -27,6 +28,7 @@ root.render(
           <Route path="/payment/fail" element={<PaymentFail />} />
           <Route path="/concept-test" element={<ConceptTest />} />
           <Route path="/concept-app" element={<ConceptApp />} />
+          <Route path="/landing-test" element={<LandingTest />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>
