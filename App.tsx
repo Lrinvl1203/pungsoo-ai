@@ -699,8 +699,12 @@ export default function App() {
                     <div className="absolute inset-[6px] border-4 border-transparent border-b-primary/50 rounded-full animate-spin" style={{ animationDuration: '2.5s', animationDirection: 'reverse' }}></div>
                     <Compass className="absolute inset-0 m-auto w-10 h-10 text-primary loading-pulse" />
                   </div>
-                  <h3 className="text-2xl font-bold text-white mb-2">공간의 명당을 찾는 중...</h3>
-                  <p className="text-slate-400 max-w-xs">부족한 기운을 채울 예술적 비방을 그려내고 있습니다.</p>
+                  <div className="flex -space-x-4 mb-6">
+                    <img src="/images/masters/cheongpung.jpeg" className="w-16 h-16 rounded-full border-4 border-[#221e10] object-cover relative z-10 shadow-lg" alt="청풍 도사" />
+                    <img src="/images/masters/myeongwol.jpeg" className="w-16 h-16 rounded-full border-4 border-[#221e10] object-cover relative z-0 shadow-lg" alt="명월 도사" />
+                  </div>
+                  <h3 className="text-2xl font-bold text-white mb-2">두 대가가 전력을 다해 감명 중입니다...</h3>
+                  <p className="text-slate-400 max-w-xs">청풍 도사의 공간 진단과 명월 도사의 비방 처방을 준비하고 있습니다.</p>
                   <div className="mt-6 flex gap-1.5">
                     <div className="w-2 h-2 rounded-full bg-primary loading-dot" style={{ animationDelay: '0s' }}></div>
                     <div className="w-2 h-2 rounded-full bg-primary loading-dot" style={{ animationDelay: '0.2s' }}></div>
@@ -724,9 +728,21 @@ export default function App() {
                     <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
                       <Compass className="w-40 h-40" />
                     </div>
-                    <h3 className="font-bold text-2xl font-bold text-white mb-4 flex items-center gap-2">
-                      <Sparkles className="w-6 h-6 text-primary" /> 종합 점수: <span className="text-primary text-3xl ml-1">{result.feng_shui_score}점</span>
-                    </h3>
+                    <div className="flex items-start justify-between mb-6 border-b border-primary/20 pb-4">
+                      <div className="flex items-center gap-4">
+                        <img src="/images/masters/cheongpung.jpeg" className="w-14 h-14 rounded-full border-2 border-primary object-cover" alt="청풍" />
+                        <div>
+                          <div className="text-primary font-bold text-xs mb-1 uppercase tracking-widest">진단 (診)</div>
+                          <h3 className="text-2xl font-bold text-white flex items-center gap-2">
+                            청풍 도사의 공간 감정서
+                          </h3>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-slate-400 text-sm font-medium mb-1">종합 풍수 점수</div>
+                        <div className="text-primary text-3xl font-black">{result.feng_shui_score}점</div>
+                      </div>
+                    </div>
                     <p className="text-slate-300 text-[17px] mb-6 leading-relaxed font-medium">{result.analysis_summary}</p>
                     <div className="space-y-3 relative z-10">
                       {result.diagnosis.map((diag, idx) => (
@@ -764,9 +780,15 @@ export default function App() {
                   {result.solution_items && result.solution_items.length > 0 && (
                     <section className="bg-white/5 backdrop-blur-xl rounded-2xl overflow-hidden shadow-xl border border-white/10 stagger-item" style={{ animationDelay: '0.3s' }}>
                       <div className="bg-white/5 backdrop-blur-sm p-5 border-b border-white/10 flex justify-between items-center">
-                        <h3 className="font-bold font-bold text-white flex items-center gap-2 text-xl">
-                          <ShoppingBag className="w-6 h-6 text-primary" /> 풍수 인테리어 처방
-                        </h3>
+                        <div className="flex items-center gap-3">
+                          <img src="/images/masters/myeongwol.jpeg" className="w-10 h-10 rounded-full border-2 border-primary object-cover" alt="명월" />
+                          <div>
+                            <div className="text-primary font-bold text-[10px] uppercase tracking-widest mb-0.5">처방 (方)</div>
+                            <h3 className="font-bold font-bold text-white flex items-center gap-2 text-xl">
+                              명월 도사의 맞춤 비방 가이드
+                            </h3>
+                          </div>
+                        </div>
                       </div>
                       <div className="p-6">
                         <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
@@ -831,8 +853,9 @@ export default function App() {
                   {/* 5. Digital Remedy Art */}
                   <section className="bg-white/5 backdrop-blur-xl rounded-2xl overflow-hidden shadow-2xl border border-primary/40 ring-4 ring-primary/10 mt-10 stagger-item" style={{ animationDelay: '0.5s' }}>
                     <div className="bg-primary text-background-dark p-5 text-white flex justify-between items-center shadow-sm">
-                      <h3 className="font-bold font-bold flex items-center gap-2 text-xl">
-                        <Sparkles className="w-6 h-6 text-white" /> AI 풍수 처방: 디지털 비방
+                      <h3 className="font-bold font-bold flex items-center gap-3 text-xl">
+                        <img src="/images/masters/myeongwol.jpeg" className="w-8 h-8 rounded-full border border-white" alt="명월" />
+                        AI 풍수 처방: 디지털 비방 아트
                       </h3>
                     </div>
                     <div className="p-6 md:p-8">
@@ -976,8 +999,9 @@ export default function App() {
                   {result.zodiac_remedy_object && (
                     <section className="bg-white/5 backdrop-blur-xl rounded-2xl overflow-hidden shadow-2xl border border-primary/40 ring-4 ring-primary/10 mt-10 stagger-item" style={{ animationDelay: '0.6s' }}>
                       <div className="bg-primary text-background-dark p-5 text-white flex justify-between items-center shadow-sm">
-                        <h3 className="font-bold font-bold flex items-center gap-2 text-xl">
-                          <Box className="w-6 h-6 text-white" /> AI 풍수 처방: 12간지 비방 오브제
+                        <h3 className="font-bold font-bold flex items-center gap-3 text-xl">
+                          <img src="/images/masters/myeongwol.jpeg" className="w-8 h-8 rounded-full border border-white" alt="명월" />
+                          AI 풍수 처방: 12간지 비방 오브제
                         </h3>
                       </div>
                       <div className="p-6 md:p-8">
@@ -1054,10 +1078,16 @@ export default function App() {
                   <div className="bg-white/5 backdrop-blur-xl rounded-xl p-10 border-2 border-primary/30 text-center shadow-lg mt-12 mb-8 relative overflow-hidden group stagger-item" style={{ animationDelay: '0.7s' }}>
                     <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-primary/0 via-primary to-primary/0"></div>
                     <div className="absolute bottom-0 left-0 w-full h-1.5 bg-gradient-to-r from-primary/0 via-primary to-primary/0 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                    <Heart className="w-10 h-10 text-primary mx-auto mb-5 drop-shadow-sm" />
+                    <div className="flex justify-center -space-x-4 mb-6">
+                      <img src="/images/masters/cheongpung.jpeg" className="w-16 h-16 rounded-full border-4 border-[#221e10] object-cover relative z-10 shadow-lg" alt="청풍 도사" />
+                      <img src="/images/masters/myeongwol.jpeg" className="w-16 h-16 rounded-full border-4 border-[#221e10] object-cover relative z-0 shadow-lg" alt="명월 도사" />
+                    </div>
                     <p className="text-white font-bold text-2xl italic leading-[1.8] max-w-xl mx-auto">
                       "{result.overall_advice}"
                     </p>
+                    <div className="mt-4 text-primary font-bold text-sm tracking-widest uppercase">
+                      풍수지리 대가 청풍 & 명월 드림
+                    </div>
                   </div>
 
                 </div>

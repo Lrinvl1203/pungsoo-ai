@@ -80,39 +80,41 @@ export default function PaymentSuccess() {
     }, [paymentKey, orderId, amount]);
 
     return (
-        <div className="min-h-screen bg-[#fdfbf7] flex items-center justify-center p-4">
-            <div className="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full text-center border border-[#e5e1da]">
+        <div className="min-h-screen bg-[#0c0a06] text-slate-100 font-display flex items-center justify-center p-4">
+            <div className="bg-[#1a1508] p-8 rounded-3xl shadow-2xl max-w-md w-full text-center border border-white/5 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl"></div>
+
                 {status === 'processing' && (
-                    <div className="flex flex-col items-center py-8">
-                        <Loader2 className="w-16 h-16 text-[#d4af37] animate-spin mb-6" />
-                        <h2 className="serif-font text-2xl font-bold text-[#4a443b] mb-2">결제 승인 중...</h2>
-                        <p className="text-[#8c8273]">잠시만 기다려주세요. 페이지를 닫지 마세요.</p>
+                    <div className="flex flex-col items-center py-8 relative z-10">
+                        <Loader2 className="w-16 h-16 text-primary animate-spin mb-6 drop-shadow-lg" />
+                        <h2 className="text-2xl font-black text-white mb-2 tracking-tight">결제 승인 중...</h2>
+                        <p className="text-slate-400 text-sm">잠시만 기다려주세요. 페이지를 닫지 마세요.</p>
                     </div>
                 )}
 
                 {status === 'success' && (
-                    <div className="flex flex-col items-center py-4 animate-in fade-in zoom-in duration-300">
-                        <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mb-6">
-                            <CheckCircle2 className="w-12 h-12 text-green-500" />
+                    <div className="flex flex-col items-center py-4 animate-in fade-in zoom-in duration-300 relative z-10">
+                        <div className="w-20 h-20 bg-green-500/10 rounded-full flex items-center justify-center mb-6 border border-green-500/20 shadow-inner">
+                            <CheckCircle2 className="w-10 h-10 text-green-500 drop-shadow-sm" />
                         </div>
-                        <h2 className="serif-font text-2xl font-bold text-[#4a443b] mb-4">결제가 완료되었습니다!</h2>
-                        <p className="text-[#6b6256] mb-8 leading-relaxed">
+                        <h2 className="text-2xl font-black text-white mb-4 tracking-tight">결제가 완료되었습니다!</h2>
+                        <p className="text-slate-300 mb-8 leading-relaxed text-[15px]">
                             의뢰하신 내용이 천지인 거사님께 성공적으로 전달되었습니다.<br />
                             확인 후 빠르게 연락드리겠습니다.
                         </p>
-                        <div className="bg-[#faf9f6] w-full p-4 rounded-xl border border-[#e5e1da] mb-8 text-left text-sm text-[#8c8273]">
-                            <div className="flex justify-between mb-2">
-                                <span>결제 금액</span>
-                                <span className="font-bold text-[#4a443b]">{Number(amount).toLocaleString()}원</span>
+                        <div className="bg-black/40 w-full p-5 rounded-2xl border border-white/5 mb-8 text-left text-sm text-slate-300 shadow-inner">
+                            <div className="flex justify-between mb-3 border-b border-white/10 pb-3">
+                                <span className="text-slate-400">결제 금액</span>
+                                <span className="font-bold text-primary text-lg">{Number(amount).toLocaleString()}원</span>
                             </div>
-                            <div className="flex justify-between">
-                                <span>주문 번호</span>
-                                <span className="font-mono text-xs">{orderId}</span>
+                            <div className="flex justify-between items-center">
+                                <span className="text-slate-400">주문 번호</span>
+                                <span className="font-mono text-[11px] bg-white/5 px-2 py-1.5 rounded-lg border border-white/5 text-slate-300">{orderId}</span>
                             </div>
                         </div>
                         <button
                             onClick={() => navigate('/')}
-                            className="w-full py-4 bg-[#d4af37] text-white font-bold rounded-xl hover:bg-[#c29d2f] transition-all flex items-center justify-center gap-2 shadow-lg"
+                            className="w-full py-4 bg-primary text-[#0c0a06] font-bold rounded-2xl hover:bg-yellow-400 transition-all flex items-center justify-center gap-2 shadow-lg hover:-translate-y-1"
                         >
                             <Home className="w-5 h-5" /> 메인으로 돌아가기
                         </button>
@@ -120,17 +122,17 @@ export default function PaymentSuccess() {
                 )}
 
                 {status === 'fail' && (
-                    <div className="flex flex-col items-center py-4">
-                        <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mb-6">
-                            <svg className="w-12 h-12 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    <div className="flex flex-col items-center py-4 relative z-10">
+                        <div className="w-20 h-20 bg-red-500/10 rounded-full flex items-center justify-center mb-6 border border-red-500/20 shadow-inner">
+                            <svg className="w-10 h-10 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
                             </svg>
                         </div>
-                        <h2 className="serif-font text-2xl font-bold text-[#4a443b] mb-4">결제 승인 싪패</h2>
-                        <p className="text-red-500 mb-8">{errorMessage}</p>
+                        <h2 className="text-2xl font-black text-white mb-4 tracking-tight">결제 승인 실패</h2>
+                        <p className="text-red-400 mb-8 font-medium">{errorMessage}</p>
                         <button
                             onClick={() => navigate('/')}
-                            className="w-full py-4 bg-[#faf9f6] text-[#6b6256] font-bold rounded-xl hover:bg-[#e5e1da] transition-all border border-[#e5e1da]"
+                            className="w-full py-4 bg-white/5 text-white font-bold rounded-2xl hover:bg-white/10 hover:text-white transition-all border border-white/10 shadow-sm"
                         >
                             홈으로 돌아가기
                         </button>
