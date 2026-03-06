@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /payment/
+
+Sitemap: https://pungsoo-ai.vercel.app/sitemap.xml

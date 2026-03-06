@@ -8,6 +8,11 @@ import PaymentSuccess from './pages/PaymentSuccess';
 import PaymentFail from './pages/PaymentFail';
 import MyPage from './pages/MyPage';
 import Landing from './pages/Landing';
+import Terms from './pages/Terms';
+import Privacy from './pages/Privacy';
+import ErrorBoundary from './components/ErrorBoundary';
+import PWAInstallPrompt from './components/PWAInstallPrompt';
+import { Analytics } from '@vercel/analytics/react';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -17,16 +22,22 @@ if (!rootElement) {
 const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
-    <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Landing />} />
-          <Route path="/analyze" element={<App />} />
-          <Route path="/mypage" element={<MyPage />} />
-          <Route path="/payment/success" element={<PaymentSuccess />} />
-          <Route path="/payment/fail" element={<PaymentFail />} />
-        </Routes>
-      </BrowserRouter>
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<Landing />} />
+            <Route path="/analyze" element={<App />} />
+            <Route path="/mypage" element={<MyPage />} />
+            <Route path="/payment/success" element={<PaymentSuccess />} />
+            <Route path="/payment/fail" element={<PaymentFail />} />
+            <Route path="/terms" element={<Terms />} />
+            <Route path="/privacy" element={<Privacy />} />
+          </Routes>
+          <PWAInstallPrompt />
+          <Analytics />
+        </BrowserRouter>
+      </AuthProvider>
+    </ErrorBoundary>
   </React.StrictMode>
 );

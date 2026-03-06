@@ -1,0 +1,30 @@
+{
+    "name": "풍수지리 AI 대가",
+    "short_name": "풍수AI",
+    "description": "AI가 당신의 공간을 분석하고 디지털 비방을 처방합니다",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#221e10",
+    "theme_color": "#221e10",
+    "orientation": "portrait-primary",
+    "icons": [
+        {
+            "src": "/images/icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "/images/icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
+        }
+    ],
+    "categories": [
+        "lifestyle",
+        "entertainment"
+    ],
+    "lang": "ko",
+    "dir": "ltr"
+}
