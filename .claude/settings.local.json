@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__playwright__browser_navigate",
+      "Bash(npm run build:*)",
+      "Bash(curl:*)"
+    ]
+  }
+}
