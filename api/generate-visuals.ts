@@ -1,5 +1,22 @@
 import { fal } from "@fal-ai/client";
 
+async function withRetry<T>(fn: () => Promise<T>, retries = 3, delayMs = 3000): Promise<T> {
+    for (let attempt = 1; attempt <= retries; attempt++) {
+        try {
+            return await fn();
+        } catch (err: any) {
+            const is503 = err?.status === 503 || err?.message?.includes('503');
+            if (is503 && attempt < retries) {
+                console.warn(`fal.ai 503, retry ${attempt}/${retries} after ${delayMs}ms`);
+                await new Promise(r => setTimeout(r, delayMs * attempt));
+                continue;
+            }
+            throw err;
+        }
+    }
+    throw new Error('Max retries exceeded');
+}
+
 export default async function handler(req: any, res: any) {
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Method Not Allowed' });
@@ -30,7 +47,7 @@ export default async function handler(req: any, res: any) {
             const uploadedUrl = await fal.storage.upload(blob);
             console.log("Uploaded image to fal storage:", uploadedUrl);
 
-            result = await fal.subscribe("fal-ai/bytedance/seedream/v4.5/edit", {
+            result = await withRetry(() => fal.subscribe("fal-ai/bytedance/seedream/v4.5/edit", {
                 input: {
                     prompt: editPrompt,
                     image_urls: [uploadedUrl],
@@ -38,7 +55,7 @@ export default async function handler(req: any, res: any) {
                     num_images: 1,
                     enable_safety_checker: true
                 },
-            });
+            }));
 
         } else if (type === 'remedy') {
             let styleKeywords = "";
@@ -77,26 +94,26 @@ export default async function handler(req: any, res: any) {
                 }
             }
 
-            result = await fal.subscribe("fal-ai/bytedance/seedream/v4.5/text-to-image", {
+            result = await withRetry(() => fal.subscribe("fal-ai/bytedance/seedream/v4.5/text-to-image", {
                 input: {
                     prompt: t2iPrompt,
                     image_size: finalImageSize,
                     num_images: 1,
                     enable_safety_checker: true
                 },
-            });
+            }));
 
         } else if (type === 'zodiac') {
             const t2iPrompt = `A full-body 3D low-poly geometric sculpture of a ${zodiacObj.animal} for modern interior decor. Placed in a majestic pose. Crafted from luxurious ${zodiacObj.material_and_color}. Special feature: ${zodiacObj.specific_pose_or_feature}. High-end minimalist art object photography, professional studio lighting with dramatic reflections, clean neutral background, 8k resolution, C4D Arnold render style, ready for 3D printing aesthetic.`;
 
-            result = await fal.subscribe("fal-ai/bytedance/seedream/v4.5/text-to-image", {
+            result = await withRetry(() => fal.subscribe("fal-ai/bytedance/seedream/v4.5/text-to-image", {
                 input: {
                     prompt: t2iPrompt,
                     image_size: "square_hd",
                     num_images: 1,
                     enable_safety_checker: true
                 },
-            });
+            }));
         }
 
         console.log("Fal.ai raw result keys:", result ? Object.keys(result) : "null");

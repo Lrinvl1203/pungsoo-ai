@@ -2,6 +2,11 @@
     "buildCommand": "npm run build",
     "outputDirectory": "dist",
     "framework": "vite",
+    "functions": {
+        "api/generate-visuals.ts": {
+            "maxDuration": 120
+        }
+    },
     "rewrites": [
         {
             "source": "/((?!api/).*)",
