@@ -1,5 +1,5 @@
-import React from 'react';
-import { Loader2, Download, RefreshCw, Palette, ShoppingBag } from 'lucide-react';
+import React, { useState } from 'react';
+import { Loader2, Download, RefreshCw, Palette, ShoppingBag, Lock } from 'lucide-react';
 import { AnalysisResult, UserMetadata, ImageSizeOption } from '../types';
 
 interface RemedyCardProps {
@@ -23,6 +23,8 @@ export default function RemedyCard({
     onDownloadImage,
     onOrderFrame,
 }: RemedyCardProps) {
+    const [isUnlocked, setIsUnlocked] = useState(false);
+
     const aspectClass = metadata.imageSize.preset === '1:1' ? 'aspect-square'
         : metadata.imageSize.preset === '9:16' ? 'aspect-[9/16]'
             : metadata.imageSize.preset === '16:9' ? 'aspect-video w-full max-w-lg'
@@ -40,19 +42,34 @@ export default function RemedyCard({
             </div>
             <div className="p-6 md:p-8">
                 <div className="flex flex-col gap-8">
-                    {/* Art Display */}
+                    {/* Art Display with Paywall */}
                     <div className={`w-full max-w-sm mx-auto ${aspectClass} bg-[#fcfbfa] rounded-2xl overflow-hidden relative shadow-inner ring-1 ring-black/5 transition-all duration-300`}>
                         {remedyArt ? (
-                            <img src={remedyArt} alt="Remedy Art" className="w-full h-full object-cover" />
+                            <>
+                                <img src={remedyArt} alt="Remedy Art" className={`w-full h-full object-cover transition-all duration-700 ${!isUnlocked ? 'blur-xl scale-110 brightness-50' : 'blur-0 scale-100'}`} />
+                                {!isUnlocked && (
+                                    <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center z-10 bg-black/40 backdrop-blur-sm">
+                                        <Lock className="w-10 h-10 text-primary mb-4" />
+                                        <h4 className="text-xl font-bold text-white mb-2">맞춤형 디지털 비방 아트워크</h4>
+                                        <p className="text-sm text-slate-200 mb-6 leading-relaxed">내 공간에 부족한 <strong className="text-primary">'{result.remedy_art.deficiency}'</strong> 기운을 보완하기 위해 AI가 특별히 생성한 단 하나뿐인 예술 작품입니다.</p>
+                                        <button
+                                            onClick={() => setIsUnlocked(true)}
+                                            className="w-full py-3 bg-gradient-to-r from-[#d4af37] to-[#c29d2f] text-white font-bold rounded-xl hover:shadow-lg transition-all animate-pulse-glow"
+                                        >
+                                            작품 확인 및 원본 다운로드 (₩1,000)
+                                        </button>
+                                    </div>
+                                )}
+                            </>
                         ) : (
-                            <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6">
+                            <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6 bg-[#221e10]">
                                 <Loader2 className="w-12 h-12 animate-spin text-primary mb-4" />
-                                <p className="text-[15px] text-slate-300 leading-relaxed">부족한 <span className="font-bold text-primary">'{result.remedy_art.deficiency}'</span>의 기운을<br />
+                                <p className="text-[15px] text-slate-300 leading-relaxed">부족한 <span className="font-bold text-primary">'{result.remedy_art.deficiency}'</span> 기운을<br />
                                     <span className="font-bold text-white">{metadata.artStyle === 'buddhist' ? '레트로 예술' : metadata.artStyle === 'modern_buddhist' ? '모던 레트로 예술' : '모던 아트'}</span>로 승화시키는 중입니다...</p>
                             </div>
                         )}
-                        {remedyArt && (
-                            <div className="absolute bottom-4 right-4 flex gap-2">
+                        {(remedyArt && isUnlocked) && (
+                            <div className="absolute bottom-4 right-4 flex gap-2 z-20">
                                 <button
                                     onClick={() => onDownloadImage(remedyArt, 'FengShui_Remedy.png')}
                                     className="bg-black/60 backdrop-blur-md shadow-xl p-3 rounded-full text-white hover:bg-black/80 hover:scale-105 transition-all"

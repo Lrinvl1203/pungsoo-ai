@@ -1,5 +1,5 @@
-import React from 'react';
-import { Sparkles, Compass, MapPin, Loader2, AlertTriangle, CheckCircle2, ImageIcon } from 'lucide-react';
+import React, { useState } from 'react';
+import { Share2, FileText, CheckCircle2, AlertTriangle, Download, Compass, Sparkles, MapPin, ImageIcon, Loader2, Lock } from 'lucide-react';
 import { AnalysisResult, UserMetadata } from '../types';
 import RemedyCard from './RemedyCard';
 import ZodiacCard from './ZodiacCard';
@@ -18,7 +18,7 @@ interface ResultViewProps {
     onDownloadImage: (dataUrl: string, filename: string) => void;
     onOrderFrame: () => void;
     onOrderObject: () => void;
-    currentAnalysisId?: string | null;
+    currentAnalysisId?: number | null;
 }
 
 export default function ResultView({
@@ -37,15 +37,32 @@ export default function ResultView({
     onOrderObject,
     currentAnalysisId,
 }: ResultViewProps) {
-    const handleKakaoShare = () => {
-        if (!currentAnalysisId) return;
+    // Paywall mock states
+    const [isReportUnlocked, setIsReportUnlocked] = useState(false);
+    const [isRemedyUnlocked, setIsRemedyUnlocked] = useState(false);
+    const [isZodiacUnlocked, setIsZodiacUnlocked] = useState(false);
+
+    const handleShare = async () => {
+        if (!currentAnalysisId) {
+            alert('저장된 분석 결과가 없습니다. 다시 시도해주세요.');
+            return;
+        }
         const shareUrl = `${window.location.origin}/analyze?id=${currentAnalysisId}`;
-        window.Kakao.Share.sendDefault({
+        const imageUrl = image || 'https://images.unsplash.com/photo-1524813686514-a57563d77965?auto=format&fit=crop&q=80&w=800';
+
+        const Kakao = (window as any).Kakao;
+        if (!Kakao || !Kakao.isInitialized()) {
+            console.error('카카오 SDK가 초기화되지 않았습니다.');
+            alert('카카오톡 공유를 준비 중입니다. 잠시 후 다시 시도해주세요.');
+            return;
+        }
+
+        Kakao.Share.sendDefault({
             objectType: 'feed',
             content: {
-                title: '풍수지리 AI - 청풍 도사의 감정서',
-                description: result?.analysis_summary || '당신의 공간을 분석하고 디지털 비방을 확인하세요.',
-                imageUrl: image || 'https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6',
+                title: '풍수 AI 공간 감명 결과',
+                description: `나의 종합 풍수 점수는 ${result?.feng_shui_score || 0}점! 청풍 도사의 진단을 확인해보세요.`,
+                imageUrl: imageUrl,
                 link: { mobileWebUrl: shareUrl, webUrl: shareUrl },
             },
             buttons: [{ title: '감정서 확인하기', link: { mobileWebUrl: shareUrl, webUrl: shareUrl } }]
@@ -128,7 +145,7 @@ export default function ResultView({
                         </div>
                     </section>
 
-                    {/* 2. Detailed Report */}
+                    {/* 2. Detailed Report (PAYWALL STAGE 1) */}
                     {result.detailed_report && (
                         <section className="bg-[#4a443b]/80 backdrop-blur-xl rounded-2xl p-8 shadow-2xl border border-primary/30 relative overflow-hidden text-white mt-10 mb-10 stagger-item" style={{ animationDelay: '0.2s' }}>
                             <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
@@ -141,8 +158,33 @@ export default function ResultView({
                                 <Sparkles className="w-6 h-6 text-primary" />
                                 초정밀 도사 감명서 <span className="text-primary text-sm font-medium tracking-widest uppercase ml-2 opacity-80">(Full Documentation)</span>
                             </h3>
-                            <div className="prose prose-sm max-w-none text-white/95 leading-[1.9] whitespace-pre-wrap font-medium relative z-10 text-[15px]">
-                                {result.detailed_report}
+
+                            <div className="relative">
+                                {/* Blurred text container if locked */}
+                                <div className={`prose prose-sm max-w-none text-white/95 leading-[1.9] whitespace-pre-wrap font-medium relative z-10 text-[15px] ${!isReportUnlocked ? 'h-[160px] overflow-hidden' : ''}`}>
+                                    {result.detailed_report}
+
+                                    {!isReportUnlocked && (
+                                        <div className="absolute bottom-0 left-0 w-full h-[120px] bg-gradient-to-t from-[#4a443b] to-transparent z-20"></div>
+                                    )}
+                                </div>
+
+                                {/* Unlock Overlay */}
+                                {!isReportUnlocked && (
+                                    <div className="absolute bottom-0 left-0 w-full flex flex-col items-center justify-end pb-2 pt-24 z-30 pointer-events-auto">
+                                        <div className="bg-[#221e10]/90 backdrop-blur-xl p-6 rounded-2xl border border-primary/50 shadow-2xl w-[90%] max-w-sm text-center transform translate-y-8">
+                                            <Lock className="w-8 h-8 mx-auto text-primary mb-3" />
+                                            <h4 className="text-lg font-bold text-white mb-2">프리미엄 진단 내용 잠김</h4>
+                                            <p className="text-sm text-slate-300 mb-5">청풍 도사의 구체적인 공간 진단과 운기 상승 비결을 온전히 확인하고 싶다면 잠금을 해제하세요.</p>
+                                            <button
+                                                onClick={() => setIsReportUnlocked(true)}
+                                                className="w-full py-3 bg-gradient-to-r from-[#d4af37] to-[#c29d2f] text-white font-bold rounded-xl hover:shadow-lg transition-all animate-pulse-glow"
+                                            >
+                                                자세한 감명서 열람하기 (₩3,000)
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </section>
                     )}
@@ -260,11 +302,10 @@ export default function ResultView({
                         {currentAnalysisId && (
                             <div className="flex items-center justify-center gap-4 mt-8 pt-8 border-t border-white/10">
                                 <button
-                                    onClick={handleKakaoShare}
-                                    className="flex items-center gap-2 bg-[#FEE500] text-[#000000] font-bold px-5 py-2.5 rounded-xl hover:bg-[#FEE500]/90 transition-colors shadow-sm"
+                                    onClick={handleShare}
+                                    className="flex-1 py-3 bg-[#FEE500] text-[#000000] font-bold rounded-xl hover:bg-[#FEE500]/90 transition-all shadow-md flex items-center justify-center gap-2"
                                 >
-                                    <svg className="w-5 h-5 text-black" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3c-5.52 0-10 3.51-10 7.84 0 2.76 1.76 5.17 4.41 6.5l-1.12 4.12c-.1.35.31.62.61.42l4.8-3.23c.43.05.86.08 1.3.08 5.52 0 10-3.51 10-7.84C22 6.51 17.52 3 12 3z" /></svg>
-                                    카카오톡 공유
+                                    <Share2 className="w-5 h-5 text-black" /> 카카오톡 공유
                                 </button>
                                 <button
                                     onClick={handleCopyLink}
