@@ -1,6 +1,10 @@
 import React, { useState } from 'react';
 import { Loader2, Download, RefreshCw, Palette, ShoppingBag, Lock } from 'lucide-react';
 import { AnalysisResult, UserMetadata, ImageSizeOption } from '../types';
+import { useAuth } from '../contexts/AuthContext';
+import DigitalPaymentModal from './DigitalPaymentModal';
+import LoginPromptModal from './LoginPromptModal';
+import { supabase } from '../services/supabaseClient';
 
 interface RemedyCardProps {
     result: AnalysisResult;
@@ -11,6 +15,7 @@ interface RemedyCardProps {
     onRegenerateArt: () => void;
     onDownloadImage: (dataUrl: string, filename: string) => void;
     onOrderFrame: () => void;
+    currentAnalysisId?: number | null;
 }
 
 export default function RemedyCard({
@@ -22,8 +27,42 @@ export default function RemedyCard({
     onRegenerateArt,
     onDownloadImage,
     onOrderFrame,
+    currentAnalysisId,
 }: RemedyCardProps) {
     const [isUnlocked, setIsUnlocked] = useState(false);
+
+    // Auth and Modals
+    const { user } = useAuth();
+    const [showLoginModal, setShowLoginModal] = useState(false);
+    const [showPaymentModal, setShowPaymentModal] = useState(false);
+
+    // Fetch unlock status from DB
+    React.useEffect(() => {
+        const checkUnlockStatus = async () => {
+            if (user && currentAnalysisId) {
+                const { data } = await supabase
+                    .from('purchases')
+                    .select('order_type')
+                    .eq('user_id', user.id)
+                    .eq('analysis_id', currentAnalysisId)
+                    .eq('status', 'COMPLETED')
+                    .eq('order_type', 'remedy');
+
+                if (data && data.length > 0) {
+                    setIsUnlocked(true);
+                }
+            }
+        };
+        checkUnlockStatus();
+    }, [user, currentAnalysisId]);
+
+    const handleUnlockRemedy = () => {
+        if (!user) {
+            setShowLoginModal(true);
+        } else {
+            setShowPaymentModal(true);
+        }
+    };
 
     const aspectClass = metadata.imageSize.preset === '1:1' ? 'aspect-square'
         : metadata.imageSize.preset === '9:16' ? 'aspect-[9/16]'
@@ -58,7 +97,7 @@ export default function RemedyCard({
                                         <h4 className="text-xl font-bold text-white mb-2">맞춤형 디지털 비방 아트워크</h4>
                                         <p className="text-sm text-slate-200 mb-6 leading-relaxed">내 공간에 부족한 <strong className="text-primary">'{result.remedy_art.deficiency}'</strong> 기운을 보완하기 위해 AI가 특별히 생성한 단 하나뿐인 예술 작품입니다.</p>
                                         <button
-                                            onClick={() => setIsUnlocked(true)}
+                                            onClick={handleUnlockRemedy}
                                             className="w-full py-3 bg-gradient-to-r from-[#d4af37] to-[#c29d2f] text-white font-bold rounded-xl hover:shadow-lg transition-all animate-pulse-glow"
                                         >
                                             작품 확인 및 원본 다운로드 (₩1,000)
@@ -181,6 +220,16 @@ export default function RemedyCard({
                     </div>
                 </div>
             </div>
+
+            {/* Modals for Premium Remedy */}
+            <LoginPromptModal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} />
+            <DigitalPaymentModal
+                isOpen={showPaymentModal}
+                onClose={() => setShowPaymentModal(false)}
+                amount={1000}
+                orderName="맞춤형 디지털 비방 아트워크 다운로드"
+                orderType="remedy"
+            />
         </section>
     );
 }

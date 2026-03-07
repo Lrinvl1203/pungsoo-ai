@@ -7,6 +7,7 @@ import {
     Image as ImageIcon, Settings, Trash2, ShieldCheck, Download
 } from 'lucide-react';
 import { AnalysisResult } from '../types';
+import { supabase } from '../services/supabaseClient';
 
 interface HistoryItem {
     result: AnalysisResult;
@@ -20,6 +21,7 @@ export default function MyPage() {
     const { user, signOut } = useAuth();
     const { settings, updateSettings } = useUserSettings();
     const [history, setHistory] = useState<HistoryItem[]>([]);
+    const [purchases, setPurchases] = useState<any[]>([]);
     const [activeTab, setActiveTab] = useState<'profile' | 'history' | 'orders' | 'gallery' | 'settings'>('history');
 
     useEffect(() => {
@@ -36,6 +38,20 @@ export default function MyPage() {
                 console.error('Failed to parse history', e);
             }
         }
+
+        const fetchPurchases = async () => {
+            const { data, error } = await supabase
+                .from('purchases')
+                .select('*')
+                .eq('user_id', user.id)
+                .order('created_at', { ascending: false });
+
+            if (data && !error) {
+                setPurchases(data);
+            }
+        };
+
+        fetchPurchases();
     }, [user, navigate]);
 
     const handleSignOut = async () => {
@@ -253,23 +269,56 @@ export default function MyPage() {
                         {activeTab === 'orders' && (
                             <div className="space-y-6 animate-in fade-in duration-300">
                                 <h3 className="text-2xl md:text-3xl font-black text-white tracking-tight mb-8">의뢰 및 주문 내역</h3>
-                                <div className="bg-[#1a1508]/50 border-2 border-dashed border-white/10 rounded-3xl p-10 md:p-16 text-center shadow-lg">
-                                    <div className="w-20 h-20 bg-black/40 rounded-3xl flex items-center justify-center mx-auto mb-6 border border-white/5 shadow-inner">
-                                        <ShoppingBag className="w-10 h-10 text-primary opacity-80" />
+                                {purchases.length === 0 ? (
+                                    <div className="bg-[#1a1508]/50 border-2 border-dashed border-white/10 rounded-3xl p-10 md:p-16 text-center shadow-lg">
+                                        <div className="w-20 h-20 bg-black/40 rounded-3xl flex items-center justify-center mx-auto mb-6 border border-white/5 shadow-inner">
+                                            <ShoppingBag className="w-10 h-10 text-primary opacity-80" />
+                                        </div>
+                                        <h4 className="font-bold text-white text-xl mb-3">아직 주문 내역이 없습니다</h4>
+                                        <p className="text-slate-400 text-sm leading-relaxed max-w-sm mx-auto">
+                                            AI가 분석한 맞춤형 비방 아트 액자나<br />
+                                            12간지 비방 오브제를 의뢰하여<br />
+                                            공간의 기운을 보완해보세요.
+                                        </p>
+                                        <button
+                                            onClick={() => navigate('/analyze')}
+                                            className="mt-8 px-8 py-3.5 bg-white/5 border border-primary text-primary text-sm font-bold rounded-2xl hover:bg-primary hover:text-[#0c0a06] transition-all shadow-sm"
+                                        >
+                                            풍수 분석하러 가기
+                                        </button>
                                     </div>
-                                    <h4 className="font-bold text-white text-xl mb-3">아직 주문 내역이 없습니다</h4>
-                                    <p className="text-slate-400 text-sm leading-relaxed max-w-sm mx-auto">
-                                        AI가 분석한 맞춤형 비방 아트 액자나<br />
-                                        12간지 비방 오브제를 의뢰하여<br />
-                                        공간의 기운을 보완해보세요.
-                                    </p>
-                                    <button
-                                        onClick={() => navigate('/analyze')}
-                                        className="mt-8 px-8 py-3.5 bg-white/5 border border-primary text-primary text-sm font-bold rounded-2xl hover:bg-primary hover:text-[#0c0a06] transition-all shadow-sm"
-                                    >
-                                        풍수 분석하러 가기
-                                    </button>
-                                </div>
+                                ) : (
+                                    <div className="space-y-4">
+                                        {purchases.map((purchase, idx) => (
+                                            <div key={idx} className="bg-[#1a1508] rounded-3xl p-5 md:p-6 shadow-xl border border-white/5 flex flex-col md:flex-row gap-4 items-start md:items-center group hover:border-primary/30 transition-all">
+                                                <div className="flex-1">
+                                                    <div className="flex items-center gap-3 mb-3">
+                                                        <span className={`inline-block px-3 py-1 rounded-lg text-xs font-black tracking-widest uppercase shadow-sm ${purchase.status === 'COMPLETED' ? 'bg-primary/10 text-primary border border-primary/20' : 'bg-white/10 text-slate-300 border border-white/20'}`}>
+                                                            {purchase.status === 'COMPLETED' ? '결제완료' : purchase.status}
+                                                        </span>
+                                                        <span className="text-xs text-slate-400">{new Date(purchase.created_at).toLocaleDateString('ko-KR')}</span>
+                                                    </div>
+                                                    <h4 className="font-bold text-white text-lg mb-1">
+                                                        {purchase.order_type === 'report' ? '초정밀 도사 감명서 프리미엄 열람'
+                                                            : purchase.order_type === 'remedy' ? '맞춤형 디지털 비방 아트워크 다운로드'
+                                                                : purchase.order_type === 'zodiac' ? '12간지 비방 오브제 설계도 열람'
+                                                                    : purchase.order_type === 'frame' ? '디지털 액자 제작 의뢰'
+                                                                        : '비방 오브제 제작 의뢰'}
+                                                    </h4>
+                                                    {purchase.analysis_id && (
+                                                        <p className="text-[12px] text-slate-500 flex items-center gap-1.5 mt-2">
+                                                            <Clock className="w-3 h-3" /> 연관된 분석 내역 (ID: {purchase.analysis_id})
+                                                        </p>
+                                                    )}
+                                                </div>
+                                                <div className="text-right flex flex-row md:flex-col justify-between w-full md:w-auto items-center md:items-end mt-2 md:mt-0 pt-4 md:pt-0 border-t border-white/10 md:border-0">
+                                                    <span className="font-bold text-primary text-xl md:text-2xl">{purchase.amount.toLocaleString()}<span className="text-sm text-slate-400 ml-1">원</span></span>
+                                                    <p className="text-[10px] text-slate-500 font-mono mt-1.5 bg-black/30 px-2 py-1 rounded border border-white/5">주문번호: {purchase.order_id.split('_').pop()}</p>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                         )}
 

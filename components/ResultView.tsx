@@ -3,6 +3,10 @@ import { Share2, FileText, CheckCircle2, AlertTriangle, Download, Compass, Spark
 import { AnalysisResult, UserMetadata } from '../types';
 import RemedyCard from './RemedyCard';
 import ZodiacCard from './ZodiacCard';
+import { useAuth } from '../contexts/AuthContext';
+import DigitalPaymentModal from './DigitalPaymentModal';
+import LoginPromptModal from './LoginPromptModal';
+import { supabase } from '../services/supabaseClient';
 
 interface ResultViewProps {
     result: AnalysisResult | null;
@@ -39,8 +43,39 @@ export default function ResultView({
 }: ResultViewProps) {
     // Paywall mock states
     const [isReportUnlocked, setIsReportUnlocked] = useState(false);
-    const [isRemedyUnlocked, setIsRemedyUnlocked] = useState(false);
-    const [isZodiacUnlocked, setIsZodiacUnlocked] = useState(false);
+
+    // Auth and Modals
+    const { user } = useAuth();
+    const [showLoginModal, setShowLoginModal] = useState(false);
+    const [showPaymentModal, setShowPaymentModal] = useState(false);
+
+    // Fetch unlock status from DB
+    React.useEffect(() => {
+        const checkUnlockStatus = async () => {
+            if (user && currentAnalysisId) {
+                const { data } = await supabase
+                    .from('purchases')
+                    .select('order_type')
+                    .eq('user_id', user.id)
+                    .eq('analysis_id', currentAnalysisId)
+                    .eq('status', 'COMPLETED')
+                    .eq('order_type', 'report');
+
+                if (data && data.length > 0) {
+                    setIsReportUnlocked(true);
+                }
+            }
+        };
+        checkUnlockStatus();
+    }, [user, currentAnalysisId]);
+
+    const handleUnlockReport = () => {
+        if (!user) {
+            setShowLoginModal(true);
+        } else {
+            setShowPaymentModal(true);
+        }
+    };
 
     const handleShare = async () => {
         if (!currentAnalysisId) {
@@ -180,7 +215,7 @@ export default function ResultView({
                                             <h4 className="text-lg font-bold text-white mb-2">프리미엄 진단 내용 잠김</h4>
                                             <p className="text-sm text-slate-300 mb-5">청풍 도사의 구체적인 공간 진단과 운기 상승 비결을 온전히 확인하고 싶다면 잠금을 해제하세요.</p>
                                             <button
-                                                onClick={() => setIsReportUnlocked(true)}
+                                                onClick={handleUnlockReport}
                                                 className="w-full py-3 bg-gradient-to-r from-[#d4af37] to-[#c29d2f] text-white font-bold rounded-xl hover:shadow-lg transition-all animate-pulse-glow"
                                             >
                                                 자세한 감명서 열람하기 (₩3,000)
@@ -274,6 +309,7 @@ export default function ResultView({
                         onRegenerateArt={onRegenerateArt}
                         onDownloadImage={onDownloadImage}
                         onOrderFrame={onOrderFrame}
+                        currentAnalysisId={currentAnalysisId}
                     />
 
                     {/* 6. Zodiac Remedy Object */}
@@ -283,6 +319,7 @@ export default function ResultView({
                             zodiacImage={zodiacImage}
                             onDownloadImage={onDownloadImage}
                             onOrderObject={onOrderObject}
+                            currentAnalysisId={currentAnalysisId}
                         />
                     )}
 
@@ -324,6 +361,16 @@ export default function ResultView({
 
                 </div>
             )}
+
+            {/* Modals for Premium Report */}
+            <LoginPromptModal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} />
+            <DigitalPaymentModal
+                isOpen={showPaymentModal}
+                onClose={() => setShowPaymentModal(false)}
+                amount={3000}
+                orderName="초정밀 도사 감명서 프리미엄 열람"
+                orderType="report"
+            />
         </div>
     );
 }

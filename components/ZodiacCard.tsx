@@ -1,16 +1,54 @@
 import React, { useState } from 'react';
 import { Loader2, Download, Sparkles, MapPin, ExternalLink, Box, Lock } from 'lucide-react';
 import { ZodiacRemedyObject } from '../types';
+import { useAuth } from '../contexts/AuthContext';
+import DigitalPaymentModal from './DigitalPaymentModal';
+import LoginPromptModal from './LoginPromptModal';
+import { supabase } from '../services/supabaseClient';
 
 interface ZodiacCardProps {
     zodiacObject: ZodiacRemedyObject;
     zodiacImage: string | null;
     onDownloadImage: (dataUrl: string, filename: string) => void;
     onOrderObject: () => void;
+    currentAnalysisId?: number | null;
 }
 
-export default function ZodiacCard({ zodiacObject, zodiacImage, onDownloadImage, onOrderObject }: ZodiacCardProps) {
+export default function ZodiacCard({ zodiacObject, zodiacImage, onDownloadImage, onOrderObject, currentAnalysisId }: ZodiacCardProps) {
     const [isUnlocked, setIsUnlocked] = useState(false);
+
+    // Auth and Modals
+    const { user } = useAuth();
+    const [showLoginModal, setShowLoginModal] = useState(false);
+    const [showPaymentModal, setShowPaymentModal] = useState(false);
+
+    // Fetch unlock status from DB
+    React.useEffect(() => {
+        const checkUnlockStatus = async () => {
+            if (user && currentAnalysisId) {
+                const { data } = await supabase
+                    .from('purchases')
+                    .select('order_type')
+                    .eq('user_id', user.id)
+                    .eq('analysis_id', currentAnalysisId)
+                    .eq('status', 'COMPLETED')
+                    .eq('order_type', 'zodiac');
+
+                if (data && data.length > 0) {
+                    setIsUnlocked(true);
+                }
+            }
+        };
+        checkUnlockStatus();
+    }, [user, currentAnalysisId]);
+
+    const handleUnlockZodiac = () => {
+        if (!user) {
+            setShowLoginModal(true);
+        } else {
+            setShowPaymentModal(true);
+        }
+    };
 
     return (
         <section className="bg-white/5 backdrop-blur-xl rounded-2xl overflow-hidden shadow-2xl border border-primary/40 ring-4 ring-primary/10 mt-10 stagger-item" style={{ animationDelay: '0.6s' }}>
@@ -33,7 +71,7 @@ export default function ZodiacCard({ zodiacObject, zodiacImage, onDownloadImage,
                                         <h4 className="text-xl font-bold text-white mb-2">12간지 맞춤 오브제 처방</h4>
                                         <p className="text-sm text-slate-200 mb-6 leading-relaxed">명월 도사가 특별히 선별한 기운 보충용 오브제 디자인과 해설을 확인하시겠습니까?</p>
                                         <button
-                                            onClick={() => setIsUnlocked(true)}
+                                            onClick={handleUnlockZodiac}
                                             className="w-full py-3 bg-gradient-to-r from-[#d4af37] to-[#c29d2f] text-white font-bold rounded-xl hover:shadow-lg transition-all animate-pulse-glow"
                                         >
                                             12간지 비방 열람하기 (₩3,000)
@@ -100,6 +138,16 @@ export default function ZodiacCard({ zodiacObject, zodiacImage, onDownloadImage,
                     </div>
                 </div>
             </div>
+
+            {/* Modals for Premium Zodiac Object */}
+            <LoginPromptModal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} />
+            <DigitalPaymentModal
+                isOpen={showPaymentModal}
+                onClose={() => setShowPaymentModal(false)}
+                amount={3000}
+                orderName="12간지 비방 오브제 설계도 열람"
+                orderType="zodiac"
+            />
         </section>
     );
 }

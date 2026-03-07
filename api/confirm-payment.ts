@@ -1,11 +1,12 @@
 import { Resend } from 'resend';
+import { createClient } from '@supabase/supabase-js';
 
 export default async function handler(req: any, res: any) {
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Method Not Allowed' });
     }
 
-    const { paymentKey, orderId, amount, name, contact, message, orderType, analysisData, userId, objectSize } = req.body;
+    const { paymentKey, orderId, amount, name, contact, message, orderType, analysisData, userId, objectSize, analysisId } = req.body;
 
     if (!paymentKey || !orderId || !amount) {
         return res.status(400).json({ error: 'Missing payment information' });
@@ -37,9 +38,42 @@ export default async function handler(req: any, res: any) {
 
         const paymentData = await tossResponse.json();
 
-        // 2. Send Order Email
+        // 2. Save order to Supabase DB
+        const supabaseUrl = process.env.VITE_SUPABASE_URL || '';
+        // It's recommended to use SERVICE_ROLE_KEY here for backend, but we'll use ANON_KEY if not available
+        const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || '';
+
+        let dbError = null;
+        if (supabaseUrl && supabaseKey) {
+            const supabase = createClient(supabaseUrl, supabaseKey);
+
+            const { error } = await supabase
+                .from('purchases')
+                .insert([
+                    {
+                        user_id: userId || null,
+                        order_id: orderId,
+                        payment_key: paymentKey,
+                        amount: amount,
+                        order_type: orderType,
+                        status: 'COMPLETED',
+                        buyer_name: name || '비회원',
+                        contact_info: contact || null,
+                        analysis_id: analysisId ? parseInt(analysisId) : null
+                    }
+                ]);
+
+            if (error) {
+                console.warn('Failed to insert into purchases table:', error);
+                dbError = error.message;
+            }
+        }
+
+        // 3. Send Order Email (Only for physical items)
+        const isPhysicalOrder = orderType === 'frame' || orderType === 'object';
         const resendKey = process.env.RESEND_KEY;
-        if (resendKey) {
+
+        if (isPhysicalOrder && resendKey) {
             const resend = new Resend(resendKey);
             const orderTypeName = orderType === 'frame' ? '디지털 액자' : '오브제';
 
@@ -81,9 +115,7 @@ export default async function handler(req: any, res: any) {
             });
         }
 
-        // 3. Optional: Save order to Supabase DB here if table exists
-
-        res.status(200).json({ success: true, payment: paymentData });
+        res.status(200).json({ success: true, payment: paymentData, dbError });
     } catch (error: any) {
         console.error('Server error during payment confirmation:', error);
         res.status(500).json({ error: error.message || 'Internal Server Error' });
