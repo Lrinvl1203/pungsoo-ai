@@ -64,6 +64,8 @@ export default function RemedyCard({
         }
     };
 
+    if (!result.remedy_art) return null;
+
     const aspectClass = metadata.imageSize.preset === '1:1' ? 'aspect-square'
         : metadata.imageSize.preset === '9:16' ? 'aspect-[9/16]'
             : metadata.imageSize.preset === '16:9' ? 'aspect-video w-full max-w-lg'

@@ -72,6 +72,17 @@ export default async function handler(req: any, res: any) {
       parsed = JSON.parse(repairJsonNewlines(sanitizedText));
     }
 
+    // Validate required fields - if missing, return structured error
+    const requiredFields = ['analysis_summary', 'diagnosis', 'feng_shui_score', 'solution_items', 'remedy_art', 'overall_advice'];
+    const missingFields = requiredFields.filter(f => parsed[f] == null);
+    if (missingFields.length > 0) {
+      console.error("GEMINI INCOMPLETE RESPONSE - missing fields:", missingFields, "raw length:", text.length);
+      return res.status(422).json({
+        error: 'AI 응답이 불완전합니다. 다시 시도해 주세요.',
+        missing_fields: missingFields,
+      });
+    }
+
     return res.status(200).json(parsed);
   } catch (error: any) {
     console.error("VERCEL FUNCTION CRASH LOG:", error);

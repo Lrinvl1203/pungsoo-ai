@@ -186,7 +186,7 @@ export default function ResultView({
                         </div>
                         <p className="text-slate-300 text-[17px] mb-6 leading-relaxed font-medium">{result.analysis_summary}</p>
                         <div className="space-y-3 relative z-10">
-                            {result.diagnosis.map((diag, idx) => (
+                            {(result.diagnosis ?? []).map((diag, idx) => (
                                 <div key={idx} className={`p-4 rounded-xl border-l-4 shadow-sm bg-white/5 backdrop-blur-md border ${diag.type.includes('길') ? 'border-l-green-500 border-gray-100' : 'border-l-red-500 border-gray-100'}`}>
                                     <div className="flex items-center gap-2 mb-1.5">
                                         {diag.type.includes('길') ? <CheckCircle2 className="w-5 h-5 text-green-500" /> : <AlertTriangle className="w-5 h-5 text-red-500" />}
