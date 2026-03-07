@@ -1,9 +1,27 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Sparkles, Compass, Shield, Eye, Zap, ArrowRight, CheckCircle2, Star, Users, Target, Heart, Send, TrendingUp, Award, BookOpen, Clock, ChevronRight } from 'lucide-react';
+import Onboarding from '../components/Onboarding';
+import DailyFengShui from '../components/DailyFengShui';
 
 export default function Landing() {
+    // Onboarding State
+    const [showOnboarding, setShowOnboarding] = useState(() => {
+        if (typeof window !== 'undefined') {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('onboarding') === 'true') {
+                return true;
+            }
+            return localStorage.getItem('PUNGSOO_ONBOARDING_COMPLETED') !== 'true';
+        }
+        return true;
+    });
+
     return (
         <div className="relative min-h-screen w-full font-display text-slate-100 antialiased overflow-x-hidden bg-[#0c0a06]">
+            {showOnboarding && (
+                <Onboarding onComplete={() => setShowOnboarding(false)} />
+            )}
+            {!showOnboarding && <DailyFengShui />}
 
             {/* ============================================ */}
             {/* 1. HERO — Cinematic Full-Bleed */}

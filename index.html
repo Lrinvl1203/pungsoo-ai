@@ -10,7 +10,9 @@
     <meta name="keywords" content="풍수, 풍수지리, AI 풍수, 인테리어 풍수, 비방 아트, 12간지, 오행, 공간 분석">
     <link rel="canonical" href="https://pungsoo-ai.vercel.app">
     <meta name="theme-color" content="#221e10">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
     <link rel="manifest" href="/manifest.json">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.0/kakao.min.js" crossorigin="anonymous"></script>
@@ -89,6 +91,13 @@
     <script>
         tailwind.config = {
             darkMode: 'class',
+            content: [
+                "./index.html",
+                "./src/**/*.{js,ts,jsx,tsx}",
+                "./components/**/*.{js,ts,jsx,tsx}",
+                "./pages/**/*.{js,ts,jsx,tsx}",
+                "./App.tsx"
+            ],
             theme: {
                 extend: {
                     colors: {
@@ -99,6 +108,16 @@
                     fontFamily: {
                         'display': ['Plus Jakarta Sans', 'Pretendard', 'sans-serif']
                     },
+                    keyframes: {
+                        'fade-in-up': {
+                            '0%': { opacity: '0', transform: 'translateY(20px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        }
+                    },
+                    animation: {
+                        'fade-in-up': 'fade-in-up 0.5s ease-out forwards',
+                        'pulse-glow': 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+                    }
                 },
             },
         }

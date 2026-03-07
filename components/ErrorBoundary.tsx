@@ -43,7 +43,7 @@ export default class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBo
                         )}
                         <div className="flex gap-3 justify-center">
                             <button
-                                onClick={() => { this.setState({ hasError: false, error: null }); window.location.reload(); }}
+                                onClick={() => { (this as any).setState({ hasError: false, error: null }); window.location.reload(); }}
                                 className="flex items-center gap-2 px-6 py-3 bg-primary text-[#221e10] font-bold rounded-lg hover:bg-yellow-400 transition-all"
                             >
                                 <RefreshCw className="w-4 h-4" /> 다시 시도

@@ -35,7 +35,7 @@ export default function RemedyCard({
     return (
         <section className="bg-white/5 backdrop-blur-xl rounded-2xl overflow-hidden shadow-2xl border border-primary/40 ring-4 ring-primary/10 mt-10 stagger-item" style={{ animationDelay: '0.5s' }}>
             <div className="bg-primary text-background-dark p-5 text-white flex justify-between items-center shadow-sm">
-                <h3 className="font-bold font-bold flex items-center gap-3 text-xl">
+                <h3 className="font-bold flex items-center gap-3 text-xl">
                     <img src="/images/masters/myeongwol.jpeg" className="w-8 h-8 rounded-full border border-white" alt="명월" />
                     AI 풍수 처방: 디지털 비방 아트
                 </h3>
@@ -46,7 +46,12 @@ export default function RemedyCard({
                     <div className={`w-full max-w-sm mx-auto ${aspectClass} bg-[#fcfbfa] rounded-2xl overflow-hidden relative shadow-inner ring-1 ring-black/5 transition-all duration-300`}>
                         {remedyArt ? (
                             <>
-                                <img src={remedyArt} alt="Remedy Art" className={`w-full h-full object-cover transition-all duration-700 ${!isUnlocked ? 'blur-xl scale-110 brightness-50' : 'blur-0 scale-100'}`} />
+                                <img
+                                    src={remedyArt}
+                                    alt="Remedy Art"
+                                    className={`w-full h-full object-cover transition-all duration-700 ${!isUnlocked ? 'scale-110 brightness-50' : 'scale-100'}`}
+                                    style={{ filter: !isUnlocked ? 'blur(12px)' : 'none' }}
+                                />
                                 {!isUnlocked && (
                                     <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center z-10 bg-black/40 backdrop-blur-sm">
                                         <Lock className="w-10 h-10 text-primary mb-4" />

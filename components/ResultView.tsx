@@ -161,7 +161,10 @@ export default function ResultView({
 
                             <div className="relative">
                                 {/* Blurred text container if locked */}
-                                <div className={`prose prose-sm max-w-none text-white/95 leading-[1.9] whitespace-pre-wrap font-medium relative z-10 text-[15px] ${!isReportUnlocked ? 'h-[160px] overflow-hidden' : ''}`}>
+                                <div
+                                    className={`prose prose-sm max-w-none text-white/95 leading-[1.9] whitespace-pre-wrap font-medium relative z-10 text-[15px] transition-all duration-700 ${!isReportUnlocked ? 'h-[160px] overflow-hidden select-none' : ''}`}
+                                    style={{ filter: !isReportUnlocked ? 'blur(6px)' : 'none' }}
+                                >
                                     {result.detailed_report}
 
                                     {!isReportUnlocked && (

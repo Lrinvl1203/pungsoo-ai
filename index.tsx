@@ -35,7 +35,7 @@ root.render(
             <Route path="/privacy" element={<Privacy />} />
           </Routes>
           <PWAInstallPrompt />
-          <Analytics />
+          {import.meta.env.PROD && <Analytics />}
         </BrowserRouter>
       </AuthProvider>
     </ErrorBoundary>

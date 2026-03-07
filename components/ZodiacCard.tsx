@@ -57,7 +57,10 @@ export default function ZodiacCard({ zodiacObject, zodiacImage, onDownloadImage,
                         )}
                     </div>
                     <div className="flex-1 flex flex-col justify-center space-y-5">
-                        <div className={`bg-white/5 backdrop-blur-xl p-6 rounded-xl border border-primary/30 shadow-sm relative overflow-hidden transition-all duration-700 ${!isUnlocked ? 'opacity-30 blur-[4px] select-none' : 'opacity-100 blur-0'}`}>
+                        <div
+                            className={`bg-white/5 backdrop-blur-xl p-6 rounded-xl border border-primary/30 shadow-sm relative overflow-hidden transition-all duration-700 ${!isUnlocked ? 'opacity-30 select-none' : 'opacity-100'}`}
+                            style={{ filter: !isUnlocked ? 'blur(4px)' : 'none' }}
+                        >
                             <div className="absolute top-0 right-0 w-24 h-24 bg-[#d4af37]/5 rounded-full blur-xl"></div>
                             <h4 className="text-primary font-bold text-[13px] uppercase tracking-widest mb-2 relative z-10">추천 오브제</h4>
                             <p className="text-white font-extrabold text-3xl mb-4 relative z-10">{zodiacObject.animal}</p>
@@ -66,11 +69,17 @@ export default function ZodiacCard({ zodiacObject, zodiacImage, onDownloadImage,
                                 <p className="text-[14px] text-slate-200 flex items-center gap-2 bg-white/5 p-2 rounded-lg"><span className="font-bold text-slate-300 w-20 shrink-0">선별 특징</span> {zodiacObject.specific_pose_or_feature}</p>
                             </div>
                         </div>
-                        <div className={`bg-white/5 backdrop-blur-md p-6 rounded-xl border border-white/10 shadow-sm transition-all duration-700 ${!isUnlocked ? 'opacity-30 blur-[4px] select-none' : 'hover:border-primary/30 opacity-100 blur-0'}`}>
+                        <div
+                            className={`bg-white/5 backdrop-blur-md p-6 rounded-xl border border-white/10 shadow-sm transition-all duration-700 ${!isUnlocked ? 'opacity-30 select-none' : 'hover:border-primary/30 opacity-100'}`}
+                            style={{ filter: !isUnlocked ? 'blur(4px)' : 'none' }}
+                        >
                             <h4 className="text-white font-bold text-[16px] mb-3 flex items-center gap-2"><Sparkles className="w-4 h-4 text-primary" /> 추천 이유</h4>
                             <p className="text-slate-200 text-[15px] leading-relaxed font-medium">{zodiacObject.reason}</p>
                         </div>
-                        <div className={`bg-white/5 backdrop-blur-md p-6 rounded-xl border border-white/10 shadow-sm transition-all duration-700 ${!isUnlocked ? 'opacity-30 blur-[4px] select-none' : 'hover:border-primary/30 opacity-100 blur-0'}`}>
+                        <div
+                            className={`bg-white/5 backdrop-blur-md p-6 rounded-xl border border-white/10 shadow-sm transition-all duration-700 ${!isUnlocked ? 'opacity-30 select-none' : 'hover:border-primary/30 opacity-100'}`}
+                            style={{ filter: !isUnlocked ? 'blur(4px)' : 'none' }}
+                        >
                             <h4 className="text-white font-bold text-[16px] mb-3 flex items-center gap-2"><MapPin className="w-4 h-4 text-primary" /> 배치 가이드</h4>
                             <p className="text-slate-200 text-[15px] leading-relaxed font-medium">{zodiacObject.placement_guide}</p>
                         </div>

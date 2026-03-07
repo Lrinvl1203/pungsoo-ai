@@ -10,6 +10,8 @@ import LoginButton from './components/LoginButton';
 import PaymentButton from './components/PaymentButton';
 import AnalysisForm from './components/AnalysisForm';
 import ResultView from './components/ResultView';
+import Onboarding from './components/Onboarding';
+import DailyFengShui from './components/DailyFengShui';
 import { saveAnalysis, getAnalysisById } from './services/analysisHistoryService';
 import { supabase } from './services/supabaseClient';
 
@@ -39,6 +41,18 @@ export default function App() {
   const [isSearchingAddress, setIsSearchingAddress] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Onboarding State
+  const [showOnboarding, setShowOnboarding] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('onboarding') === 'true') {
+        return true;
+      }
+      return localStorage.getItem('PUNGSOO_ONBOARDING_COMPLETED') !== 'true';
+    }
+    return true;
+  });
 
   // Test Mode State
   const [isTestMode, setIsTestMode] = useState(() => {
@@ -282,6 +296,10 @@ export default function App() {
 
   return (
     <div className="relative flex min-h-screen w-full flex-col group/design-root font-display text-slate-100 antialiased overflow-x-hidden">
+      {showOnboarding && (
+        <Onboarding onComplete={() => setShowOnboarding(false)} />
+      )}
+      {!showOnboarding && <DailyFengShui />}
       {/* Background Image Layer */}
       <div className="fixed inset-0 z-0 bg-cover bg-center bg-no-repeat" style={{ backgroundImage: 'linear-gradient(to bottom, rgba(34, 30, 16, 0.3), rgba(34, 30, 16, 0.95)), url("https://lh3.googleusercontent.com/aida-public/AB6AXuCvWHIjiF4g5DNNRn-SXcwt2avj0BLQtkpRNkxzW4yaTcZygH6W75Mgm8xZfJMFwgDl3ZzUlc6mIm4DU7KMOq9ZA8y3P28VLj1AWm2fRSFz2W-eyaA8d3S-LT53x4KMyKZpWH97cfzWmHsYvjueHKf65AAHWn-QMjARhiNGq2m8jJxhg0Z_jHAroZMcVI7Cnqw_qBdC3swN5eLsbl34fGk8Nfx5AJ9q5f5qB6fz36r-sNjy-iST8wYDkl9viWeX0tRoiIMznIsyWmEx")' }}></div>
       {/* Floating Particles */}
