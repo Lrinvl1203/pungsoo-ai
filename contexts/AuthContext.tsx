@@ -6,8 +6,8 @@ interface AuthContextType {
     user: User | null;
     session: Session | null;
     loading: boolean;
-    signInWithKakao: () => Promise<void>;
-    signInWithGoogle: () => Promise<void>;
+    signInWithKakao: (redirectTo?: string) => Promise<void>;
+    signInWithGoogle: (redirectTo?: string) => Promise<void>;
     signOut: () => Promise<void>;
 }
 
@@ -45,12 +45,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         };
     }, []);
 
-    const signInWithKakao = async () => {
+    const signInWithKakao = async (redirectTo?: string) => {
         try {
             const { error } = await supabase.auth.signInWithOAuth({
                 provider: 'kakao',
                 options: {
-                    redirectTo: window.location.origin
+                    redirectTo: redirectTo || window.location.origin
                 }
             });
             if (error) throw error;
@@ -60,12 +60,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     };
 
-    const signInWithGoogle = async () => {
+    const signInWithGoogle = async (redirectTo?: string) => {
         try {
             const { error } = await supabase.auth.signInWithOAuth({
                 provider: 'google',
                 options: {
-                    redirectTo: window.location.origin,
+                    redirectTo: redirectTo || window.location.origin,
                     queryParams: {
                         access_type: 'offline',
                         prompt: 'consent',

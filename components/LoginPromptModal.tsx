@@ -17,10 +17,12 @@ export default function LoginPromptModal({ isOpen, onClose, message = '프리미
     const handleSignIn = async (provider: 'kakao' | 'google') => {
         setIsSigningIn(true);
         try {
+            // 로그인 후 현재 페이지로 돌아오도록 redirectTo 설정
+            const redirectTo = window.location.href;
             if (provider === 'kakao') {
-                await signInWithKakao();
+                await signInWithKakao(redirectTo);
             } else {
-                await signInWithGoogle();
+                await signInWithGoogle(redirectTo);
             }
             // On success, redirecting happens so no need to stop spinner usually
         } catch (e) {

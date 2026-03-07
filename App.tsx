@@ -112,16 +112,26 @@ export default function App() {
         const parsedHistory = JSON.parse(savedHistory);
         setHistory(parsedHistory);
         // Only load if there's no sharedId
-        if (!sharedId && location.state && typeof location.state.loadHistoryItem === 'number') {
-          const idx = location.state.loadHistoryItem;
-          if (parsedHistory[idx]) {
-            const item = parsedHistory[idx];
-            setResult(item.result);
-            setImage(item.image);
-            setRemedyArt(item.remedyArt);
-            setZodiacImage(item.zodiacImage || null);
+        if (!sharedId) {
+          if (location.state && typeof location.state.loadHistoryItem === 'number') {
+            const idx = location.state.loadHistoryItem;
+            if (parsedHistory[idx]) {
+              const item = parsedHistory[idx];
+              setResult(item.result);
+              setImage(item.image);
+              setRemedyArt(item.remedyArt);
+              setZodiacImage(item.zodiacImage || null);
+              setToBeImage(null);
+              window.history.replaceState({}, document.title);
+            }
+          } else if (localStorage.getItem('pending_payment_intent') && parsedHistory.length > 0) {
+            // 결제 중 로그인 후 복귀: 마지막 분석 결과 자동 복원
+            const latest = parsedHistory[0];
+            setResult(latest.result);
+            setImage(latest.image);
+            setRemedyArt(latest.remedyArt);
+            setZodiacImage(latest.zodiacImage || null);
             setToBeImage(null);
-            window.history.replaceState({}, document.title);
           }
         }
       } catch (e) {

@@ -45,9 +45,25 @@ export default function ResultView({
     const [isReportUnlocked, setIsReportUnlocked] = useState(false);
 
     // Auth and Modals
-    const { user } = useAuth();
+    const { user, loading: authLoading } = useAuth();
     const [showLoginModal, setShowLoginModal] = useState(false);
     const [showPaymentModal, setShowPaymentModal] = useState(false);
+
+    // 로그인 후 복귀 시 결제 모달 자동 오픈
+    React.useEffect(() => {
+        if (!authLoading && user) {
+            const raw = localStorage.getItem('pending_payment_intent');
+            if (raw) {
+                try {
+                    const intent = JSON.parse(raw);
+                    if (intent.type === 'report') {
+                        localStorage.removeItem('pending_payment_intent');
+                        setShowPaymentModal(true);
+                    }
+                } catch { /* ignore */ }
+            }
+        }
+    }, [user, authLoading]);
 
     // Fetch unlock status from DB
     React.useEffect(() => {
@@ -71,6 +87,8 @@ export default function ResultView({
 
     const handleUnlockReport = () => {
         if (!user) {
+            // 로그인 후 결제 모달이 자동 복원되도록 intent 저장
+            localStorage.setItem('pending_payment_intent', JSON.stringify({ type: 'report' }));
             setShowLoginModal(true);
         } else {
             setShowPaymentModal(true);
