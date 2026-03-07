@@ -23,6 +23,7 @@ export default function PaymentButton({ amount, orderName, orderType, onSuccess,
     const [isSdkLoaded, setIsSdkLoaded] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
     const [showWidget, setShowWidget] = useState(false);
+    const [isWidgetRendered, setIsWidgetRendered] = useState(false);
     const orderId = useRef(crypto.randomUUID().replace(/-/g, ''));
 
     useEffect(() => {
@@ -44,6 +45,12 @@ export default function PaymentButton({ amount, orderName, orderType, onSuccess,
                 { value: amount },
                 { variantKey: 'DEFAULT' }
             );
+
+            // Wait for iframe to fully render before allowing the user to click "requestPayment"
+            paymentMethodsWidget.on('ready', () => {
+                setIsWidgetRendered(true);
+            });
+
             paymentWidget.renderAgreement('#agreement', { variantKey: 'AGREEMENT' });
             paymentMethodsWidgetRef.current = paymentMethodsWidget;
         }
@@ -52,10 +59,12 @@ export default function PaymentButton({ amount, orderName, orderType, onSuccess,
     const handlePayment = async () => {
         if (!showWidget) {
             setShowWidget(true);
+            // Give the Toss Widget iframe a brief moment to mount on the DOM before requesting payment.
+            // This prevents the "UI has not rendered yet" Toss internal error.
             return;
         }
 
-        if (!paymentWidget) return;
+        if (!paymentWidget || !isWidgetRendered) return;
         setIsProcessing(true);
 
         try {
