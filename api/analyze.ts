@@ -61,10 +61,18 @@ export default async function handler(req: any, res: any) {
     const text = response.text();
     const cleanedText = text.replace(/```json/g, "").replace(/```/g, "").trim();
 
-    // Remove control characters (0x00-0x1F except \n, \r, \t) that break JSON.parse
+    // Remove non-printable control characters (except \t which is valid in JSON)
     const sanitizedText = cleanedText.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, "");
 
-    return res.status(200).json(JSON.parse(sanitizedText));
+    // Try direct parse first; if it fails, repair literal newlines inside JSON strings
+    let parsed: any;
+    try {
+      parsed = JSON.parse(sanitizedText);
+    } catch {
+      parsed = JSON.parse(repairJsonNewlines(sanitizedText));
+    }
+
+    return res.status(200).json(parsed);
   } catch (error: any) {
     console.error("VERCEL FUNCTION CRASH LOG:", error);
     return res.status(500).json({
@@ -73,4 +81,31 @@ export default async function handler(req: any, res: any) {
       name: error.name
     });
   }
+}
+
+/**
+ * Gemini occasionally emits literal \n, \r, \t inside JSON string values
+ * instead of the escaped forms \\n \\r \\t, which breaks JSON.parse.
+ * This function walks the raw text and escapes those characters only when
+ * they appear inside a JSON string (between unescaped double-quotes).
+ */
+function repairJsonNewlines(text: string): string {
+  let inString = false;
+  let result = '';
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    const prev = i > 0 ? text[i - 1] : '';
+    if (ch === '"' && prev !== '\\') {
+      inString = !inString;
+      result += ch;
+      continue;
+    }
+    if (inString) {
+      if (ch === '\n') { result += '\\n'; continue; }
+      if (ch === '\r') { result += '\\r'; continue; }
+      if (ch === '\t') { result += '\\t'; continue; }
+    }
+    result += ch;
+  }
+  return result;
 }
