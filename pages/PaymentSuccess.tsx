@@ -19,6 +19,12 @@ export default function PaymentSuccess() {
             return;
         }
 
+        // Mock 결제 모드: 실제 API 호출 없이 성공 처리
+        if (paymentKey.startsWith('mock_')) {
+            setStatus('success');
+            return;
+        }
+
         const confirmPayment = async () => {
             try {
                 const response = await fetch('/api/confirm-payment', {

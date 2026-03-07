@@ -480,7 +480,26 @@ export default function App() {
                     className="w-full bg-black/30 text-white border border-white/10 rounded-lg px-3 py-2 outline-none focus:border-primary resize-none h-20"
                     placeholder={isLoggedIn ? `연락받으실 번호와 요청사항을 적어주세요.\n(예: 010-1234-5678, 배송은 주말에 해주세요.)` : "그 외 요청하실 사항을 적어주세요."} />
                 </div>
-                <div className="pt-4">
+                <div className="pt-4 space-y-3">
+                  <button
+                    type="submit"
+                    disabled={isSubmittingOrder || (!isLoggedIn && (!orderFormData.name || !orderFormData.contact))}
+                    className="w-full py-4 bg-[#d4af37] text-[#221e10] font-bold rounded-xl hover:bg-[#c29d2f] transition-all flex items-center justify-center gap-2"
+                  >
+                    {isSubmittingOrder ? (
+                      <div className="w-5 h-5 border-2 border-[#221e10]/30 border-t-[#221e10] rounded-full animate-spin"></div>
+                    ) : (
+                      <Send className="w-5 h-5" />
+                    )}
+                    이메일로 먼저 의뢰 접수하기 (나중에 결제)
+                  </button>
+
+                  <div className="relative flex items-center py-2">
+                    <div className="flex-grow border-t border-white/10"></div>
+                    <span className="flex-shrink-0 mx-4 text-slate-500 text-xs">또는 즉시 결제</span>
+                    <div className="flex-grow border-t border-white/10"></div>
+                  </div>
+
                   <PaymentButton amount={orderType === 'frame' ? 49000 : 79000}
                     orderName={`[풍수AI] ${orderType === 'frame' ? '디지털 액자' : '12간지 비방 오브제'} 제작 의뢰`}
                     orderType={orderType}
