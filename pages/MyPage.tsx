@@ -18,13 +18,14 @@ interface HistoryItem {
 
 export default function MyPage() {
     const navigate = useNavigate();
-    const { user, signOut } = useAuth();
+    const { user, signOut, loading } = useAuth();
     const { settings, updateSettings } = useUserSettings();
     const [history, setHistory] = useState<HistoryItem[]>([]);
     const [purchases, setPurchases] = useState<any[]>([]);
     const [activeTab, setActiveTab] = useState<'profile' | 'history' | 'orders' | 'gallery' | 'settings'>('history');
 
     useEffect(() => {
+        if (loading) return;
         if (!user) {
             navigate('/');
             return;
@@ -52,7 +53,7 @@ export default function MyPage() {
         };
 
         fetchPurchases();
-    }, [user, navigate]);
+    }, [user, loading, navigate]);
 
     const handleSignOut = async () => {
         try {
@@ -87,6 +88,7 @@ export default function MyPage() {
         link.click();
     };
 
+    if (loading) return <div className="min-h-screen bg-[#0c0a06] flex items-center justify-center"><div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" /></div>;
     if (!user) return null;
 
     const displayName = user?.user_metadata?.full_name || user?.user_metadata?.name || '회원';

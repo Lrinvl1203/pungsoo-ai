@@ -11,6 +11,7 @@ import { supabase } from '../services/supabaseClient';
 interface ResultViewProps {
     result: AnalysisResult | null;
     loading: boolean;
+    generatingVisuals: boolean;
     image: string | null;
     toBeImage: string | null;
     remedyArt: string | null;
@@ -28,6 +29,7 @@ interface ResultViewProps {
 export default function ResultView({
     result,
     loading,
+    generatingVisuals,
     image,
     toBeImage,
     remedyArt,
@@ -283,8 +285,8 @@ export default function ResultView({
                         </section>
                     )}
 
-                    {/* 4. To-Be Visualization */}
-                    {metadata.analysisType === 'internal' && image && (
+                    {/* 4. To-Be Visualization — only show when generating or image is available */}
+                    {metadata.analysisType === 'internal' && image && (toBeImage !== null || generatingVisuals) && (
                         <section className="bg-white/5 backdrop-blur-xl rounded-2xl overflow-hidden shadow-xl border border-white/10 stagger-item" style={{ animationDelay: '0.4s' }}>
                             <div className="bg-white/5 backdrop-blur-sm p-5 border-b border-white/10 flex justify-between items-center">
                                 <h3 className="font-bold font-bold text-white flex items-center gap-2 text-xl">

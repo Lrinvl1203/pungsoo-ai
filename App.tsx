@@ -420,7 +420,7 @@ export default function App() {
 
             {/* Results Section — Extracted Component */}
             <ResultView
-              result={result} loading={loading} image={image} toBeImage={toBeImage}
+              result={result} loading={loading} generatingVisuals={generatingVisuals} image={image} toBeImage={toBeImage}
               remedyArt={remedyArt} zodiacImage={zodiacImage}
               metadata={metadata} setMetadata={setMetadata}
               isRegeneratingArt={isRegeneratingArt} onRegenerateArt={handleRegenerateArt}
