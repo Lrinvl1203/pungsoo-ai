@@ -6,7 +6,18 @@
       "Bash(git push:*)",
       "Bash(gh run list:*)",
       "mcp__playwright__browser_evaluate",
-      "WebFetch(domain:fal.ai)"
+      "WebFetch(domain:fal.ai)",
+      "Bash(npx vercel ls)",
+      "Bash(gh repo view:*)",
+      "Bash(npx vercel inspect:*)",
+      "Bash(npx vercel:*)",
+      "mcp__playwright__browser_console_messages",
+      "Bash(python3:*)",
+      "Bash(ls:*)",
+      "mcp__playwright__browser_fill_form",
+      "mcp__playwright__browser_file_upload",
+      "mcp__playwright__browser_click",
+      "mcp__playwright__browser_wait_for"
     ]
   }
 }
