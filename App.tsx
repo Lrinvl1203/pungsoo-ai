@@ -205,7 +205,9 @@ export default function App() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          orderType, name: orderFormData.name, contact: orderFormData.contact,
+          orderType,
+          name: isLoggedIn ? (user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email || '회원') : orderFormData.name,
+          contact: isLoggedIn ? (user?.email || orderFormData.contact) : orderFormData.contact,
           message: orderFormData.message, userId: user?.id,
           objectSize: orderType === 'object' ? orderFormData.objectSize : undefined,
           analysisData: result ? { remedyArtKeyword: result.remedy_art?.solution_keyword, deficiency: result.remedy_art?.deficiency, zodiacAnimal: result.zodiac_remedy_object?.animal } : null

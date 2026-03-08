@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { CheckCircle2, Loader2, Home } from 'lucide-react';
+import { supabase } from '../services/supabaseClient';
 
 export default function PaymentSuccess() {
     const [searchParams] = useSearchParams();
@@ -19,9 +20,28 @@ export default function PaymentSuccess() {
             return;
         }
 
-        // Mock 결제 모드: 실제 API 호출 없이 성공 처리
+        // Mock 결제 모드: 실제 API 호출 없이 성공 처리 + DB 저장
         if (paymentKey.startsWith('mock_')) {
-            setStatus('success');
+            (async () => {
+                const orderType = localStorage.getItem('temp_order_type') || 'report';
+                const userId = localStorage.getItem('temp_order_userId') || '';
+                const analysisId = localStorage.getItem('temp_order_analysisId');
+                if (userId) {
+                    await supabase.from('purchases').insert([{
+                        user_id: userId,
+                        order_id: orderId,
+                        payment_key: paymentKey,
+                        amount: parseInt(amount),
+                        order_type: orderType,
+                        status: 'COMPLETED',
+                        analysis_id: analysisId ? parseInt(analysisId) : null,
+                    }]);
+                }
+                localStorage.removeItem('temp_order_type');
+                localStorage.removeItem('temp_order_userId');
+                localStorage.removeItem('temp_order_analysisId');
+                setStatus('success');
+            })();
             return;
         }
 

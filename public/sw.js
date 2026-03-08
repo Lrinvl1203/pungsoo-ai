@@ -3,7 +3,6 @@ const CACHE_NAME = 'pungsoo-ai-v2';
 const STATIC_ASSETS = [
     '/',
     '/index.html',
-    '/index.css',
     '/images/masters/cheongpung.jpeg',
     '/images/masters/myeongwol.jpeg',
 ];
