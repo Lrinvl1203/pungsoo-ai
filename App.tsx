@@ -550,6 +550,8 @@ export default function App() {
               <span className="text-slate-600">|</span>
               <a href="/privacy" className="text-slate-400 hover:text-primary transition-colors">개인정보처리방침</a>
               <span className="text-slate-600">|</span>
+              <a href="/refund" className="text-slate-400 hover:text-primary transition-colors">환불정책</a>
+              <span className="text-slate-600">|</span>
               <a href="mailto:lrinvl1203@gmail.com" className="text-slate-400 hover:text-primary transition-colors">문의하기</a>
             </div>
             <p className="text-slate-500 text-[10px]">© Feng Shui Grand Master AI. All rights reserved.</p>

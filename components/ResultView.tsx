@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Share2, FileText, CheckCircle2, AlertTriangle, Download, Compass, Sparkles, MapPin, ImageIcon, Loader2, Lock } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { Share2, FileText, CheckCircle2, AlertTriangle, Download, Compass, Sparkles, MapPin, ImageIcon, Loader2, Lock, FileDown } from 'lucide-react';
 import { AnalysisResult, UserMetadata } from '../types';
 import RemedyCard from './RemedyCard';
 import ZodiacCard from './ZodiacCard';
@@ -96,6 +96,178 @@ export default function ResultView({
             setShowPaymentModal(true);
         }
     };
+
+    const handlePrintPDF = () => {
+        if (!result) return;
+        const printWindow = window.open('', '_blank');
+        if (!printWindow) { alert('팝업이 차단되었습니다. 팝업 허용 후 다시 시도해주세요.'); return; }
+
+        // Five elements data from result (with fallback)
+        const fe = (result as any).five_elements || { fire: 50, water: 50, wood: 50, earth: 50, metal: 50, deficient: '-', excess: '-', advice: '' };
+
+        // Diagnosis cards HTML
+        const diagnosisHTML = (result.diagnosis ?? []).map(diag => {
+            const isGood = diag.type.includes('길');
+            return `<div class="diag-card ${isGood ? 'good' : 'bad'}">
+                <div class="diag-header">${isGood ? '✅' : '⚠️'} ${diag.keyword}</div>
+                <p>${diag.description}</p>
+            </div>`;
+        }).join('');
+
+        // Convert markdown-ish report to HTML paragraphs
+        const reportHTML = (result.detailed_report || '')
+            .replace(/## (.*)/g, '<h2 class="section-title">$1</h2>')
+            .replace(/\n\n/g, '</p><p>')
+            .replace(/\n/g, '<br/>');
+
+        const today = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
+
+        printWindow.document.write(`<!DOCTYPE html>
+<html lang="ko"><head><meta charset="utf-8"/>
+<title>풍수AI 초정밀 감명서</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;700;900&family=Manrope:wght@300;400;600&display=swap" rel="stylesheet"/>
+<style>
+  :root { --gold:#D4AF37; --gold-dark:#8B7355; --ink:#1A1A1A; --paper:#FDF9EF; --red:#B81D2E; --green:#2D7F5E; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Manrope','Apple SD Gothic Neo',sans-serif; background:var(--paper); color:var(--ink); line-height:1.9; max-width:800px; margin:0 auto; }
+  
+  /* Header */
+  .header { background:linear-gradient(180deg,#1a1508,#2a2010); color:var(--paper); padding:48px 40px; text-align:center; position:relative; border-bottom:0.5px solid rgba(212,175,55,0.3); }
+  .header::before { content:''; position:absolute; inset:0 0 auto 0; height:16px; opacity:0.3; background:radial-gradient(circle at 10px 10px,var(--gold) 2px,transparent 0); background-size:24px 24px; }
+  .header h1 { font-family:'Noto Serif KR',serif; font-size:36px; font-weight:900; color:var(--gold); letter-spacing:12px; margin:8px 0; }
+  .header .subtitle { font-size:12px; color:#a09882; letter-spacing:4px; }
+  .score-badge { display:inline-flex; flex-direction:column; align-items:center; background:rgba(212,175,55,0.1); border:2px solid var(--gold); padding:12px 32px; margin-top:16px; }
+  .score-badge .number { font-family:'Noto Serif KR',serif; font-size:52px; font-weight:900; color:var(--gold); line-height:1; }
+  .score-badge .unit { font-size:16px; color:var(--gold); opacity:0.8; }
+  .score-badge .label { font-size:10px; color:#a09882; letter-spacing:3px; margin-top:4px; text-transform:uppercase; }
+  
+  /* Body */
+  .body { padding:48px 40px; }
+  
+  /* Sections */
+  .section { margin-bottom:40px; }
+  .section-header { display:flex; align-items:center; gap:12px; padding-bottom:12px; border-bottom:2px solid var(--gold); margin-bottom:20px; position:relative; }
+  .section-header::after { content:'❀'; position:absolute; bottom:-10px; left:50%; transform:translateX(-50%); background:var(--paper); padding:0 12px; color:var(--gold); font-size:13px; }
+  .section-num { font-family:'Noto Serif KR',serif; font-size:12px; font-weight:700; color:var(--gold); background:rgba(212,175,55,0.1); width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; border:1.5px solid var(--gold); flex-shrink:0; }
+  .section-title { font-family:'Noto Serif KR',serif; font-size:20px; font-weight:700; color:var(--ink); letter-spacing:2px; margin:24px 0 16px; }
+  h2.section-title { border:none; padding:0; }
+  
+  /* Report text */
+  .report-text { font-size:14px; color:#3D3D3D; line-height:2; text-align:justify; }
+  .report-text p { margin-bottom:14px; text-indent:1em; }
+  
+  /* Quote block */
+  .quote { background:linear-gradient(135deg,rgba(212,175,55,0.05),rgba(139,115,85,0.05)); border-left:4px solid var(--gold); padding:16px 20px; margin:20px 0; }
+  .quote .text { font-family:'Noto Serif KR',serif; font-size:16px; font-weight:700; letter-spacing:1px; }
+  .quote .meaning { font-size:12px; color:var(--gold-dark); font-style:italic; margin-top:4px; }
+  
+  /* Diagnosis cards */
+  .diag-card { padding:16px; margin-bottom:12px; border-left:4px solid; }
+  .diag-card.good { background:rgba(45,127,94,0.04); border-color:var(--green); }
+  .diag-card.bad { background:rgba(184,29,46,0.04); border-color:var(--red); }
+  .diag-header { font-weight:700; font-size:15px; margin-bottom:6px; }
+  .diag-card.good .diag-header { color:var(--green); }
+  .diag-card.bad .diag-header { color:var(--red); }
+  .diag-card p { font-size:13px; color:#555; line-height:1.7; }
+  
+  /* Five elements */
+  .elements { display:flex; gap:16px; justify-content:center; padding:24px; background:#F1EEE4; margin:24px 0; border:1px solid rgba(139,115,85,0.15); }
+  .el-item { text-align:center; flex:1; }
+  .el-icon { font-size:24px; margin-bottom:4px; }
+  .el-name { font-family:'Noto Serif KR',serif; font-size:12px; font-weight:700; margin-bottom:6px; }
+  .el-bar { width:100%; height:5px; background:rgba(0,0,0,0.08); overflow:hidden; }
+  .el-fill { height:100%; }
+  .el-pct { font-size:10px; color:var(--gold-dark); margin-top:3px; }
+  .el-summary { margin-top:16px; padding:12px; background:var(--paper); border:1px solid rgba(212,175,55,0.2); text-align:center; font-size:13px; color:#555; }
+  
+  /* Footer / Seal */
+  .footer { text-align:center; padding:40px; border-top:1px solid rgba(139,115,85,0.2); margin-top:40px; }
+  .seal { display:inline-block; width:72px; height:72px; border:3px solid var(--red); transform:rotate(-8deg); position:relative; margin-bottom:12px; opacity:0.8; }
+  .seal-inner { position:absolute; inset:3px; border:1.5px solid var(--red); display:flex; align-items:center; justify-content:center; font-family:'Noto Serif KR',serif; font-size:14px; font-weight:900; color:var(--red); writing-mode:vertical-rl; text-orientation:upright; line-height:1.2; letter-spacing:2px; }
+  .footer-text { font-size:10px; color:var(--gold-dark); letter-spacing:2px; }
+  .footer-date { font-size:11px; color:#999; margin-top:6px; }
+  
+  @media print {
+    body { padding:0; max-width:none; }
+    .header { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    .section, .diag-card { page-break-inside:avoid; }
+    .elements { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    .seal { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  }
+</style>
+</head><body>
+
+<div class="header">
+  <div class="subtitle">風水地理 AI 大家 — 天地人 居士</div>
+  <h1>풍 수 감 정 서</h1>
+  <div class="score-badge">
+    <div class="label">종합 풍수 점수</div>
+    <div><span class="number">${result.feng_shui_score || 0}</span><span class="unit">점</span></div>
+  </div>
+</div>
+
+<div class="body">
+  <!-- Summary -->
+  <div class="section">
+    <div class="quote">
+      <div class="text">${result.analysis_summary || ''}</div>
+      <div class="meaning">— 청풍 도사의 감평</div>
+    </div>
+  </div>
+
+  <!-- Detailed Report -->
+  <div class="section">
+    <div class="report-text"><p>${reportHTML}</p></div>
+  </div>
+
+  <!-- Diagnosis Cards -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">診</div>
+      <h3 style="font-family:'Noto Serif KR',serif;font-size:20px;font-weight:700;letter-spacing:2px;">길흉 진단 요약</h3>
+    </div>
+    ${diagnosisHTML}
+  </div>
+
+  <!-- Five Elements -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">行</div>
+      <h3 style="font-family:'Noto Serif KR',serif;font-size:20px;font-weight:700;letter-spacing:2px;">오행(五行) 균형 분석</h3>
+    </div>
+    <div class="elements">
+      <div class="el-item"><div class="el-icon">🔥</div><div class="el-name">火</div><div class="el-bar"><div class="el-fill" style="width:${fe.fire}%;background:#DC2626;"></div></div><div class="el-pct">${fe.fire}%</div></div>
+      <div class="el-item"><div class="el-icon">💧</div><div class="el-name">水</div><div class="el-bar"><div class="el-fill" style="width:${fe.water}%;background:#2563EB;"></div></div><div class="el-pct">${fe.water}%</div></div>
+      <div class="el-item"><div class="el-icon">🌿</div><div class="el-name">木</div><div class="el-bar"><div class="el-fill" style="width:${fe.wood}%;background:#16A34A;"></div></div><div class="el-pct">${fe.wood}%</div></div>
+      <div class="el-item"><div class="el-icon">⛰️</div><div class="el-name">土</div><div class="el-bar"><div class="el-fill" style="width:${fe.earth}%;background:#CA8A04;"></div></div><div class="el-pct">${fe.earth}%</div></div>
+      <div class="el-item"><div class="el-icon">🪙</div><div class="el-name">金</div><div class="el-bar"><div class="el-fill" style="width:${fe.metal}%;background:#6B7280;"></div></div><div class="el-pct">${fe.metal}%</div></div>
+    </div>
+    ${fe.advice ? `<div class="el-summary">부족: <strong>${fe.deficient}</strong> · 과잉: <strong>${fe.excess}</strong><br/>${fe.advice}</div>` : ''}
+  </div>
+
+  <!-- Overall Advice -->
+  <div class="section" style="margin-top:32px;">
+    <div class="quote" style="text-align:center;">
+      <div class="text" style="font-size:15px;">${result.overall_advice || ''}</div>
+      <div class="meaning">— 청풍 · 명월 두 대가의 총평</div>
+    </div>
+  </div>
+</div>
+
+<!-- Footer with Seal -->
+<div class="footer">
+  <div class="seal"><div class="seal-inner">天地人居士</div></div>
+  <div class="footer-text">풍수지리 AI 대가 — 천지인 거사 감정</div>
+  <div class="footer-date">${today} 발행</div>
+  <div style="margin-top:16px;font-size:9px;color:#bbb;">© 풍수AI · 본 문서는 AI 분석 결과이며, 전문가의 현장 감정을 대체하지 않습니다.</div>
+</div>
+
+</body></html>`);
+        printWindow.document.close();
+        printWindow.focus();
+        setTimeout(() => { printWindow.print(); }, 800);
+    };
+
 
     const handleShare = async () => {
         if (!currentAnalysisId) {
@@ -228,6 +400,14 @@ export default function ResultView({
                                 </div>
 
                                 {/* Unlock Overlay */}
+                                {isReportUnlocked && (
+                                    <div className="mt-6 flex justify-center">
+                                        <button onClick={handlePrintPDF} className="flex items-center gap-2 px-5 py-3 bg-primary/10 border border-primary/30 text-primary font-bold rounded-xl hover:bg-primary/20 transition-all text-sm">
+                                            <FileDown className="w-4 h-4" /> 감명서 PDF 저장
+                                        </button>
+                                    </div>
+                                )}
+
                                 {!isReportUnlocked && (
                                     <div className="absolute bottom-0 left-0 w-full flex flex-col items-center justify-end pb-2 pt-24 z-30 pointer-events-auto">
                                         <div className="bg-[#221e10]/90 backdrop-blur-xl p-6 rounded-2xl border border-primary/50 shadow-2xl w-[90%] max-w-sm text-center transform translate-y-8">

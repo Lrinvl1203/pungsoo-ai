@@ -10,6 +10,8 @@ import MyPage from './pages/MyPage';
 import Landing from './pages/Landing';
 import Terms from './pages/Terms';
 import Privacy from './pages/Privacy';
+import Refund from './pages/Refund';
+import AdminDashboard from './pages/AdminDashboard';
 import ErrorBoundary from './components/ErrorBoundary';
 import PWAInstallPrompt from './components/PWAInstallPrompt';
 import { Analytics } from '@vercel/analytics/react';
@@ -33,6 +35,8 @@ root.render(
             <Route path="/payment/fail" element={<PaymentFail />} />
             <Route path="/terms" element={<Terms />} />
             <Route path="/privacy" element={<Privacy />} />
+            <Route path="/refund" element={<Refund />} />
+            <Route path="/admin" element={<AdminDashboard />} />
           </Routes>
           <PWAInstallPrompt />
           {import.meta.env.PROD && <Analytics />}
