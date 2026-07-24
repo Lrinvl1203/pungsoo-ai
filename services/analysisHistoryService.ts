@@ -37,6 +37,12 @@
  *   ON analysis_history FOR DELETE
  *   USING (auth.uid() = user_id);
  *
+ * -- Users can update their own rows (needed for paid visual generation)
+ * CREATE POLICY "Users can update own history"
+ *   ON analysis_history FOR UPDATE
+ *   USING (auth.uid() = user_id)
+ *   WITH CHECK (auth.uid() = user_id);
+ *
  * -- Index for faster user queries
  * CREATE INDEX idx_analysis_history_user ON analysis_history(user_id, created_at DESC);
  * ```
@@ -168,6 +174,30 @@ export async function deleteAnalysis(id: string): Promise<boolean> {
         return true;
     } catch (err) {
         console.error('Error deleting analysis:', err);
+        return false;
+    }
+}
+
+/**
+ * Update generated visual URLs after a paid unlock.
+ */
+export async function updateAnalysisVisuals(
+    id: string,
+    updates: Partial<Pick<AnalysisHistoryRow, 'remedy_art_url' | 'zodiac_image_url' | 'to_be_image_url'>>
+): Promise<boolean> {
+    try {
+        const { error } = await supabase
+            .from('analysis_history')
+            .update(updates)
+            .eq('id', id);
+
+        if (error) {
+            console.error('Failed to update analysis visuals:', error);
+            return false;
+        }
+        return true;
+    } catch (err) {
+        console.error('Error updating analysis visuals:', err);
         return false;
     }
 }

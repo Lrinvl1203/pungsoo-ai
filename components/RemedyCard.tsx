@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import DigitalPaymentModal from './DigitalPaymentModal';
 import LoginPromptModal from './LoginPromptModal';
 import { supabase } from '../services/supabaseClient';
+import { DIGITAL_PRODUCT_TOTAL_KRW, formatKrw } from '../services/pricing';
 
 interface RemedyCardProps {
     result: AnalysisResult;
@@ -15,7 +16,8 @@ interface RemedyCardProps {
     onRegenerateArt: () => void;
     onDownloadImage: (dataUrl: string, filename: string) => void;
     onOrderFrame: () => void;
-    currentAnalysisId?: number | null;
+    currentAnalysisId?: string | null;
+    premiumPreviewUnlocked?: boolean;
 }
 
 export default function RemedyCard({
@@ -28,8 +30,11 @@ export default function RemedyCard({
     onDownloadImage,
     onOrderFrame,
     currentAnalysisId,
+    premiumPreviewUnlocked = false,
 }: RemedyCardProps) {
     const [isUnlocked, setIsUnlocked] = useState(false);
+    const [hasRequestedPaidImage, setHasRequestedPaidImage] = useState(false);
+    const effectiveUnlocked = isUnlocked || premiumPreviewUnlocked;
 
     // Auth and Modals
     const { user } = useAuth();
@@ -56,8 +61,31 @@ export default function RemedyCard({
         checkUnlockStatus();
     }, [user, currentAnalysisId]);
 
+    React.useEffect(() => {
+        if (!user) return;
+        const raw = localStorage.getItem('pending_payment_intent');
+        if (!raw) return;
+        try {
+            const intent = JSON.parse(raw);
+            if (intent.type === 'remedy') {
+                localStorage.removeItem('pending_payment_intent');
+                setShowPaymentModal(true);
+            }
+        } catch {
+            localStorage.removeItem('pending_payment_intent');
+        }
+    }, [user]);
+
+    React.useEffect(() => {
+        if (isUnlocked && !remedyArt && !isRegeneratingArt && !hasRequestedPaidImage) {
+            setHasRequestedPaidImage(true);
+            onRegenerateArt();
+        }
+    }, [isUnlocked, remedyArt, isRegeneratingArt, hasRequestedPaidImage, onRegenerateArt]);
+
     const handleUnlockRemedy = () => {
         if (!user) {
+            localStorage.setItem('pending_payment_intent', JSON.stringify({ type: 'remedy' }));
             setShowLoginModal(true);
         } else {
             setShowPaymentModal(true);
@@ -74,11 +102,11 @@ export default function RemedyCard({
                         : 'aspect-[3/4]';
 
     return (
-        <section className="bg-white/5 backdrop-blur-xl rounded-2xl overflow-hidden shadow-2xl border border-primary/40 ring-4 ring-primary/10 mt-10 stagger-item" style={{ animationDelay: '0.5s' }}>
-            <div className="bg-primary text-background-dark p-5 text-white flex justify-between items-center shadow-sm">
+        <section className="bg-[#14100a] backdrop-blur-xl rounded-2xl overflow-hidden shadow-2xl border border-primary/45 ring-4 ring-primary/10 mt-10 stagger-item" style={{ animationDelay: '0.5s' }}>
+            <div className="bg-[#21180e] p-5 text-white flex justify-between items-center shadow-sm border-b border-primary/25">
                 <h3 className="font-bold flex items-center gap-3 text-xl">
-                    <img src="/images/masters/myeongwol.jpeg" className="w-8 h-8 rounded-full border border-white" alt="명월" />
-                    AI 풍수 처방: 디지털 비방 아트
+                    <img src="/images/masters/myeongwol.jpeg" className="w-8 h-8 rounded-full border border-white object-cover object-top" alt="명월" />
+                    제5장 비방화: 맞춤 디지털 비방 아트
                 </h3>
             </div>
             <div className="p-6 md:p-8">
@@ -90,31 +118,53 @@ export default function RemedyCard({
                                 <img
                                     src={remedyArt}
                                     alt="Remedy Art"
-                                    className={`w-full h-full object-cover transition-all duration-700 ${!isUnlocked ? 'scale-110 brightness-50' : 'scale-100'}`}
-                                    style={{ filter: !isUnlocked ? 'blur(12px)' : 'none' }}
+                                    className={`w-full h-full object-cover transition-all duration-700 ${!effectiveUnlocked ? 'scale-110 brightness-50' : 'scale-100'}`}
+                                    style={{ filter: !effectiveUnlocked ? 'blur(12px)' : 'none' }}
                                 />
-                                {!isUnlocked && (
+                                {!effectiveUnlocked && (
                                     <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center z-10 bg-black/40 backdrop-blur-sm">
                                         <Lock className="w-10 h-10 text-primary mb-4" />
-                                        <h4 className="text-xl font-bold text-white mb-2">맞춤형 디지털 비방 아트워크</h4>
-                                        <p className="text-sm text-slate-200 mb-6 leading-relaxed">내 공간에 부족한 <strong className="text-primary">'{result.remedy_art.deficiency}'</strong> 기운을 보완하기 위해 AI가 특별히 생성한 단 하나뿐인 예술 작품입니다.</p>
+                                        <h4 className="text-xl font-bold text-white mb-2">비방화 원본 봉인</h4>
+                                        <p className="text-sm text-slate-200 mb-6 leading-relaxed">내 공간에 부족한 <strong className="text-primary">'{result.remedy_art.deficiency}'</strong> 기운을 보완하기 위해 생성된 고해상도 원본과 해설을 열람합니다.</p>
                                         <button
                                             onClick={handleUnlockRemedy}
                                             className="w-full py-3 bg-gradient-to-r from-[#d4af37] to-[#c29d2f] text-white font-bold rounded-xl hover:shadow-lg transition-all animate-pulse-glow"
                                         >
-                                            작품 확인 및 원본 다운로드 (₩1,000)
+                                            비방화 원본 열람하기 ({formatKrw(DIGITAL_PRODUCT_TOTAL_KRW)})
                                         </button>
                                     </div>
                                 )}
                             </>
+                        ) : effectiveUnlocked ? (
+                            <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6 bg-[#221e10]">
+                                {isUnlocked ? (
+                                    <>
+                                        <Loader2 className="w-12 h-12 animate-spin text-primary mb-4" />
+                                        <p className="text-[15px] text-slate-300 leading-relaxed">결제가 확인되었습니다.<br />
+                                            <span className="font-bold text-white">맞춤형 비방 아트</span>를 생성하는 중입니다...</p>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Lock className="w-10 h-10 text-primary mb-4" />
+                                        <h4 className="text-xl font-bold text-white mb-2">비방화 미리보기</h4>
+                                        <p className="text-sm text-slate-200 leading-relaxed">테스트 미리보기 상태입니다.<br />실제 결제 후 고해상도 원본이 생성됩니다.</p>
+                                    </>
+                                )}
+                            </div>
                         ) : (
                             <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6 bg-[#221e10]">
-                                <Loader2 className="w-12 h-12 animate-spin text-primary mb-4" />
-                                <p className="text-[15px] text-slate-300 leading-relaxed">부족한 <span className="font-bold text-primary">'{result.remedy_art.deficiency}'</span> 기운을<br />
-                                    <span className="font-bold text-white">{metadata.artStyle === 'buddhist' ? '레트로 예술' : metadata.artStyle === 'modern_buddhist' ? '모던 레트로 예술' : '모던 아트'}</span>로 승화시키는 중입니다...</p>
+                                <Lock className="w-10 h-10 text-primary mb-4" />
+                                <h4 className="text-xl font-bold text-white mb-2">비방화 원본 봉인</h4>
+                                <p className="text-sm text-slate-200 mb-6 leading-relaxed">결제 후 공간 기운에 맞춘 고해상도 비방화를 생성하고 원본 다운로드를 제공합니다.</p>
+                                <button
+                                    onClick={handleUnlockRemedy}
+                                    className="w-full py-3 bg-gradient-to-r from-[#d4af37] to-[#c29d2f] text-white font-bold rounded-xl hover:shadow-lg transition-all animate-pulse-glow"
+                                >
+                                    비방화 생성 및 원본 열람 ({formatKrw(DIGITAL_PRODUCT_TOTAL_KRW)})
+                                </button>
                             </div>
                         )}
-                        {(remedyArt && isUnlocked) && (
+                        {(remedyArt && effectiveUnlocked) && (
                             <div className="absolute bottom-4 right-4 flex gap-2 z-20">
                                 <button
                                     onClick={() => onDownloadImage(remedyArt, 'FengShui_Remedy.png')}
@@ -143,6 +193,7 @@ export default function RemedyCard({
                         </div>
 
                         {/* Style Controls for Regeneration */}
+                        {isUnlocked && (
                         <div className="p-5 bg-white/5 backdrop-blur-md rounded-xl border border-white/10 shadow-sm space-y-5">
                             <div>
                                 <h5 className="text-[14px] font-bold text-slate-300 flex items-center gap-2 mb-3">
@@ -201,11 +252,22 @@ export default function RemedyCard({
                                 위 옵션으로 비방 다시 그리기
                             </button>
                         </div>
+                        )}
 
                         {/* Art Story */}
                         <div className="bg-[#4a443b] p-6 rounded-xl text-white italic text-[16px] leading-relaxed shadow-lg relative">
                             <div className="absolute top-2 left-3 text-4xl text-white/10 font-bold">"</div>
-                            {result.remedy_art.art_story}
+                            {effectiveUnlocked ? (
+                                result.remedy_art.art_story
+                            ) : (
+                                <div className="not-italic">
+                                    <p className="font-bold text-primary mb-2">비방화 해설 봉인 중</p>
+                                    <p className="text-sm text-slate-200 leading-relaxed">
+                                        결제 후 이 공간에 왜 {result.remedy_art.deficiency} 기운의 비방화가 필요한지,
+                                        색·상징·배치 의도까지 담은 도슨트 해설이 열립니다.
+                                    </p>
+                                </div>
+                            )}
                             <div className="absolute bottom-[-10px] right-3 text-4xl text-white/10 font-bold">"</div>
                         </div>
 
@@ -228,9 +290,10 @@ export default function RemedyCard({
             <DigitalPaymentModal
                 isOpen={showPaymentModal}
                 onClose={() => setShowPaymentModal(false)}
-                amount={1000}
+                amount={DIGITAL_PRODUCT_TOTAL_KRW}
                 orderName="맞춤형 디지털 비방 아트워크 다운로드"
                 orderType="remedy"
+                analysisId={currentAnalysisId}
             />
         </section>
     );

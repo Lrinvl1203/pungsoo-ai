@@ -27,12 +27,24 @@ export interface ZodiacRemedyObject {
   placement_guide: string;
 }
 
+export interface FiveElements {
+  fire: number;
+  water: number;
+  wood: number;
+  earth: number;
+  metal: number;
+  deficient: string;
+  excess: string;
+  advice: string;
+}
+
 export interface AnalysisResult {
   analysis_summary: string;
   detailed_report: string; // A4 3-page sized very detailed markdown report
   spatial_features: string[];
   feng_shui_score: number;
   diagnosis: FengShuiDiagnosis[];
+  five_elements?: FiveElements;
   solution_items: SolutionItem[];
   remedy_art: RemedyArt;
   zodiac_remedy_object: ZodiacRemedyObject;

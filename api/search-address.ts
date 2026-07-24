@@ -5,8 +5,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(405).json({ error: 'Method Not Allowed' });
     }
 
-    const { q } = req.query;
-    if (!q || typeof q !== 'string') {
+    const requestUrl = new URL(req.url || '', `https://${req.headers.host || 'localhost'}`);
+    const q = requestUrl.searchParams.get('q') || '';
+    if (!q) {
         return res.status(400).json({ error: 'Query parameter "q" is required' });
     }
 

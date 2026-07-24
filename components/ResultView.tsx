@@ -1,5 +1,5 @@
-import React, { useState, useRef } from 'react';
-import { Share2, FileText, CheckCircle2, AlertTriangle, Download, Compass, Sparkles, MapPin, ImageIcon, Loader2, Lock, FileDown } from 'lucide-react';
+import React, { useState } from 'react';
+import { Share2, FileText, CheckCircle2, AlertTriangle, Compass, Sparkles, MapPin, ImageIcon, Loader2, Lock, FileDown } from 'lucide-react';
 import { AnalysisResult, UserMetadata } from '../types';
 import RemedyCard from './RemedyCard';
 import ZodiacCard from './ZodiacCard';
@@ -7,6 +7,8 @@ import { useAuth } from '../contexts/AuthContext';
 import DigitalPaymentModal from './DigitalPaymentModal';
 import LoginPromptModal from './LoginPromptModal';
 import { supabase } from '../services/supabaseClient';
+import { trackEvent } from '../services/analyticsService';
+import { DIGITAL_PRODUCT_TOTAL_KRW, formatKrw } from '../services/pricing';
 
 interface ResultViewProps {
     result: AnalysisResult | null;
@@ -20,10 +22,112 @@ interface ResultViewProps {
     setMetadata: React.Dispatch<React.SetStateAction<UserMetadata>>;
     isRegeneratingArt: boolean;
     onRegenerateArt: () => void;
+    isGeneratingZodiacImage: boolean;
+    onGenerateZodiacImage: () => void;
     onDownloadImage: (dataUrl: string, filename: string) => void;
     onOrderFrame: () => void;
     onOrderObject: () => void;
-    currentAnalysisId?: number | null;
+    currentAnalysisId?: string | null;
+    premiumPreviewUnlocked?: boolean;
+}
+
+interface PremiumReportSection {
+    title: string;
+    paragraphs: string[];
+    seal: string;
+}
+
+const REPORT_SEALS = ['序', '壹', '貳', '叄', '肆', '伍', '結'];
+
+function parsePremiumReport(report?: string): PremiumReportSection[] {
+    const cleaned = (report || '').trim();
+    if (!cleaned) return [];
+
+    if (!/^##\s+/m.test(cleaned)) {
+        return [{
+            title: '공간비방서 본문',
+            paragraphs: cleaned.split(/\n{2,}/).map(part => part.trim()).filter(Boolean),
+            seal: '秘',
+        }];
+    }
+
+    return cleaned
+        .split(/^##\s+/m)
+        .map(part => part.trim())
+        .filter(Boolean)
+        .map((part, index) => {
+            const [rawTitle, ...bodyLines] = part.split(/\r?\n/);
+            const body = bodyLines.join('\n').trim();
+            return {
+                title: rawTitle.trim(),
+                paragraphs: body.split(/\n{2,}/).map(paragraph => paragraph.trim()).filter(Boolean),
+                seal: REPORT_SEALS[index] || String(index + 1).padStart(2, '0'),
+            };
+        });
+}
+
+function renderParagraphText(paragraph: string) {
+    return paragraph.split(/\r?\n/).map((line, index, lines) => (
+        <React.Fragment key={`${line}-${index}`}>
+            {line}
+            {index < lines.length - 1 && <br />}
+        </React.Fragment>
+    ));
+}
+
+function escapeHtml(value: string): string {
+    return value.replace(/[&<>"']/g, char => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;',
+    }[char] || char));
+}
+
+function premiumReportToHtml(report?: string): string {
+    return parsePremiumReport(report).map(section => {
+        const paragraphs = section.paragraphs
+            .map(paragraph => `<p>${escapeHtml(paragraph).replace(/\r?\n/g, '<br/>')}</p>`)
+            .join('');
+        return `<section class="report-section">
+            <div class="report-section-kicker">${escapeHtml(section.seal)} · CONFIDENTIAL MANUAL</div>
+            <h2 class="section-title">${escapeHtml(section.title)}</h2>
+            ${paragraphs}
+        </section>`;
+    }).join('');
+}
+
+function PremiumReportBody({ sections, locked = false }: { sections: PremiumReportSection[]; locked?: boolean }) {
+    return (
+        <div className="space-y-7">
+            {sections.map((section, index) => (
+                <article key={`${section.title}-${index}`} className="relative border-l-2 border-[#b9892e]/45 pl-4 md:pl-6">
+                    <div className="absolute right-0 top-0 text-[56px] leading-none font-black text-[#8f1f1f]/10 select-none">
+                        {section.seal}
+                    </div>
+                    <div className="relative mb-3 flex items-start gap-3">
+                        <div className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center border border-[#8f1f1f]/35 bg-[#8f1f1f]/10 text-[13px] font-black text-[#8f1f1f] shadow-inner">
+                            {section.seal}
+                        </div>
+                        <div>
+                            <div className="text-[10px] font-black tracking-[0.24em] text-[#8f1f1f]/75">CONFIDENTIAL MANUAL</div>
+                            <h4 className="mt-1 text-[18px] md:text-[21px] font-black leading-snug text-[#2a190b]">
+                                {section.title}
+                            </h4>
+                        </div>
+                    </div>
+                    <div className={`relative space-y-3 text-[14px] md:text-[15px] leading-[1.95] text-[#3f2b16] ${locked ? 'opacity-80' : ''}`}>
+                        {section.paragraphs.map((paragraph, paragraphIndex) => (
+                            <p key={`${section.title}-${paragraphIndex}`} className="font-medium">
+                                {renderParagraphText(paragraph)}
+                            </p>
+                        ))}
+                    </div>
+                </article>
+            ))}
+        </div>
+    );
 }
 
 export default function ResultView({
@@ -38,10 +142,13 @@ export default function ResultView({
     setMetadata,
     isRegeneratingArt,
     onRegenerateArt,
+    isGeneratingZodiacImage,
+    onGenerateZodiacImage,
     onDownloadImage,
     onOrderFrame,
     onOrderObject,
     currentAnalysisId,
+    premiumPreviewUnlocked = false,
 }: ResultViewProps) {
     // Paywall mock states
     const [isReportUnlocked, setIsReportUnlocked] = useState(false);
@@ -60,39 +167,85 @@ export default function ResultView({
                     const intent = JSON.parse(raw);
                     if (intent.type === 'report') {
                         localStorage.removeItem('pending_payment_intent');
+                        trackEvent('payment_modal_opened', {
+                            userId: user.id,
+                            analysisId: currentAnalysisId,
+                            orderType: 'report',
+                            amount: DIGITAL_PRODUCT_TOTAL_KRW,
+                            metadata: { source: 'post_login_restore' },
+                        });
                         setShowPaymentModal(true);
                     }
                 } catch { /* ignore */ }
             }
         }
-    }, [user, authLoading]);
+    }, [user, authLoading, currentAnalysisId]);
 
-    // Fetch unlock status from DB
+    // Fetch unlock status from DB. Retry briefly after checkout because webhooks can land a moment later.
     React.useEffect(() => {
-        const checkUnlockStatus = async () => {
-            if (user && currentAnalysisId) {
-                const { data } = await supabase
-                    .from('purchases')
-                    .select('order_type')
-                    .eq('user_id', user.id)
-                    .eq('analysis_id', currentAnalysisId)
-                    .eq('status', 'COMPLETED')
-                    .eq('order_type', 'report');
+        let cancelled = false;
+        let attempts = 0;
+        let retryTimer: number | null = null;
 
-                if (data && data.length > 0) {
-                    setIsReportUnlocked(true);
-                }
+        const checkUnlockStatus = async () => {
+            if (!user || !currentAnalysisId) {
+                if (!cancelled) setIsReportUnlocked(false);
+                return false;
+            }
+
+            const { data } = await supabase
+                .from('purchases')
+                .select('order_type')
+                .eq('user_id', user.id)
+                .eq('analysis_id', currentAnalysisId)
+                .eq('status', 'COMPLETED')
+                .eq('order_type', 'report')
+                .limit(1);
+
+            const unlocked = Boolean(data && data.length > 0);
+            if (!cancelled) setIsReportUnlocked(unlocked);
+            return unlocked;
+        };
+
+        const runCheck = async () => {
+            const unlocked = await checkUnlockStatus();
+            attempts += 1;
+            if ((unlocked || attempts >= 6) && retryTimer) {
+                window.clearInterval(retryTimer);
+                retryTimer = null;
             }
         };
-        checkUnlockStatus();
+
+        runCheck();
+        retryTimer = window.setInterval(runCheck, 2500);
+        window.addEventListener('focus', runCheck);
+
+        return () => {
+            cancelled = true;
+            if (retryTimer) window.clearInterval(retryTimer);
+            window.removeEventListener('focus', runCheck);
+        };
     }, [user, currentAnalysisId]);
 
     const handleUnlockReport = () => {
         if (!user) {
+            trackEvent('login_prompt_opened', {
+                analysisId: currentAnalysisId,
+                orderType: 'report',
+                amount: DIGITAL_PRODUCT_TOTAL_KRW,
+                metadata: { source: 'premium_report_unlock' },
+            });
             // 로그인 후 결제 모달이 자동 복원되도록 intent 저장
             localStorage.setItem('pending_payment_intent', JSON.stringify({ type: 'report' }));
             setShowLoginModal(true);
         } else {
+            trackEvent('payment_modal_opened', {
+                userId: user.id,
+                analysisId: currentAnalysisId,
+                orderType: 'report',
+                amount: DIGITAL_PRODUCT_TOTAL_KRW,
+                metadata: { source: 'premium_report_unlock' },
+            });
             setShowPaymentModal(true);
         }
     };
@@ -114,11 +267,7 @@ export default function ResultView({
             </div>`;
         }).join('');
 
-        // Convert markdown-ish report to HTML paragraphs
-        const reportHTML = (result.detailed_report || '')
-            .replace(/## (.*)/g, '<h2 class="section-title">$1</h2>')
-            .replace(/\n\n/g, '</p><p>')
-            .replace(/\n/g, '<br/>');
+        const reportHTML = premiumReportToHtml(result.detailed_report);
 
         const today = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
 
@@ -149,11 +298,13 @@ export default function ResultView({
   .section-header { display:flex; align-items:center; gap:12px; padding-bottom:12px; border-bottom:2px solid var(--gold); margin-bottom:20px; position:relative; }
   .section-header::after { content:'❀'; position:absolute; bottom:-10px; left:50%; transform:translateX(-50%); background:var(--paper); padding:0 12px; color:var(--gold); font-size:13px; }
   .section-num { font-family:'Noto Serif KR',serif; font-size:12px; font-weight:700; color:var(--gold); background:rgba(212,175,55,0.1); width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; border:1.5px solid var(--gold); flex-shrink:0; }
-  .section-title { font-family:'Noto Serif KR',serif; font-size:20px; font-weight:700; color:var(--ink); letter-spacing:2px; margin:24px 0 16px; }
+  .section-title { font-family:'Noto Serif KR',serif; font-size:20px; font-weight:700; color:var(--ink); letter-spacing:2px; margin:4px 0 14px; }
   h2.section-title { border:none; padding:0; }
   
   /* Report text */
   .report-text { font-size:14px; color:#3D3D3D; line-height:2; text-align:justify; }
+  .report-section { border-left:3px solid var(--gold); padding-left:18px; margin:0 0 30px; page-break-inside:avoid; }
+  .report-section-kicker { font-size:10px; font-weight:800; color:var(--red); letter-spacing:2px; margin-bottom:4px; }
   .report-text p { margin-bottom:14px; text-indent:1em; }
   
   /* Quote block */
@@ -217,7 +368,7 @@ export default function ResultView({
 
   <!-- Detailed Report -->
   <div class="section">
-    <div class="report-text"><p>${reportHTML}</p></div>
+    <div class="report-text">${reportHTML}</div>
   </div>
 
   <!-- Diagnosis Cards -->
@@ -304,6 +455,26 @@ export default function ResultView({
         }).catch(err => console.error('링크 복사 실패:', err));
     };
 
+    const diagnosisItems = result?.diagnosis ?? [];
+    const goodDiagnosis = diagnosisItems.find(diag => diag.type.includes('길') || diag.type.includes('Good')) || diagnosisItems[0];
+    const badDiagnosis = diagnosisItems.find(diag => diag.type.includes('흉') || diag.type.includes('Bad')) || diagnosisItems[1] || diagnosisItems[0];
+    const previewPrescription = result?.solution_items?.[0];
+    const fiveElements = result ? ((result as any).five_elements || null) : null;
+    const effectiveReportUnlocked = isReportUnlocked || premiumPreviewUnlocked;
+    const lockedReportPreview = result ? [
+        '## 제1장 좌향과 기맥 판독',
+        `${result.analysis_summary}`,
+        '',
+        '## 제2장 길흉 지점 정밀 해석',
+        goodDiagnosis ? `길한 흐름: ${goodDiagnosis.keyword}` : '길한 흐름: 프리미엄 본문에서 공개',
+        badDiagnosis ? `막힌 기운: ${badDiagnosis.keyword}` : '막힌 기운: 프리미엄 본문에서 공개',
+        '',
+        '## 제3장 오행 균형과 비보 처방',
+        '상세 오행 수치, 전체 처방, 실행 순서는 결제 후 열람됩니다.'
+    ].join('\n') : '';
+    const premiumReportSections = parsePremiumReport(result?.detailed_report);
+    const lockedReportPreviewSections = parsePremiumReport(lockedReportPreview);
+
     return (
         <div className="relative">
             {/* Loading Overlay */}
@@ -340,126 +511,283 @@ export default function ResultView({
             {result && (
                 <div className="space-y-10 relative mt-8">
 
-                    {/* 1. Score & Summary */}
-                    <section className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 shadow-xl border border-primary/30 relative overflow-hidden stagger-item" style={{ animationDelay: '0.1s' }}>
-                        <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
-                            <Compass className="w-40 h-40" />
-                        </div>
-                        <div className="flex items-start justify-between mb-6 border-b border-primary/20 pb-4">
-                            <div className="flex items-center gap-4">
-                                <img src="/images/masters/cheongpung.jpeg" className="w-14 h-14 rounded-full border-2 border-primary object-cover" alt="청풍" />
-                                <div>
-                                    <div className="text-primary font-bold text-xs mb-1 uppercase tracking-widest">진단 (診)</div>
-                                    <h3 className="text-2xl font-bold text-white flex items-center gap-2">청풍 도사의 공간 감정서</h3>
-                                </div>
-                            </div>
-                            <div className="text-right">
-                                <div className="text-slate-400 text-sm font-medium mb-1">종합 풍수 점수</div>
-                                <div className="text-primary text-3xl font-black">{result.feng_shui_score}점</div>
-                            </div>
-                        </div>
-                        <p className="text-slate-300 text-[17px] mb-6 leading-relaxed font-medium">{result.analysis_summary}</p>
-                        <div className="space-y-3 relative z-10">
-                            {(result.diagnosis ?? []).map((diag, idx) => (
-                                <div key={idx} className={`p-4 rounded-xl border-l-4 shadow-sm bg-white/5 backdrop-blur-md border ${diag.type.includes('길') ? 'border-l-green-500 border-gray-100' : 'border-l-red-500 border-gray-100'}`}>
-                                    <div className="flex items-center gap-2 mb-1.5">
-                                        {diag.type.includes('길') ? <CheckCircle2 className="w-5 h-5 text-green-500" /> : <AlertTriangle className="w-5 h-5 text-red-500" />}
-                                        <span className="font-bold text-[15px] text-white">{diag.keyword}</span>
+                    {/* 1. Free Preview: First Reading Scroll */}
+                    <section className="relative overflow-hidden rounded-2xl border border-[#d4af37]/50 bg-[#f2e4c2] text-[#26190b] shadow-2xl stagger-item" style={{ animationDelay: '0.1s' }}>
+                        <div
+                            className="absolute inset-0 opacity-[0.18] pointer-events-none"
+                            style={{
+                                backgroundImage: 'radial-gradient(circle at 16px 16px, rgba(116, 75, 30, 0.35) 1px, transparent 0)',
+                                backgroundSize: '28px 28px'
+                            }}
+                        />
+                        <div className="absolute -right-10 -top-10 w-44 h-44 rounded-full border border-[#8f1f1f]/25 opacity-50 pointer-events-none"></div>
+                        <div className="relative p-6 md:p-8">
+                            <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-6 border-b border-[#7a5125]/25 pb-6">
+                                <div className="flex items-center gap-4">
+                                    <img src="/images/masters/cheongpung.jpeg" className="w-14 h-14 rounded-full border-2 border-[#8f1f1f] object-cover shadow-md" alt="청풍" />
+                                    <div>
+                                        <div className="text-[#8f1f1f] font-black text-[11px] mb-1 tracking-[0.24em]">무료 공개본 · 初見帖</div>
+                                        <h3 className="text-2xl md:text-3xl font-black text-[#24160a]">공간 초견첩</h3>
+                                        <p className="text-[13px] text-[#6d4b26] mt-1 font-semibold">청풍 도사의 첫 감평과 핵심 징후만 공개됩니다.</p>
                                     </div>
-                                    <p className="text-[14px] text-slate-200 leading-relaxed">{diag.description}</p>
                                 </div>
-                            ))}
+                                <div className="shrink-0 w-28 h-28 rounded-full border-4 border-[#8f1f1f]/70 bg-[#f8edcf]/80 flex flex-col items-center justify-center shadow-inner rotate-[-4deg]">
+                                    <span className="text-[11px] font-black text-[#8f1f1f] tracking-widest">風水點</span>
+                                    <span className="text-4xl font-black text-[#24160a] leading-none">{result.feng_shui_score}</span>
+                                    <span className="text-[12px] font-bold text-[#7a5125]">점</span>
+                                </div>
+                            </div>
+
+                            <div className="mt-6 grid lg:grid-cols-[1.2fr_0.8fr] gap-6 items-stretch">
+                                <div className="space-y-4">
+                                    <div>
+                                        <div className="text-[12px] font-black text-[#8f1f1f] tracking-[0.22em] mb-2">한 줄 감평</div>
+                                        <p className="text-[17px] leading-relaxed font-bold text-[#2f2111]">{result.analysis_summary}</p>
+                                    </div>
+                                    <div className="grid sm:grid-cols-2 gap-3">
+                                        {goodDiagnosis && (
+                                            <div className="bg-[#fff7df]/65 border border-[#2d7f5e]/25 rounded-xl p-4">
+                                                <div className="flex items-center gap-2 mb-2 text-[#1f7a58] font-black text-[14px]">
+                                                    <CheckCircle2 className="w-4 h-4" /> 열린 길
+                                                </div>
+                                                <p className="font-black text-[#24160a] mb-1">{goodDiagnosis.keyword}</p>
+                                                <p className="text-[13px] leading-relaxed text-[#5e4121]">{goodDiagnosis.description}</p>
+                                            </div>
+                                        )}
+                                        {badDiagnosis && (
+                                            <div className="bg-[#fff7df]/65 border border-[#8f1f1f]/25 rounded-xl p-4">
+                                                <div className="flex items-center gap-2 mb-2 text-[#8f1f1f] font-black text-[14px]">
+                                                    <AlertTriangle className="w-4 h-4" /> 막힌 기운
+                                                </div>
+                                                <p className="font-black text-[#24160a] mb-1">{badDiagnosis.keyword}</p>
+                                                <p className="text-[13px] leading-relaxed text-[#5e4121]">{badDiagnosis.description}</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="bg-[#24160a] text-[#f8edcf] rounded-xl p-5 border border-[#d4af37]/35 shadow-xl relative overflow-hidden">
+                                    <div className="absolute right-3 top-3 opacity-10">
+                                        <Compass className="w-20 h-20" />
+                                    </div>
+                                    <div className="text-[#d4af37] text-[11px] font-black tracking-[0.22em] mb-3">초견 처방 1건</div>
+                                    {previewPrescription ? (
+                                        <>
+                                            <h4 className="text-xl font-black mb-2">{previewPrescription.item_name}</h4>
+                                            <p className="text-[13px] text-[#e9d8a8] leading-relaxed mb-4">{previewPrescription.target_problem}</p>
+                                            <p className="text-[14px] leading-relaxed border-t border-[#d4af37]/20 pt-4">{previewPrescription.placement_guide}</p>
+                                        </>
+                                    ) : (
+                                        <p className="text-[14px] text-[#e9d8a8] leading-relaxed">초견 처방을 정리하는 중입니다.</p>
+                                    )}
+                                    <div className="mt-5 pt-4 border-t border-[#d4af37]/20 text-[12px] text-[#d4af37] font-bold">
+                                        전체 비방, 오행 균형, 세부 배치법은 프리미엄 비방서에 봉인되어 있습니다.
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </section>
 
-                    {/* 2. Detailed Report (PAYWALL STAGE 1) */}
+                    {/* 2. Premium Manual (PAYWALL STAGE 1) */}
                     {result.detailed_report && (
-                        <section className="bg-[#4a443b]/80 backdrop-blur-xl rounded-2xl p-8 shadow-2xl border border-primary/30 relative overflow-hidden text-white mt-10 mb-10 stagger-item" style={{ animationDelay: '0.2s' }}>
-                            <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
-                                <MapPin className="w-40 h-40 text-primary" />
+                        <section className="relative overflow-hidden rounded-2xl border border-[#d4af37]/45 bg-[#14100a] text-white shadow-2xl mt-10 mb-10 stagger-item" style={{ animationDelay: '0.2s' }}>
+                            <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-[#8f1f1f] via-[#d4af37] to-[#2d7f5e]"></div>
+                            <div className="absolute right-[-70px] top-[-60px] opacity-10 pointer-events-none">
+                                <Compass className="w-72 h-72 text-[#d4af37]" />
                             </div>
-                            <div className="absolute -left-10 -bottom-10 opacity-10 pointer-events-none">
-                                <Compass className="w-56 h-56 text-primary" />
-                            </div>
-                            <h3 className="font-bold text-2xl font-bold mb-8 border-b border-primary/30 pb-4 flex items-center gap-3">
-                                <Sparkles className="w-6 h-6 text-primary" />
-                                초정밀 도사 감명서 <span className="text-primary text-sm font-medium tracking-widest uppercase ml-2 opacity-80">(Full Documentation)</span>
-                            </h3>
-
-                            <div className="relative">
-                                {/* Blurred text container if locked */}
-                                <div
-                                    className={`prose prose-sm max-w-none text-white/95 leading-[1.9] whitespace-pre-wrap font-medium relative z-10 text-[15px] transition-all duration-700 ${!isReportUnlocked ? 'h-[160px] overflow-hidden select-none' : ''}`}
-                                    style={{ filter: !isReportUnlocked ? 'blur(6px)' : 'none' }}
-                                >
-                                    {result.detailed_report}
-
-                                    {!isReportUnlocked && (
-                                        <div className="absolute bottom-0 left-0 w-full h-[120px] bg-gradient-to-t from-[#4a443b] to-transparent z-20"></div>
-                                    )}
-                                </div>
-
-                                {/* Unlock Overlay */}
-                                {isReportUnlocked && (
-                                    <div className="mt-6 flex justify-center">
-                                        <button onClick={handlePrintPDF} className="flex items-center gap-2 px-5 py-3 bg-primary/10 border border-primary/30 text-primary font-bold rounded-xl hover:bg-primary/20 transition-all text-sm">
-                                            <FileDown className="w-4 h-4" /> 감명서 PDF 저장
-                                        </button>
-                                    </div>
-                                )}
-
-                                {!isReportUnlocked && (
-                                    <div className="absolute bottom-0 left-0 w-full flex flex-col items-center justify-end pb-2 pt-24 z-30 pointer-events-auto">
-                                        <div className="bg-[#221e10]/90 backdrop-blur-xl p-6 rounded-2xl border border-primary/50 shadow-2xl w-[90%] max-w-sm text-center transform translate-y-8">
-                                            <Lock className="w-8 h-8 mx-auto text-primary mb-3" />
-                                            <h4 className="text-lg font-bold text-white mb-2">프리미엄 진단 내용 잠김</h4>
-                                            <p className="text-sm text-slate-300 mb-5">청풍 도사의 구체적인 공간 진단과 운기 상승 비결을 온전히 확인하고 싶다면 잠금을 해제하세요.</p>
-                                            <button
-                                                onClick={handleUnlockReport}
-                                                className="w-full py-3 bg-gradient-to-r from-[#d4af37] to-[#c29d2f] text-white font-bold rounded-xl hover:shadow-lg transition-all animate-pulse-glow"
-                                            >
-                                                자세한 감명서 열람하기 (₩3,000)
-                                            </button>
+                            <div className="relative p-6 md:p-8">
+                                <div className="grid lg:grid-cols-[0.85fr_1.15fr] gap-8">
+                                    <div className="relative border border-[#d4af37]/30 bg-[#21180e] p-6 md:p-7 shadow-inner">
+                                        <div className="absolute inset-3 border border-[#d4af37]/15 pointer-events-none"></div>
+                                        <div className="relative">
+                                            <div className="flex items-center gap-3 mb-8">
+                                                <img src="/images/masters/cheongpung.jpeg" className="w-10 h-10 rounded-full border border-[#d4af37] object-cover" alt="청풍" />
+                                                <img src="/images/masters/myeongwol.jpeg" className="w-10 h-10 rounded-full border border-[#d4af37] object-cover -ml-5" alt="명월" />
+                                                <div className="text-[11px] font-black tracking-[0.22em] text-[#d4af37]">PREMIUM 秘方書</div>
+                                            </div>
+                                            <div className="text-[#d4af37] text-[12px] font-black tracking-[0.3em] mb-3">청풍명월 합감</div>
+                                            <h3 className="text-3xl md:text-4xl font-black leading-tight mb-4">공간비방서</h3>
+                                            <p className="text-[14px] leading-relaxed text-[#d9caa0] mb-7">
+                                                초견첩의 단편 징후를 넘어 공간의 길흉, 오행 결핍, 실전 비보 배치까지 한 권의 감명서로 엮었습니다.
+                                            </p>
+                                            <div className="space-y-3 text-[13px]">
+                                                {['제1장 좌향과 기맥 판독', '제2장 길흉 지점 정밀 해석', '제3장 오행 결핍과 과잉', '제4장 맞춤 비보 처방', '제5장 실행 순서와 보관용 PDF'].map((chapter) => (
+                                                    <div key={chapter} className="flex items-center gap-3 border-b border-[#d4af37]/10 pb-3 text-[#f4e6bd]">
+                                                        <FileText className="w-4 h-4 text-[#d4af37] shrink-0" />
+                                                        <span className="font-bold">{chapter}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            {fiveElements && (
+                                                <div className="mt-7 border border-[#d4af37]/20 p-4 bg-black/20">
+                                                    <div className="text-[11px] font-black tracking-[0.22em] text-[#d4af37] mb-3">五行 BALANCE</div>
+                                                    <div className="grid grid-cols-5 gap-2 text-center">
+                                                        {[
+                                                            ['火', fiveElements.fire ?? 50, '#dc2626'],
+                                                            ['水', fiveElements.water ?? 50, '#2563eb'],
+                                                            ['木', fiveElements.wood ?? 50, '#16a34a'],
+                                                            ['土', fiveElements.earth ?? 50, '#ca8a04'],
+                                                            ['金', fiveElements.metal ?? 50, '#94a3b8']
+                                                        ].map(([label, value, color]) => (
+                                                            <div key={label as string}>
+                                                                <div className="text-[#f4e6bd] font-black mb-1">{label}</div>
+                                                                <div className="h-16 bg-white/10 flex items-end">
+                                                                    <div className="w-full" style={{ height: `${value}%`, backgroundColor: color as string }}></div>
+                                                                </div>
+                                                                <div className="text-[10px] text-[#d9caa0] mt-1">{value}%</div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
-                                )}
+
+                                    <div className="relative min-h-[360px]">
+                                        <div
+                                            className={`relative overflow-hidden bg-[#f6ebcf] text-[#25180d] border border-[#d4af37]/40 p-5 md:p-8 shadow-xl transition-all duration-700 ${!effectiveReportUnlocked ? 'h-[360px] select-none' : ''}`}
+                                            style={{ filter: !effectiveReportUnlocked ? 'blur(6px)' : 'none' }}
+                                        >
+                                            <div
+                                                className="absolute inset-0 opacity-[0.16] pointer-events-none"
+                                                style={{
+                                                    backgroundImage: 'linear-gradient(rgba(116,75,30,0.16) 1px, transparent 1px)',
+                                                    backgroundSize: '100% 31px'
+                                                }}
+                                            />
+                                            <div className="relative">
+                                                <div className="mb-5 flex items-center justify-between gap-4 border-b border-[#8f1f1f]/20 pb-4">
+                                                    <div>
+                                                        <div className="text-[#8f1f1f] text-[11px] font-black tracking-[0.24em] mb-1">
+                                                            {effectiveReportUnlocked ? '봉인 해제본' : '본문 미리보기'}
+                                                        </div>
+                                                        <div className="text-[13px] font-bold text-[#6d4b26]">
+                                                            청풍 진단과 명월 처방을 장별로 정리한 보관용 감명서
+                                                        </div>
+                                                    </div>
+                                                    <div className="hidden sm:flex h-12 w-12 items-center justify-center border-2 border-[#8f1f1f]/45 text-[#8f1f1f] font-black rotate-[-6deg]">
+                                                        秘
+                                                    </div>
+                                                </div>
+                                                <PremiumReportBody
+                                                    sections={effectiveReportUnlocked ? premiumReportSections : lockedReportPreviewSections}
+                                                    locked={!effectiveReportUnlocked}
+                                                />
+                                            </div>
+                                            {!effectiveReportUnlocked && (
+                                                <div className="absolute bottom-0 left-0 w-full h-[150px] bg-gradient-to-t from-[#14100a] to-transparent z-20"></div>
+                                            )}
+                                        </div>
+
+                                        {effectiveReportUnlocked && (
+                                            <div className="mt-6 flex justify-center">
+                                                <button onClick={handlePrintPDF} className="flex items-center gap-2 px-5 py-3 bg-[#d4af37]/10 border border-[#d4af37]/35 text-[#d4af37] font-bold rounded-xl hover:bg-[#d4af37]/20 transition-all text-sm">
+                                                    <FileDown className="w-4 h-4" /> 비방서 PDF 저장
+                                                </button>
+                                            </div>
+                                        )}
+
+                                        {!effectiveReportUnlocked && (
+                                            <div className="absolute inset-x-0 bottom-0 flex flex-col items-center justify-end pb-2 pt-28 z-30 pointer-events-auto">
+                                                <div className="bg-[#1d150c]/95 backdrop-blur-xl p-6 rounded-2xl border border-[#d4af37]/55 shadow-2xl w-[92%] max-w-sm text-center">
+                                                    <Lock className="w-8 h-8 mx-auto text-[#d4af37] mb-3" />
+                                                    <h4 className="text-lg font-black text-white mb-2">공간비방서 봉인 중</h4>
+                                                    <p className="text-sm text-[#d9caa0] mb-4 leading-relaxed">한 번 결제로 아래 잠금 영역이 모두 열립니다.</p>
+                                                    <div className="mb-5 grid gap-2 text-left">
+                                                        {['상세 감명서 전체 본문', '오행 균형표와 원인 해석', '비방 아트·수호 오브제 해설'].map((item) => (
+                                                            <div key={item} className="flex items-center gap-2 rounded-xl border border-[#d4af37]/20 bg-[#d4af37]/10 px-3 py-2 text-[12px] font-bold text-[#f4e6bd]">
+                                                                <CheckCircle2 className="h-4 w-4 shrink-0 text-[#d4af37]" />
+                                                                {item}
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                    <button
+                                                        onClick={handleUnlockReport}
+                                                        className="w-full py-3 bg-gradient-to-r from-[#d4af37] to-[#c29d2f] text-white font-bold rounded-xl hover:shadow-lg transition-all animate-pulse-glow"
+                                                    >
+                                                        {formatKrw(DIGITAL_PRODUCT_TOTAL_KRW)}으로 즉시 열람하기
+                                                    </button>
+                                                    <p className="mt-3 text-[11px] font-medium text-[#a8976b]">결제 완료 후 이 분석 페이지와 마이페이지에서 다시 볼 수 있습니다.</p>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
                         </section>
                     )}
 
-                    {/* 3. Feng Shui Interior Prescription */}
+                    {/* 3. Premium Feng Shui Prescription */}
                     {result.solution_items && result.solution_items.length > 0 && (
-                        <section className="bg-white/5 backdrop-blur-xl rounded-2xl overflow-hidden shadow-xl border border-white/10 stagger-item" style={{ animationDelay: '0.3s' }}>
-                            <div className="bg-white/5 backdrop-blur-sm p-5 border-b border-white/10 flex justify-between items-center">
-                                <div className="flex items-center gap-3">
-                                    <img src="/images/masters/myeongwol.jpeg" className="w-10 h-10 rounded-full border-2 border-primary object-cover" alt="명월" />
-                                    <div>
-                                        <div className="text-primary font-bold text-[10px] uppercase tracking-widest mb-0.5">처방 (方)</div>
-                                        <h3 className="font-bold font-bold text-white flex items-center gap-2 text-xl">명월 도사의 맞춤 비방 가이드</h3>
+                        <section className="relative overflow-hidden rounded-2xl border border-[#d4af37]/35 bg-[#0f1c18] text-white shadow-xl stagger-item" style={{ animationDelay: '0.3s' }}>
+                            <div className="absolute left-[-80px] bottom-[-80px] opacity-10 pointer-events-none">
+                                <MapPin className="w-72 h-72 text-[#2d7f5e]" />
+                            </div>
+                            <div className="relative p-6 md:p-8">
+                                <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-5 border-b border-[#d4af37]/20 pb-5 mb-6">
+                                    <div className="flex items-center gap-3">
+                                        <img src="/images/masters/myeongwol.jpeg" className="w-11 h-11 rounded-full border-2 border-[#d4af37] object-cover" alt="명월" />
+                                        <div>
+                                            <div className="text-[#d4af37] font-black text-[11px] tracking-[0.24em] mb-1">제4장 · 秘補處方</div>
+                                            <h3 className="font-black text-white text-2xl">명월 도사의 맞춤 비보 처방</h3>
+                                        </div>
+                                    </div>
+                                    <div className="text-[12px] text-[#d9caa0] font-bold">
+                                        {effectiveReportUnlocked ? `${result.solution_items.length}개 처방 전체 공개` : '무료판은 첫 처방만 공개'}
                                     </div>
                                 </div>
-                            </div>
-                            <div className="p-6">
-                                <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-                                    {result.solution_items.map((item, idx) => (
-                                        <div key={idx} className="bg-black/30 text-white rounded-xl p-5 border border-white/10 transition-all hover:border-primary/50 hover:shadow-md">
-                                            <h5 className="font-bold text-white text-[16px] mb-1">{item.item_name}</h5>
-                                            <p className="text-[14px] text-slate-300 mb-4">{item.target_problem}</p>
-                                            <div className="bg-white/5 backdrop-blur-md p-4 rounded-xl border border-white/10 mb-4">
-                                                <p className="text-[14px] text-slate-200 leading-relaxed flex items-start gap-2.5">
-                                                    <MapPin className="w-4 h-4 text-primary mt-1 shrink-0" />
-                                                    {item.placement_guide}
-                                                </p>
+
+                                <div className="relative">
+                                    <div
+                                        className={`grid md:grid-cols-2 gap-4 transition-all duration-700 ${!effectiveReportUnlocked ? 'max-h-[260px] overflow-hidden select-none' : ''}`}
+                                        style={{ filter: !effectiveReportUnlocked ? 'blur(5px)' : 'none' }}
+                                    >
+                                        {(effectiveReportUnlocked ? result.solution_items : result.solution_items.slice(0, 1)).map((item, idx) => (
+                                            <div key={idx} className="bg-black/25 text-white rounded-xl p-5 border border-white/10 transition-all hover:border-[#d4af37]/45 hover:shadow-md">
+                                                <div className="text-[#d4af37] text-[11px] font-black tracking-[0.18em] mb-2">비방 {String(idx + 1).padStart(2, '0')}</div>
+                                                <h5 className="font-black text-white text-[17px] mb-2">{item.item_name}</h5>
+                                                <p className="text-[14px] text-[#d9caa0] mb-4 leading-relaxed">{item.target_problem}</p>
+                                                <div className="bg-white/5 backdrop-blur-md p-4 rounded-xl border border-white/10 mb-4">
+                                                    <p className="text-[14px] text-slate-200 leading-relaxed flex items-start gap-2.5">
+                                                        <MapPin className="w-4 h-4 text-[#d4af37] mt-1 shrink-0" />
+                                                        {item.placement_guide}
+                                                    </p>
+                                                </div>
+                                                {effectiveReportUnlocked && (
+                                                    <a
+                                                        href={`https://ohou.se/productions/feed?query=${encodeURIComponent(item.product_search_keyword)}`}
+                                                        target="_blank" rel="noopener noreferrer"
+                                                        className="inline-flex items-center gap-1.5 text-[14px] text-[#d4af37] font-bold hover:text-[#f3d56b] transition-colors"
+                                                    >
+                                                        <span className="w-4 h-4">↗</span> 추천 상품 보러가기
+                                                    </a>
+                                                )}
                                             </div>
-                                            <a
-                                                href={`https://ohou.se/productions/feed?query=${encodeURIComponent(item.product_search_keyword)}`}
-                                                target="_blank" rel="noopener noreferrer"
-                                                className="inline-flex items-center gap-1.5 text-[14px] text-primary font-bold hover:text-[#b4922b] transition-colors"
-                                            >
-                                                <span className="w-4 h-4">↗</span> 추천 상품 보러가기
-                                            </a>
+                                        ))}
+                                    </div>
+
+                                    {!effectiveReportUnlocked && (
+                                        <div className="absolute inset-x-0 bottom-0 flex justify-center pt-24 pb-1 bg-gradient-to-t from-[#0f1c18] via-[#0f1c18]/90 to-transparent">
+                                            <div className="bg-[#14100a]/95 backdrop-blur-xl p-5 rounded-2xl border border-[#d4af37]/45 shadow-2xl w-[92%] max-w-md text-center">
+                                                <Lock className="w-7 h-7 mx-auto text-[#d4af37] mb-3" />
+                                                <h4 className="text-lg font-black text-white mb-2">전체 비보 처방 봉인</h4>
+                                                <p className="text-sm text-[#d9caa0] mb-4 leading-relaxed">공간비방서 구매 시 전체 처방과 실행 순서가 함께 열립니다.</p>
+                                                <div className="mb-4 grid grid-cols-3 gap-2">
+                                                    {['전체 처방', '배치 위치', '추천 키워드'].map((item) => (
+                                                        <div key={item} className="rounded-xl border border-[#d4af37]/20 bg-[#d4af37]/10 px-2 py-2 text-[11px] font-black text-[#f4e6bd]">
+                                                            {item}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                                <button
+                                                    onClick={handleUnlockReport}
+                                                    className="w-full py-3 bg-gradient-to-r from-[#d4af37] to-[#c29d2f] text-white font-bold rounded-xl hover:shadow-lg transition-all"
+                                                >
+                                                    같은 {formatKrw(DIGITAL_PRODUCT_TOTAL_KRW)}으로 전체 열람
+                                                </button>
+                                            </div>
                                         </div>
-                                    ))}
+                                    )}
                                 </div>
                             </div>
                         </section>
@@ -510,6 +838,7 @@ export default function ResultView({
                         onDownloadImage={onDownloadImage}
                         onOrderFrame={onOrderFrame}
                         currentAnalysisId={currentAnalysisId}
+                        premiumPreviewUnlocked={premiumPreviewUnlocked}
                     />
 
                     {/* 6. Zodiac Remedy Object */}
@@ -517,9 +846,12 @@ export default function ResultView({
                         <ZodiacCard
                             zodiacObject={result.zodiac_remedy_object}
                             zodiacImage={zodiacImage}
+                            isGeneratingZodiacImage={isGeneratingZodiacImage}
+                            onGenerateZodiacImage={onGenerateZodiacImage}
                             onDownloadImage={onDownloadImage}
                             onOrderObject={onOrderObject}
                             currentAnalysisId={currentAnalysisId}
+                            premiumPreviewUnlocked={premiumPreviewUnlocked}
                         />
                     )}
 
@@ -531,9 +863,25 @@ export default function ResultView({
                             <img src="/images/masters/cheongpung.jpeg" className="w-16 h-16 rounded-full border-4 border-[#221e10] object-cover relative z-10 shadow-lg" alt="청풍 도사" />
                             <img src="/images/masters/myeongwol.jpeg" className="w-16 h-16 rounded-full border-4 border-[#221e10] object-cover relative z-0 shadow-lg" alt="명월 도사" />
                         </div>
-                        <p className="text-white font-bold text-2xl italic leading-[1.8] max-w-xl mx-auto">
-                            "{result.overall_advice}"
-                        </p>
+                        {effectiveReportUnlocked ? (
+                            <p className="text-white font-bold text-2xl italic leading-[1.8] max-w-xl mx-auto">
+                                "{result.overall_advice}"
+                            </p>
+                        ) : (
+                            <div className="mx-auto max-w-xl rounded-2xl border border-primary/20 bg-black/25 p-6">
+                                <Lock className="mx-auto mb-3 h-8 w-8 text-primary" />
+                                <p className="text-xl font-black text-white">결(結) 총평 봉인 중</p>
+                                <p className="mt-3 text-sm leading-relaxed text-slate-300">
+                                    청풍과 명월이 함께 남기는 최종 덕담과 장기 실행 조언은 프리미엄 공간비방서에서 열립니다.
+                                </p>
+                                <button
+                                    onClick={handleUnlockReport}
+                                    className="mt-5 rounded-xl bg-primary px-5 py-3 text-sm font-black text-[#0c0a06] transition-colors hover:bg-yellow-400"
+                                >
+                                    결론까지 열람하기
+                                </button>
+                            </div>
+                        )}
                         <div className="mt-4 text-primary font-bold text-sm tracking-widest uppercase mb-8">
                             풍수지리 대가 청풍 & 명월 드림
                         </div>
@@ -567,9 +915,10 @@ export default function ResultView({
             <DigitalPaymentModal
                 isOpen={showPaymentModal}
                 onClose={() => setShowPaymentModal(false)}
-                amount={3000}
+                amount={DIGITAL_PRODUCT_TOTAL_KRW}
                 orderName="초정밀 도사 감명서 프리미엄 열람"
                 orderType="report"
+                analysisId={currentAnalysisId}
             />
         </div>
     );

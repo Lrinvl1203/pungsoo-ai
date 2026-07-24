@@ -62,7 +62,7 @@ export default function PrivacyPage() {
                             <li><strong>회원 정보:</strong> 회원 탈퇴 시까지 (Supabase에 안전하게 저장)</li>
                             <li><strong>분석 이력:</strong> 회원 탈퇴 시 또는 사용자 삭제 요청 시 즉시 파기</li>
                             <li><strong>업로드 이미지:</strong> 분석 완료 후 서버에 저장하지 않음 (클라이언트에서만 처리)</li>
-                            <li><strong>결제 정보:</strong> 토스페이먼츠에서 관리하며 본 서비스에 저장하지 않음</li>
+                            <li><strong>결제 정보:</strong> Polar 등 결제대행사에서 관리하며 본 서비스는 결제 확인과 주문 관리를 위한 최소 정보만 저장</li>
                         </ul>
                     </section>
 
@@ -73,7 +73,7 @@ export default function PrivacyPage() {
                             <ul className="list-disc pl-5 mt-2 space-y-1">
                                 <li>사용자의 사전 동의가 있는 경우</li>
                                 <li>법령에 의한 요청이 있는 경우</li>
-                                <li>결제 처리를 위해 토스페이먼츠에 필요 최소한의 정보 전달</li>
+                                <li>결제 처리를 위해 Polar 등 결제대행사에 필요 최소한의 정보 전달</li>
                             </ul>
                         </div>
                     </section>
@@ -83,7 +83,7 @@ export default function PrivacyPage() {
                         <ul className="list-disc pl-5 space-y-2">
                             <li><strong>Google Gemini API:</strong> AI 풍수 분석 및 이미지 생성 (이미지는 분석 후 즉시 폐기)</li>
                             <li><strong>Supabase:</strong> 사용자 인증 및 데이터 저장 (회원 정보, 분석 이력)</li>
-                            <li><strong>토스페이먼츠:</strong> 안전한 결제 처리</li>
+                            <li><strong>Polar 등 결제대행사:</strong> 안전한 결제 처리, 결제 확인, 환불 처리</li>
                             <li><strong>Resend:</strong> 주문 확인 이메일 발송</li>
                             <li><strong>카카오 로컬 API:</strong> 주소 검색</li>
                         </ul>

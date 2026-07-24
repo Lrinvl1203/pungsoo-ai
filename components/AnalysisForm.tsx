@@ -279,7 +279,7 @@ export default function AnalysisForm({
                                 onClick={() => onLoadHistory(idx)}
                                 className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-black/30 text-white transition-colors text-left border border-transparent hover:border-white/10"
                             >
-                                <img src={item.remedyArt} className="w-12 h-12 object-cover rounded-md" alt="History" />
+                                <img src={item.remedyArt || item.image || '/images/masters/cheongpung.jpeg'} className="w-12 h-12 object-cover rounded-md" alt="History" />
                                 <div className="flex-1 min-w-0">
                                     <p className="text-xs font-bold text-white truncate">{item.result.analysis_summary}</p>
                                     <p className="text-[10px] text-slate-300">{item.result.remedy_art.deficiency}</p>
@@ -299,7 +299,7 @@ export default function AnalysisForm({
                 disabled={loading || (metadata.analysisType === 'internal' && !image) || (metadata.analysisType === 'external' && !metadata.address)}
                 className={`w-full py-4 rounded-xl font-bold shadow-lg transition-all flex items-center justify-center gap-2 ${loading || (metadata.analysisType === 'internal' && !image) || (metadata.analysisType === 'external' && !metadata.address) ? 'bg-slate-700 text-slate-400 cursor-not-allowed' : 'bg-primary text-[#221e10] hover:bg-yellow-400 hover:scale-[1.02] active:scale-95 hover:shadow-primary/30 hover:shadow-xl'}`}
             >
-                {loading ? <><Loader2 className="w-5 h-5 animate-spin" /> 감명 중...</> : <><Send className="w-5 h-5" /> 풍수 감정 & 비방 생성</>}
+                {loading ? <><Loader2 className="w-5 h-5 animate-spin" /> 감명 중...</> : <><Send className="w-5 h-5" /> 무료 풍수 감정 시작</>}
             </button>
         </div>
     );

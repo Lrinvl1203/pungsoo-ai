@@ -46,10 +46,18 @@ export default function LoginPromptModal({ isOpen, onClose, message = '프리미
                     <Lock className="w-8 h-8 text-primary" />
                 </div>
 
-                <h3 className="text-xl font-bold text-white mb-2">로그인이 필요합니다</h3>
+                <h3 className="text-xl font-bold text-white mb-2">계정 연동 후 바로 이어집니다</h3>
                 <p className="text-sm text-slate-300 mb-8 leading-relaxed">
-                    {message}<br />결제 내역은 회원 계정에 안전하게 보관됩니다.
+                    {message}<br />로그인 후 결제창이 자동으로 다시 열립니다.
                 </p>
+
+                <div className="mb-6 grid grid-cols-3 gap-2">
+                    {['구매권 보관', '마이페이지 열람', '환불 요청 가능'].map((item) => (
+                        <div key={item} className="rounded-xl border border-primary/20 bg-primary/10 px-2 py-2 text-[11px] font-bold text-primary">
+                            {item}
+                        </div>
+                    ))}
+                </div>
 
                 <div className="flex flex-col gap-3">
                     <button
@@ -75,7 +83,7 @@ export default function LoginPromptModal({ isOpen, onClose, message = '프리미
                 </div>
 
                 <p className="mt-6 text-[11px] text-slate-500">
-                    안전한 결제 및 구매 내역 보관을 위해<br />소셜 계정 연동을 진행합니다.
+                    결제 내역과 프리미엄 열람권을 잃지 않도록<br />소셜 계정에 안전하게 연결합니다.
                 </p>
             </div>
         </div>

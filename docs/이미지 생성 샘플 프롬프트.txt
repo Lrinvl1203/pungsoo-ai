@@ -1,0 +1,147 @@
+이미지 생성 샘플 프롬프트
+
+실제 백엔드 로직을 거쳐 AI(fal.ai)로 전송될 완성형 프롬프트(영문) 샘플 10가지를 구성했습니다.
+
+각 샘플은 AI(Gemini)가 분석한 오행 처방(결핍된 기운) 상황을 가정한 후, 앞서 정의한 변수({core_motif},
+{element_shape}, {element_color})를 매핑하여 완성된 형태입니다. 그대로 복사해서 fal.ai 테스트넷이나
+Midjourney에 넣어보시면 하이엔드 퀄리티를 바로 확인하실 수 있습니다.
+
+🛡️ [STEP 1] 극흉(極凶) ~ 흉(凶) 공간 (정화와 결계)
+
+1. 신성 기하학 (Sacred Geometry) - 🔥 화(火) 기운 부족 처방
+
+  - 상황: 우울하고 무기력한 공간. 날카롭고 상승하는 붉은 기운으로 활력을 강제 주입해야 함.
+  - 완성 프롬프트:
+
+A mesmerizing sacred geometry digital art piece. Theme: Radiant Sun. Perfectly
+symmetrical and precise sharp, radiating triangular structures. Color palette:
+Monochromatic deep background with striking glowing lines of crimson red and
+warm orange. Style: Contemporary mystical art, hypnotic perfection, ultra-crisp
+vector lines, meditative and protective talisman energy. High-end modern gallery
+aesthetic, 8k resolution, cinematic dramatic lighting.
+
+2. 킨츠기 힐링 (Kintsugi) - ⛰️ 토(土) 기운 부족 처방
+
+  - 상황: 기운이 깨지고 불안정한 공간. 무거운 사각형의 흙/땅의 기운으로 상처를 치유하고 안정감을 부여해야 함.
+  - 완성 프롬프트:
+
+A contemporary abstract artwork inspired by the Japanese Kintsugi philosophy.
+Theme: Cracked Mountain Landscape. Featuring beautiful, heavy textured fractures
+that are seamlessly fused with glowing, liquid-like #d4af37 pure gold veins.
+Surrounding surface formed by stable, heavy block-like shapes in deep amber and
+earthy brown tones. Style: Raw elegance, healing energy, wabi-sabi luxury
+interior art, extreme tactile details, museum quality, photorealistic macro
+texture.
+
+3. 수묵 여백 젠 (Minimalist Zen Ink) - 💧 수(水) 기운 부족 처방
+
+  - 상황: 탁하고 답답한 공간. 고요하고 부드러운 물의 파동으로 공간의 살기(殺氣)를 씻어내야 함.
+  - 완성 프롬프트:
+
+Extreme minimalist Zen abstract art. Theme: A single drop of water creating
+ripples. A vast expanse of clean, warm-white negative space (Ma). In the center,
+a single, masterful, expressive brushstroke forming soft, undulating fluid waves
+using dense navy blue and ink black. Style: High-end contemporary East Asian
+gallery art, profound silence, purifying energy, spiritual, perfectly balanced
+composition. 8k, highly aesthetic.
+
+🌊 [STEP 2] 보통(普通) 공간 (순환과 조화)
+
+4. 루미너스 오라 (Luminous Aura) - ⚙️ 금(金) 기운 부족 처방
+
+  - 상황: 집중력이 떨어지고 산만한 공간. 완벽한 구형과 맑은 금속/빛의 기운으로 공간을 명료하게 만들어야 함.
+  - 완성 프롬프트:
+
+A soothing, contemporary light-and-space abstract art. Theme: Full Moon.
+Featuring a soft, glowing, immersive gradient aura in the form of perfect
+spherical and circular geometries. Color palette: Ethereal and healing pure
+white and metallic silver. Style: James Turrell inspired, seamless smooth
+transitions, glowing from within, uplifting and calming room energy, dreamlike
+interior poster art, 8k, flawless rendering.
+
+5. 플루이드 레진 (Fluid Resin) - 💧 수(水) 기운 부족 처방
+
+  - 상황: 금전운이나 인간관계가 꽉 막혀 흐르지 않는 공간. 유연하게 굽이치는 물의 흐름이 필요함.
+  - 완성 프롬프트:
+
+A luxurious fluid acrylic and epoxy resin abstract painting. Theme: Ocean
+Current. Beautiful, flowing liquid dynamics incorporating free-flowing,
+asymmetrical wave patterns. Rich, marbled textures mixing sapphire blue and deep
+aquamarine with subtle hints of shimmering gold and pearlescent white. Style:
+High-gloss finish, organic flow, energetic circulation, mesmerizing luxury
+interior decor, highly detailed macro photography of paint mixing.
+
+6. 와비사비 어스 (Wabi-Sabi Earthy Plaster) - 🌲 목(木) 기운 부족 처방
+
+  - 상황: 인공적이고 삭막한 사무실. 위로 곧게 자라나는 생명력과 나무의 따뜻한 질감이 필요함.
+  - 완성 프롬프트:
+
+A tactile wabi-sabi textured plaster abstract canvas. Theme: Tree Rings and
+Forest Canopy. Organic, uneven, and natural tall, vertical rising reliefs
+protruding from a raw, earthy background. Color palette: Muted, calming sage
+green and warm forest tones with warm organic undertones. Style: Minimalist
+Japandi interior art, grounding and stabilizing energy, raw plaster finish,
+architectural digest aesthetic, beautiful raking light revealing texture.
+
+👑 [STEP 3] 길(吉) ~ 극길(極吉) 공간 (운기 증폭 및 재물 발복)
+
+7. 오퓰런트 골드 리프 (Opulent Gold Leaf) - ⛰️ 토(土) 기운 부족 처방
+
+  - 상황: 이미 기운이 좋은 공간. 묵직한 대지의 기운과 황금 텍스처를 더해 부동산/재물운을 극대화함.
+  - 완성 프롬프트:
+
+A magnificent, opulent abstract expressionist masterpiece. Theme: Golden
+Plateau. Dominated by thick impasto knife strokes in layered, horizontal and
+wide flat shapes. Heavy application of real 24k gold leaf foil (#d4af37)
+contrasting beautifully against rich ochre and golden brown. Style: Ultimate
+luxury, symbol of immense wealth and prosperity, bold, dynamic energy, high-end
+VIP lounge interior art, masterpiece.
+
+8. 모던 팝-민화 (Vibrant Neo-Minhwa) - 🔥 화(火) 기운 부족 처방
+
+  - 상황: 화목하고 즐거운 공간. 불의 기운을 뜻하는 붉은색과 활짝 핀 꽃의 형상으로 성공과 명예를 축포처럼 터뜨림.
+  - 완성 프롬프트:
+
+A vibrant, contemporary pop-art reinterpretation of traditional Korean folk art
+(Minhwa). Theme: Blooming Peony (모란). Graphic, bold, and clean upward-reaching
+triangular petal elements. Color palette: Highly saturated, joyful magenta and
+vermilion red with contrasting bright accents. Style: Flat illustration
+aesthetic, cheerful and auspicious energy, trendy lifestyle boutique art, sharp
+vector edges mixed with subtle paper grain texture, 8k.
+
+9. 바이오필릭 보태니컬 (Biophilic Organic) - 🌲 목(木) 기운 부족 처방
+
+  - 상황: 창업이나 새로운 시작을 앞둔 공간. 막힘없이 뻗어나가는 거대한 식물의 성장 에너지를 쏟아부음.
+  - 완성 프롬프트:
+
+A hyper-aesthetic biophilic organic abstract art. Theme: Expanding Bamboo Roots.
+Overflowing with lush, blooming vitality and macro-level organic vertical,
+upward-reaching cylindrical structures. Color palette: Deep, life-giving vibrant
+emerald and spring green. Style: Fusion of nature and abstract geometry, vibrant
+growth energy, highly detailed, refreshing and expansive, perfect for a high-end
+eco-luxury interior.
+
+10. 셀레스티얼 코스모스 (Celestial Cosmos) - ⚙️ 금(金) 기운 부족 처방
+
+  - 상황: 완벽에 가까운 공간. 금(Metal)의 결실을 우주적 스케일의 빛과 원형으로 표현해 궁극의 권위와 명예를 부여함.
+  - 완성 프롬프트:
+
+A profound celestial abstract masterpiece. Theme: Golden Supernova. Depicting a
+vast, cosmic-scale phenomenon shaped as expanding spherical rings and perfect
+orbits. Deep, infinite space feeling using rich platinum white and deep space
+black combined with stardust-like golden particles. Style: Transcendent
+spiritual art, ultimate Feng Shui master remedy, awe-inspiring, deep meditative
+state, Hubble telescope meets abstract painting, 8k, flawless masterpiece.
+
+💡 (참고) 개발 적용 시나리오
+
+유저가 앱에서 **"모던 스타일"**을 선택하고, AI 분석 결과 "수(水)기운 결핍 / 풍수점수 35점(흉)" 이 나왔다면:
+
+1.  풍수점수가 낮으므로 STEP 1의 처방 사용 결정.
+2.  모던 스타일이므로 '수묵 여백 젠(3번)' 또는 '신성 기하학(1번)' 템플릿 선택.
+3.  수(水)기운 필수 변수 할당:
+      - {element_color} = navy blue and ink black
+      - {element_shape} = soft, undulating fluid waves
+4.  Gemini가 도출한 스토리 키워드 할당:
+      - {core_motif} = A single drop of water creating ripples
+5.  위 샘플 3번 프롬프트가 완성되어 fal.ai로 전송되고, 유저에게는 갤러리 수준의 하이엔드 이미지가 제공됩니다.

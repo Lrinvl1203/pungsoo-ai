@@ -18,3 +18,9 @@ View your app in AI Studio: https://ai.studio/apps/drive/1yXia8xw36FWWj4QixFkQZy
 2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
 3. Run the app:
    `npm run dev`
+
+## Payment Setup
+
+- Polar payment setup: [docs/polar-payment-setup.md](docs/polar-payment-setup.md)
+- Latpeed product setup: [docs/latpeed-product-setup.md](docs/latpeed-product-setup.md)
+- Environment template: [.env.example](.env.example)

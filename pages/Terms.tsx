@@ -52,11 +52,11 @@ export default function TermsPage() {
                     <section>
                         <h2 className="text-xl font-bold text-white mb-3">제4조 (결제 및 환불)</h2>
                         <ul className="list-disc pl-5 space-y-2">
-                            <li>유료 서비스(액자/오브제 제작 의뢰)는 토스페이먼츠를 통해 결제됩니다.</li>
-                            <li><strong>결제 후 제작 착수 전:</strong> 전액 환불 가능 (결제 후 24시간 이내)</li>
-                            <li><strong>제작 착수 후:</strong> 환불 불가 (제작 시작 안내 이메일 발송 후)</li>
+                            <li>유료 서비스(프리미엄 감명서, 비방 아트, 오브제 설계, 실물 제작 의뢰)는 Polar 등 결제대행사를 통해 결제됩니다.</li>
+                            <li><strong>디지털 콘텐츠:</strong> 결제 후 콘텐츠 열람권이 정상 제공된 경우 단순 변심 환불은 제한될 수 있습니다. 단, 중복 결제, 결제 오류, 콘텐츠 미제공 등 판매자 귀책 사유가 확인되면 전액 환불합니다.</li>
+                            <li><strong>실물 제작 의뢰:</strong> 제작 착수 전에는 전액 환불 가능하며, 맞춤 제작이 시작된 이후에는 환불이 제한됩니다.</li>
                             <li>제품 하자 시 수령 후 7일 이내 교환 또는 환불 가능합니다.</li>
-                            <li>환불 요청은 이메일(lrinvl1203@gmail.com)로 접수해 주세요.</li>
+                            <li>환불 요청은 마이페이지의 환불 요청 기능 또는 이메일(lrinvl1203@gmail.com)로 접수해 주세요.</li>
                         </ul>
                     </section>
 

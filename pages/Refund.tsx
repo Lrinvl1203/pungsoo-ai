@@ -22,7 +22,7 @@ export default function Refund() {
                         <h2 className="text-lg font-bold">디지털 콘텐츠 (감명서 / 비방 아트 / 오브제 설계)</h2>
                     </div>
                     <ul className="text-slate-300 text-sm leading-relaxed space-y-3 list-disc list-inside">
-                        <li>디지털 콘텐츠의 특성상, <strong className="text-white">결제 완료 후 콘텐츠가 제공(잠금 해제)된 경우 환불이 불가</strong>합니다.</li>
+                        <li>디지털 콘텐츠의 특성상, <strong className="text-white">결제 완료 후 콘텐츠가 정상 제공(잠금 해제)된 경우 단순 변심 환불은 제한</strong>될 수 있습니다.</li>
                         <li>이는 「전자상거래 등에서의 소비자보호에 관한 법률」 제17조 제2항 제5호에 근거합니다.</li>
                         <li>결제 후 콘텐츠가 정상적으로 제공되지 않은 경우(서버 오류, 로딩 실패 등)에는 전액 환불해 드립니다.</li>
                         <li>중복 결제가 확인된 경우, 중복분에 대해 전액 환불 처리됩니다.</li>
@@ -47,7 +47,7 @@ export default function Refund() {
                         <h2 className="text-lg font-bold text-white">환불 신청 방법</h2>
                     </div>
                     <p className="text-slate-300 text-sm leading-relaxed">
-                        아래 연락처로 <strong className="text-white">주문 번호</strong>와 <strong className="text-white">환불 사유</strong>를 알려주시면 영업일 기준 1~3일 내에 처리해 드립니다.
+                        마이페이지의 <strong className="text-white">환불 요청</strong> 버튼으로 <strong className="text-white">환불 사유</strong>를 남기거나, 아래 연락처로 주문 번호와 환불 사유를 알려주시면 영업일 기준 1~3일 내에 확인합니다.
                     </p>
                     <div className="flex flex-col gap-3">
                         <div className="flex items-center gap-3 bg-black/30 rounded-xl px-4 py-3 border border-white/5">

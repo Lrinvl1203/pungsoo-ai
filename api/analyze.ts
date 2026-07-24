@@ -1,7 +1,7 @@
 
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { buildSystemPrompt } from "./constants.js";
-import { buildMingongContext } from "./utils/fengshui.js";
+import { buildSystemPrompt } from "../server/constants.js";
+import { buildMingongContext } from "../server/utils/fengshui.js";
 
 export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') {
@@ -13,6 +13,12 @@ export default async function handler(req: any, res: any) {
 
   if (!apiKey) {
     return res.status(500).json({ error: 'API Key not configured' });
+  }
+  if (!metadata || typeof metadata !== 'object') {
+    return res.status(400).json({ error: 'metadata is required.' });
+  }
+  if (!image || typeof image !== 'string') {
+    return res.status(400).json({ error: 'image is required.' });
   }
 
   const genAI = new GoogleGenerativeAI(apiKey);
@@ -73,7 +79,7 @@ export default async function handler(req: any, res: any) {
     }
 
     // Validate required fields - if missing, return structured error
-    const requiredFields = ['analysis_summary', 'diagnosis', 'feng_shui_score', 'solution_items', 'remedy_art', 'overall_advice'];
+    const requiredFields = ['analysis_summary', 'detailed_report', 'spatial_features', 'diagnosis', 'feng_shui_score', 'five_elements', 'solution_items', 'remedy_art', 'zodiac_remedy_object', 'overall_advice'];
     const missingFields = requiredFields.filter(f => parsed[f] == null);
     if (missingFields.length > 0) {
       console.error("GEMINI INCOMPLETE RESPONSE - missing fields:", missingFields, "raw length:", text.length);

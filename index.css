@@ -1,0 +1,21 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    font-family: 'Plus Jakarta Sans', 'Pretendard', sans-serif;
+    background-color: #221e10;
+    color: #f1f5f9;
+  }
+}
+
+@layer utilities {
+  .serif-font {
+    font-family: 'Noto Serif KR', serif;
+  }
+
+  .gold-gradient {
+    background: linear-gradient(135deg, #d4af37 0%, #f9f295 50%, #d4af37 100%);
+  }
+}

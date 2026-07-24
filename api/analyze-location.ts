@@ -1,6 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { buildExternalSystemPrompt } from "./constants.js";
-import { buildMingongContext } from "./utils/fengshui.js";
+import { buildExternalSystemPrompt } from "../server/constants.js";
+import { buildMingongContext } from "../server/utils/fengshui.js";
 
 export default async function handler(req: any, res: any) {
     if (req.method !== 'POST') {
@@ -16,6 +16,12 @@ export default async function handler(req: any, res: any) {
     }
     if (!kakaoKey) {
         return res.status(500).json({ error: 'Kakao REST API Key not configured' });
+    }
+    if (!address || typeof address !== 'string') {
+        return res.status(400).json({ error: 'address is required.' });
+    }
+    if (!metadata || typeof metadata !== 'object') {
+        return res.status(400).json({ error: 'metadata is required.' });
     }
 
     try {
@@ -138,7 +144,24 @@ export default async function handler(req: any, res: any) {
         // Remove control characters (0x00-0x1F except \n, \r, \t) that break JSON.parse
         const sanitizedText = cleanedText.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, "");
 
-        return res.status(200).json(JSON.parse(sanitizedText));
+        let parsed: any;
+        try {
+            parsed = JSON.parse(sanitizedText);
+        } catch {
+            parsed = JSON.parse(repairJsonNewlines(sanitizedText));
+        }
+
+        const requiredFields = ['analysis_summary', 'detailed_report', 'spatial_features', 'diagnosis', 'feng_shui_score', 'five_elements', 'solution_items', 'remedy_art', 'zodiac_remedy_object', 'overall_advice'];
+        const missingFields = requiredFields.filter(f => parsed[f] == null);
+        if (missingFields.length > 0) {
+            console.error("GEMINI INCOMPLETE EXTERNAL RESPONSE - missing fields:", missingFields, "raw length:", text.length);
+            return res.status(422).json({
+                error: 'AI 응답이 불완전합니다. 다시 시도해 주세요.',
+                missing_fields: missingFields,
+            });
+        }
+
+        return res.status(200).json(parsed);
 
     } catch (error: any) {
         console.error("VERCEL FUNCTION CRASH LOG:", error);
@@ -148,4 +171,25 @@ export default async function handler(req: any, res: any) {
             name: error.name
         });
     }
+}
+
+function repairJsonNewlines(text: string): string {
+    let inString = false;
+    let result = '';
+    for (let i = 0; i < text.length; i++) {
+        const ch = text[i];
+        const prev = i > 0 ? text[i - 1] : '';
+        if (ch === '"' && prev !== '\\') {
+            inString = !inString;
+            result += ch;
+            continue;
+        }
+        if (inString) {
+            if (ch === '\n') { result += '\\n'; continue; }
+            if (ch === '\r') { result += '\\r'; continue; }
+            if (ch === '\t') { result += '\\t'; continue; }
+        }
+        result += ch;
+    }
+    return result;
 }

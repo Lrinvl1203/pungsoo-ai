@@ -12,7 +12,18 @@ export default async function handler(req: any, res: any) {
         return res.status(400).json({ error: 'Missing payment information' });
     }
 
-    const secretKey = process.env.TOSS_SECRET_KEY || 'test_sk_Z1aOwX7K8m2ROk9X22B38yQxzvNP';
+    const secretKey = process.env.TOSS_SECRET_KEY;
+    const supabaseUrl = process.env.VITE_SUPABASE_URL || '';
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+
+    if (!secretKey) {
+        return res.status(500).json({ error: 'TOSS_SECRET_KEY 환경변수가 설정되지 않았습니다.' });
+    }
+
+    if (!supabaseUrl || !supabaseKey) {
+        return res.status(500).json({ error: 'Supabase 서버 저장 환경변수가 설정되지 않았습니다. SUPABASE_SERVICE_ROLE_KEY를 추가해주세요.' });
+    }
+
     const encodedKey = Buffer.from(`${secretKey}:`).toString('base64');
 
     try {
@@ -38,35 +49,28 @@ export default async function handler(req: any, res: any) {
 
         const paymentData = await tossResponse.json();
 
-        // 2. Save order to Supabase DB
-        const supabaseUrl = process.env.VITE_SUPABASE_URL || '';
-        // It's recommended to use SERVICE_ROLE_KEY here for backend, but we'll use ANON_KEY if not available
-        const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || '';
+        // 2. Save order to Supabase DB with service role, so RLS cannot block server-side confirmations.
+        const supabase = createClient(supabaseUrl, supabaseKey);
 
-        let dbError = null;
-        if (supabaseUrl && supabaseKey) {
-            const supabase = createClient(supabaseUrl, supabaseKey);
+        const { error } = await supabase
+            .from('purchases')
+            .insert([
+                {
+                    user_id: userId || null,
+                    order_id: orderId,
+                    payment_key: paymentKey,
+                    amount: Number(amount),
+                    order_type: orderType,
+                    status: 'COMPLETED',
+                    buyer_name: name || '비회원',
+                    contact_info: contact || null,
+                    analysis_id: analysisId || null
+                }
+            ]);
 
-            const { error } = await supabase
-                .from('purchases')
-                .insert([
-                    {
-                        user_id: userId || null,
-                        order_id: orderId,
-                        payment_key: paymentKey,
-                        amount: amount,
-                        order_type: orderType,
-                        status: 'COMPLETED',
-                        buyer_name: name || '비회원',
-                        contact_info: contact || null,
-                        analysis_id: analysisId ? parseInt(analysisId) : null
-                    }
-                ]);
-
-            if (error) {
-                console.warn('Failed to insert into purchases table:', error);
-                dbError = error.message;
-            }
+        if (error) {
+            console.error('Failed to insert into purchases table:', error);
+            return res.status(500).json({ error: '결제는 승인되었지만 구매 내역 저장에 실패했습니다.', details: error.message });
         }
 
         // 3. Send Order Email (Only for physical items)
@@ -159,7 +163,7 @@ export default async function handler(req: any, res: any) {
             }
         }
 
-        res.status(200).json({ success: true, payment: paymentData, dbError });
+        res.status(200).json({ success: true, payment: paymentData });
     } catch (error: any) {
         console.error('Server error during payment confirmation:', error);
         res.status(500).json({ error: error.message || 'Internal Server Error' });

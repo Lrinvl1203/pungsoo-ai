@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
-import { Sparkles, Compass, Shield, Eye, Zap, ArrowRight, CheckCircle2, Star, Users, Target, Heart, Send, TrendingUp, Award, BookOpen, Clock, ChevronRight } from 'lucide-react';
+import { Sparkles, Compass, Shield, Eye, ArrowRight, CheckCircle2, Users, Target, Heart, TrendingUp, Award, BookOpen, Clock, ChevronRight } from 'lucide-react';
 import Onboarding from '../components/Onboarding';
 import DailyFengShui from '../components/DailyFengShui';
+import { trackEvent } from '../services/analyticsService';
+import { DIGITAL_PRODUCT_TOTAL_KRW, formatKrw } from '../services/pricing';
 
 export default function Landing() {
     // Onboarding State
@@ -11,7 +13,7 @@ export default function Landing() {
             if (urlParams.get('onboarding') === 'true') {
                 return true;
             }
-            return localStorage.getItem('PUNGSOO_ONBOARDING_COMPLETED') !== 'true';
+            return false;
         }
         return true;
     });
@@ -56,6 +58,8 @@ export default function Landing() {
                         </div>
                         <div className="hidden md:flex items-center gap-8">
                             <a href="#why" className="text-sm font-bold text-slate-400 hover:text-primary transition-colors">풍수란?</a>
+                            <a href="#sample" className="text-sm font-bold text-slate-400 hover:text-primary transition-colors">샘플</a>
+                            <a href="#packages" className="text-sm font-bold text-slate-400 hover:text-primary transition-colors">개업 패키지</a>
                             <a href="#process" className="text-sm font-bold text-slate-400 hover:text-primary transition-colors">감정 과정</a>
                             <a href="#masters" className="text-sm font-bold text-slate-400 hover:text-primary transition-colors">대가 소개</a>
                         </div>
@@ -70,52 +74,48 @@ export default function Landing() {
                     <div className="max-w-3xl fade-in-up">
                         <div className="flex w-fit items-center gap-2 rounded-full border border-primary/30 bg-[#0c0a06]/80 backdrop-blur-md px-4 py-1.5 mb-8">
                             <Sparkles className="w-4 h-4 text-primary" />
-                            <span className="text-xs font-bold uppercase tracking-wider text-primary">대한민국 최초 듀얼 페르소나 풍수 AI</span>
+                            <span className="text-xs font-bold uppercase tracking-wider text-primary">사진 기반 공간 진단 · 프리미엄 비방서</span>
                         </div>
                         <h1 className="text-5xl md:text-6xl lg:text-7xl font-black leading-[1.1] tracking-tight text-white mb-6 text-shadow-xl">
-                            당신의 공간이<br />
-                            <span className="text-primary">운명을 결정합니다</span>
+                            공간의 흐름이<br />
+                            <span className="text-primary">일상을 바꿉니다</span>
                         </h1>
                         <p className="text-xl leading-relaxed text-slate-300 max-w-xl mb-12 text-shadow">
-                            40년 경력 청풍 도사의 <strong className="text-white">공간 진단</strong>과
-                            명월 도사의 <strong className="text-white">맞춤 비방 처방</strong>.<br />
-                            사진 한 장으로 두 대가의 완벽한 풍수 솔루션을 경험하세요.
+                            사진 한 장과 공간 목적을 바탕으로 채광, 동선, 방향, 오행 균형을 읽고
+                            청풍 도사의 <strong className="text-white">진단</strong>과 명월 도사의 <strong className="text-white">실행 처방</strong>으로 정리합니다.
                         </p>
 
                         <div className="flex flex-col sm:flex-row gap-4 mb-16">
-                            <a href="/analyze" className="group flex h-16 items-center justify-center gap-3 rounded-2xl bg-primary px-10 text-lg font-bold text-[#221e10] transition-all hover:bg-yellow-400 hover:scale-105 shadow-xl shadow-primary/20">
-                                무료로 공간 진단하기
-                                <ArrowRight className="w-6 h-6 transition-transform group-hover:translate-x-1" />
-                            </a>
-                            <a href="#why" className="flex h-16 items-center justify-center gap-2 rounded-2xl border border-white/20 bg-white/5 px-8 text-lg font-medium text-white backdrop-blur-md transition-all hover:bg-white/10">
-                                결과 미리보기
+                        <a
+                            href="/analyze"
+                            onClick={() => trackEvent('landing_cta_click', { metadata: { placement: 'hero_primary' } })}
+                            className="group flex h-16 items-center justify-center gap-3 rounded-2xl bg-primary px-10 text-lg font-bold text-[#221e10] transition-all hover:bg-yellow-400 hover:scale-105 shadow-xl shadow-primary/20"
+                        >
+                            무료 초견 받아보기
+                            <ArrowRight className="w-6 h-6 transition-transform group-hover:translate-x-1" />
+                        </a>
+                            <a href="#sample" className="flex h-16 items-center justify-center gap-2 rounded-2xl border border-white/20 bg-white/5 px-8 text-lg font-medium text-white backdrop-blur-md transition-all hover:bg-white/10">
+                                프리미엄 샘플 보기
                             </a>
                         </div>
 
                         {/* Social Proof Bar */}
-                        <div className="flex flex-wrap items-center gap-8 py-6 border-t border-white/10 backdrop-blur-sm bg-[#0c0a06]/40 rounded-3xl px-8">
-                            <div className="flex items-center gap-4">
-                                <div className="flex -space-x-3">
-                                    <img src="https://i.pravatar.cc/100?img=1" className="w-10 h-10 rounded-full border-2 border-[#1a1508]" alt="User" />
-                                    <img src="https://i.pravatar.cc/100?img=2" className="w-10 h-10 rounded-full border-2 border-[#1a1508]" alt="User" />
-                                    <img src="https://i.pravatar.cc/100?img=3" className="w-10 h-10 rounded-full border-2 border-[#1a1508]" alt="User" />
-                                    <div className="w-10 h-10 rounded-full border-2 border-[#1a1508] bg-primary flex items-center justify-center text-[#1a1508] font-bold text-xs">+1K</div>
-                                </div>
-                                <div>
-                                    <div className="flex text-primary mb-1">
-                                        <Star className="w-3 h-3 fill-current" /><Star className="w-3 h-3 fill-current" /><Star className="w-3 h-3 fill-current" /><Star className="w-3 h-3 fill-current" /><Star className="w-3 h-3 fill-current" />
+                        <div className="grid gap-4 border-t border-white/10 bg-[#0c0a06]/50 px-5 py-5 backdrop-blur-sm sm:grid-cols-3 sm:rounded-3xl sm:px-6">
+                            {[
+                                { icon: Eye, title: '무료 초견 먼저 확인', desc: '결제 전 핵심 징후 공개' },
+                                { icon: Clock, title: '즉시 분석 가능', desc: '사진 업로드 후 바로 결과 확인' },
+                                { icon: Shield, title: '주문 기록 보관', desc: '마이페이지에서 결제·환불 상태 확인' },
+                            ].map((item) => (
+                                <div key={item.title} className="flex items-center gap-3">
+                                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                                        <item.icon className="h-5 w-5" />
                                     </div>
-                                    <div className="text-xs font-bold text-slate-400">1,247명 감정 완료</div>
+                                    <div>
+                                        <div className="text-sm font-bold text-white">{item.title}</div>
+                                        <div className="text-xs text-slate-400">{item.desc}</div>
+                                    </div>
                                 </div>
-                            </div>
-                            <div className="w-px h-10 bg-white/10 hidden md:block"></div>
-                            <div className="flex items-center gap-3">
-                                <Clock className="w-5 h-5 text-primary" />
-                                <div>
-                                    <div className="text-sm font-bold text-white">즉시 분석 가능</div>
-                                    <div className="text-xs text-slate-400">평균 소요시간 30초</div>
-                                </div>
-                            </div>
+                            ))}
                         </div>
 
                     </div>
@@ -130,21 +130,55 @@ export default function Landing() {
                     <div className="text-center mb-24">
                         <div className="flex w-fit items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 mx-auto mb-6">
                             <BookOpen className="w-4 h-4 text-primary" />
-                            <span className="text-xs font-bold uppercase tracking-wider text-primary">공간의 차이가 운명의 차이</span>
+                            <span className="text-xs font-bold uppercase tracking-wider text-primary">신비한 언어, 현실적인 실행</span>
                         </div>
-                        <h2 className="text-4xl md:text-5xl font-black text-white mb-6">현대 환경심리학이 증명한 <span className="text-primary">명당의 비밀</span></h2>
-                        <p className="text-lg text-slate-400 max-w-2xl mx-auto">미신이 아닙니다. 색채, 채광, 배치가 스트레스 지수와 업무 능률에 미치는 영향은 숱한 논문을 통해 입증되었습니다.</p>
+                        <h2 className="text-4xl md:text-5xl font-black text-white mb-6">풍수 감각을 <span className="text-primary">공간 심리와 동선</span>으로 번역합니다</h2>
+                        <p className="text-lg text-slate-400 max-w-3xl mx-auto">단정적인 예언이 아니라, 채광·시야·동선·색감·수납의 흐름을 풍수 언어로 읽고 실제로 바꿀 수 있는 행동으로 정리합니다.</p>
                     </div>
 
                     {/* Before/After Showcase */}
                     <div className="grid lg:grid-cols-2 gap-12 items-center mb-24">
                         <div className="relative group">
-                            {/* Comparison Slider Concept (Static for now) */}
                             <div className="relative rounded-3xl overflow-hidden border border-white/10 aspect-video shadow-2xl">
-                                <div className="absolute inset-0 bg-slate-900 flex items-center justify-center">
-                                    <span className="text-slate-500 font-bold">인테리어 비교 이미지 영역</span>
+                                <div className="absolute inset-0 grid grid-cols-2 bg-[#16130b]">
+                                    <div className="relative overflow-hidden border-r border-white/10 p-5">
+                                        <div className="absolute inset-0 bg-red-500/5"></div>
+                                        <div className="relative h-full rounded-2xl border border-red-500/25 bg-black/25 p-4">
+                                            <div className="mb-4 flex items-center justify-between">
+                                                <span className="text-xs font-black text-red-300">막힌 흐름</span>
+                                                <span className="rounded-full bg-red-500/15 px-2 py-1 text-[10px] font-bold text-red-200">Before</span>
+                                            </div>
+                                            <div className="grid h-[72%] grid-cols-3 grid-rows-3 gap-2">
+                                                <div className="rounded-lg bg-slate-700/60"></div>
+                                                <div className="col-span-2 rounded-lg border border-red-400/40 bg-red-500/10"></div>
+                                                <div className="row-span-2 rounded-lg border border-white/10 bg-slate-800/80"></div>
+                                                <div className="rounded-lg bg-slate-700/40"></div>
+                                                <div className="rounded-lg bg-slate-700/40"></div>
+                                                <div className="col-span-2 rounded-lg border border-red-400/40 bg-red-500/10"></div>
+                                            </div>
+                                            <div className="absolute left-1/2 top-1/2 h-24 w-1 -translate-x-1/2 -translate-y-1/2 rotate-45 rounded-full bg-red-400/50 blur-sm"></div>
+                                        </div>
+                                    </div>
+                                    <div className="relative overflow-hidden p-5">
+                                        <div className="absolute inset-0 bg-primary/5"></div>
+                                        <div className="relative h-full rounded-2xl border border-primary/30 bg-black/25 p-4">
+                                            <div className="mb-4 flex items-center justify-between">
+                                                <span className="text-xs font-black text-primary">정돈된 흐름</span>
+                                                <span className="rounded-full bg-primary/15 px-2 py-1 text-[10px] font-bold text-primary">After</span>
+                                            </div>
+                                            <div className="grid h-[72%] grid-cols-3 grid-rows-3 gap-2">
+                                                <div className="rounded-lg bg-primary/25"></div>
+                                                <div className="rounded-lg bg-slate-700/45"></div>
+                                                <div className="rounded-lg bg-primary/20"></div>
+                                                <div className="col-span-3 rounded-lg border border-primary/30 bg-primary/10"></div>
+                                                <div className="rounded-lg bg-slate-700/45"></div>
+                                                <div className="rounded-lg bg-primary/20"></div>
+                                                <div className="rounded-lg bg-slate-700/45"></div>
+                                            </div>
+                                            <div className="absolute left-1/2 top-1/2 h-28 w-28 -translate-x-1/2 -translate-y-1/2 rounded-full border border-primary/35"></div>
+                                        </div>
+                                    </div>
                                 </div>
-                                {/* Mockup label */}
                                 <div className="absolute top-4 left-4 bg-black/60 backdrop-blur-md px-3 py-1.5 border border-white/10 rounded-lg text-xs font-bold text-white">흉지 (Before)</div>
                                 <div className="absolute top-4 right-4 bg-primary/90 text-black px-3 py-1.5 border border-primary/20 rounded-lg text-xs font-bold">명당 (After)</div>
                                 <div className="absolute top-0 bottom-0 left-1/2 w-0.5 bg-primary/50 cursor-ew-resize hidden md:block">
@@ -158,9 +192,9 @@ export default function Landing() {
                             <h3 className="text-3xl font-black text-white mb-6">가구 배치 하나가<br />수면의 질을 결정합니다</h3>
                             <ul className="space-y-6 mb-8">
                                 {[
-                                    { icon: Shield, title: "화(火)와 수(水)의 충돌 방지", desc: "주방의 가스레인지와 싱크대 배치를 교정하여 부부 갈등의 원인을 제거합니다." },
-                                    { icon: TrendingUp, title: "배산임수의 원리 적용", desc: "침대의 헤드 방향을 안정적인 벽으로 향하게 하여 수면 중 기운 누출을 막습니다." },
-                                    { icon: Eye, title: "현관 기운 정화", desc: "집의 첫인상인 현관의 거울 위치를 조정하여 밖에서 들어오는 좋은 기운을 반사시키지 않게 합니다." }
+                                    { icon: Shield, title: "화(火)와 수(水)의 충돌 완화", desc: "주방의 열기와 물 사용 동선을 읽고, 가족의 체류감이 깨지는 지점을 현실적인 배치로 조정합니다." },
+                                    { icon: TrendingUp, title: "등 뒤 지지와 시야 안정", desc: "침대와 책상 뒤가 비어 있을 때 생기는 불안정한 시야를 줄이고, 집중과 휴식에 유리한 방향을 제안합니다." },
+                                    { icon: Eye, title: "현관의 첫 인상 정리", desc: "거울, 조명, 수납, 바닥의 시선 흐름을 점검해 들어오는 순간의 밝기와 정돈감을 개선합니다." }
                                 ].map((item, idx) => (
                                     <li key={idx} className="flex gap-4 items-start">
                                         <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
@@ -182,7 +216,7 @@ export default function Landing() {
                         <div>
                             <div className="text-primary font-bold text-sm mb-2">청풍 도사의 한마디</div>
                             <blockquote className="text-xl md:text-2xl text-white italic font-bold leading-relaxed">
-                                "공간은 사람의 그릇이오. 그릇이 깨져 있으면 재물이 새고, 그릇이 곧으면 사람이 모이는 법이지요. 작은 구조 변경만으로도 운의 흐름을 확연히 바꿀 수 있소이다."
+                                "풍수는 겁을 주는 말이 아니라 공간을 정리하는 언어입니다. 빛이 머무는 자리, 사람이 쉬는 방향, 물건이 쌓이는 흐름을 바로잡으면 공간의 인상이 달라집니다."
                             </blockquote>
                         </div>
                     </div>
@@ -217,9 +251,22 @@ export default function Landing() {
                     {/* Split Screen Master Banner */}
                     <div className="grid md:grid-cols-2 rounded-3xl overflow-hidden border border-white/10 shadow-2xl">
                         {/* Cheongpung Side */}
-                        <div className="bg-gradient-to-br from-[#1a1508] to-[#0c0a06] p-12 relative overflow-hidden group">
+                        <div className="bg-gradient-to-br from-[#1a1508] to-[#0c0a06] p-10 sm:p-12 relative overflow-hidden group min-h-[360px]">
+                            <img src="/images/masters/cheongpung_landing.jpeg" className="pointer-events-none absolute inset-y-0 right-0 h-full w-2/3 object-cover object-center opacity-[0.12] mix-blend-luminosity transition-transform duration-700 group-hover:scale-105" alt="" aria-hidden="true" />
+                            <div className="absolute inset-0 bg-gradient-to-r from-[#1a1508] via-[#1a1508]/95 to-[#1a1508]/60"></div>
                             <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 rounded-full blur-[80px]"></div>
-                            <img src="/images/masters/cheongpung.jpeg" className="w-16 h-16 rounded-full border-2 border-primary mb-6 relative z-10" alt="청풍" />
+                            <div className="relative z-10 mb-7 flex items-center gap-4">
+                                <div className="relative h-24 w-24 shrink-0 rounded-[1.35rem] bg-gradient-to-br from-primary via-[#fff0a6] to-[#6d4c12] p-[2px] shadow-2xl shadow-primary/15">
+                                    <div className="h-full w-full overflow-hidden rounded-[1.2rem] bg-[#1b1509]">
+                                        <img src="/images/masters/cheongpung.jpeg" className="h-full w-full object-cover object-top" alt="청풍 도사" />
+                                    </div>
+                                    <div className="pointer-events-none absolute inset-[2px] rounded-[1.2rem] ring-1 ring-white/25"></div>
+                                </div>
+                                <div className="hidden sm:block">
+                                    <p className="text-[11px] font-black uppercase tracking-[0.22em] text-primary">Diagnosis Master</p>
+                                    <p className="mt-1 text-sm font-bold text-slate-400">산세와 공간 기운 판독</p>
+                                </div>
+                            </div>
                             <h3 className="text-3xl font-black text-white mb-2 relative z-10">진단(診) 담당 : 청풍 도사</h3>
                             <p className="text-primary font-bold text-sm mb-6 relative z-10">지리·풍수 대가 | 산세 및 공간 기운 감정</p>
                             <ul className="space-y-3 mb-8 relative z-10">
@@ -229,9 +276,22 @@ export default function Landing() {
                             </ul>
                         </div>
                         {/* Myeongwol Side */}
-                        <div className="bg-gradient-to-tl from-[#1a1508] to-[#0c0a06] p-12 relative overflow-hidden border-t md:border-t-0 md:border-l border-white/5">
+                        <div className="bg-gradient-to-tl from-[#1a1508] to-[#0c0a06] p-10 sm:p-12 relative overflow-hidden border-t md:border-t-0 md:border-l border-white/5 group min-h-[360px]">
+                            <img src="/images/masters/myeongwol_landing.jpeg" className="pointer-events-none absolute inset-y-0 right-0 h-full w-2/3 object-cover object-center opacity-[0.12] mix-blend-luminosity transition-transform duration-700 group-hover:scale-105" alt="" aria-hidden="true" />
+                            <div className="absolute inset-0 bg-gradient-to-r from-[#1a1508] via-[#1a1508]/95 to-[#1a1508]/60"></div>
                             <div className="absolute bottom-0 left-0 w-64 h-64 bg-primary/10 rounded-full blur-[80px]"></div>
-                            <img src="/images/masters/myeongwol.jpeg" className="w-16 h-16 rounded-full border-2 border-primary mb-6 relative z-10" alt="명월" />
+                            <div className="relative z-10 mb-7 flex items-center gap-4">
+                                <div className="relative h-24 w-24 shrink-0 rounded-[1.35rem] bg-gradient-to-br from-primary via-[#fff0a6] to-[#6d4c12] p-[2px] shadow-2xl shadow-primary/15">
+                                    <div className="h-full w-full overflow-hidden rounded-[1.2rem] bg-[#1b1509]">
+                                        <img src="/images/masters/myeongwol.jpeg" className="h-full w-full object-cover object-top" alt="명월 도사" />
+                                    </div>
+                                    <div className="pointer-events-none absolute inset-[2px] rounded-[1.2rem] ring-1 ring-white/25"></div>
+                                </div>
+                                <div className="hidden sm:block">
+                                    <p className="text-[11px] font-black uppercase tracking-[0.22em] text-primary">Remedy Master</p>
+                                    <p className="mt-1 text-sm font-bold text-slate-400">오행 보완과 비방 설계</p>
+                                </div>
+                            </div>
                             <h3 className="text-3xl font-black text-white mb-2 relative z-10">처방(方) 담당 : 명월 도사</h3>
                             <p className="text-primary font-bold text-sm mb-6 relative z-10">명리·비방 대가 | 오행 보완 및 비방 오브제</p>
                             <ul className="space-y-3 mb-8 relative z-10">
@@ -286,40 +346,287 @@ export default function Landing() {
             </section>
 
             {/* ============================================ */}
-            {/* 5. URGENCY & CTA */}
+            {/* 5. SAMPLE REPORT */}
+            {/* ============================================ */}
+            <section id="sample" className="relative py-32 px-6 bg-[#120f08] border-y border-white/[0.06]">
+                <div className="max-w-7xl mx-auto">
+                    <div className="grid lg:grid-cols-[0.95fr_1.05fr] gap-12 items-center">
+                        <div>
+                            <div className="flex w-fit items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 mb-6">
+                                <Award className="w-4 h-4 text-primary" />
+                                <span className="text-xs font-bold uppercase tracking-wider text-primary">샘플 감명서 미리보기</span>
+                            </div>
+                            <h2 className="text-4xl md:text-5xl font-black text-white mb-6">
+                                무료는 판단의 시작,<br />
+                                <span className="text-primary">프리미엄은 실행 문서</span>입니다
+                            </h2>
+                            <p className="text-lg text-slate-400 leading-relaxed mb-8">
+                                무료 초견은 결제 전 핵심 징후를 보여줍니다. 프리미엄 공간비방서는 빛, 동선, 오행 결핍, 배치 처방, 비방 아트와 수호 오브제까지 실제로 따라 할 수 있는 순서로 정리합니다.
+                            </p>
+                            <div className="grid sm:grid-cols-3 gap-3">
+                                {[
+                                    ['8장', '보관용 감명서 구성'],
+                                    ['5개', '핵심 징후와 원인'],
+                                    ['7일', '실행 체크리스트'],
+                                ].map(([value, label]) => (
+                                    <div key={label} className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+                                        <div className="text-3xl font-black text-primary mb-1">{value}</div>
+                                        <div className="text-xs font-bold text-slate-400">{label}</div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="relative">
+                            <div className="absolute inset-0 translate-x-4 translate-y-4 rounded-3xl border border-primary/20 bg-primary/5"></div>
+                            <div className="relative overflow-hidden rounded-3xl border border-primary/40 bg-[#f4e6bd] p-6 md:p-8 text-[#25180d] shadow-2xl">
+                                <div className="flex items-start justify-between gap-4 border-b border-[#8f6f26]/25 pb-5 mb-6">
+                                    <div>
+                                        <p className="text-[11px] font-black tracking-[0.28em] text-[#8f1f1f] mb-2">PREMIUM SPACE REPORT</p>
+                                        <h3 className="text-2xl md:text-3xl font-black">프리미엄 공간비방서 샘플</h3>
+                                        <p className="text-sm font-bold text-[#7a6332] mt-2">거실 겸 작업 공간 / 채광·동선·수납 진단</p>
+                                    </div>
+                                    <div className="shrink-0 rounded-2xl border border-[#8f6f26]/30 bg-[#25180d] px-4 py-3 text-center text-[#f4e6bd]">
+                                        <div className="text-3xl font-black leading-none">91</div>
+                                        <div className="text-[10px] font-bold">점</div>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-5 text-sm leading-relaxed">
+                                    <div>
+                                        <h4 className="mb-2 font-black text-[#8f1f1f]">1장. 공간의 첫 판독</h4>
+                                        <p>현관에서 창으로 이어지는 직선 동선이 시선을 빠르게 흘려보내고, 작업 좌석 뒤의 여백이 집중감을 약하게 만듭니다. 밝은 채광은 장점이지만 이를 붙잡아 줄 금(金)의 정돈감이 부족합니다.</p>
+                                    </div>
+                                    <div className="grid sm:grid-cols-2 gap-4">
+                                        <div className="rounded-2xl border border-[#8f6f26]/25 bg-white/35 p-4">
+                                            <h5 className="font-black text-[#2d5f46] mb-1">유지할 요소</h5>
+                                            <p>밝은 채광, 열린 시야, 시작을 돕는 화(火)의 활력</p>
+                                        </div>
+                                        <div className="rounded-2xl border border-[#8f6f26]/25 bg-white/35 p-4">
+                                            <h5 className="font-black text-[#8f1f1f] mb-1">바꿀 요소</h5>
+                                            <p>빠른 시선 흐름, 금기 부족, 등 뒤 지지 약화</p>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <h4 className="mb-2 font-black text-[#8f1f1f]">5장. 실행 비방</h4>
+                                        <ul className="space-y-2">
+                                            <li>현관과 창 사이에 낮은 식물 또는 반투명 오브제를 두어 시선의 속도를 낮춥니다.</li>
+                                            <li>서쪽 선반에 백색 원형 트레이를 배치해 금(金)의 정돈감을 보강합니다.</li>
+                                            <li>비방 아트는 달빛, 은빛 원형 그릇, 흰 산 능선을 중심 이미지로 생성합니다.</li>
+                                        </ul>
+                                    </div>
+                                    <div className="rounded-2xl border border-[#8f6f26]/25 bg-[#25180d]/10 p-4">
+                                        <h4 className="mb-3 font-black text-[#8f1f1f]">구매 후 제공 항목</h4>
+                                        <div className="grid gap-2 sm:grid-cols-3">
+                                            {['상세 감명서', '비방 아트 원본', '배치 체크리스트'].map((item) => (
+                                                <div key={item} className="rounded-xl bg-white/40 px-3 py-2 text-center text-xs font-black text-[#25180d]">
+                                                    {item}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="mt-8 flex flex-col sm:flex-row gap-3">
+                                    <a href="/analyze" className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#25180d] px-5 py-3 text-sm font-black text-[#f4e6bd] hover:bg-[#3a2916] transition-colors">
+                                        내 공간도 무료 진단하기 <ArrowRight className="w-4 h-4" />
+                                    </a>
+                                    <a href="#compare" className="flex flex-1 items-center justify-center rounded-xl border border-[#8f6f26]/35 px-5 py-3 text-sm font-black text-[#25180d] hover:bg-white/40 transition-colors">
+                                        무료/프리미엄 비교
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            {/* ============================================ */}
+            {/* 6. COMPARISON */}
+            {/* ============================================ */}
+            <section id="compare" className="relative py-28 px-6">
+                <div className="max-w-6xl mx-auto">
+                    <div className="text-center mb-14">
+                        <h2 className="text-4xl font-black text-white mb-4">결제 이유가 한눈에 보이게</h2>
+                        <p className="text-slate-400">무료 결과는 판단을 돕고, 프리미엄은 바로 실행할 수 있는 문서와 이미지 원본을 제공합니다.</p>
+                    </div>
+                    <div className="overflow-x-auto rounded-3xl border border-white/10 bg-white/[0.03]">
+                        <div className="min-w-[760px]">
+                            <div className="grid grid-cols-3 bg-black/30 text-sm font-black text-white">
+                                <div className="p-5">구성</div>
+                                <div className="p-5 border-l border-white/10">무료 초견첩</div>
+                                <div className="p-5 border-l border-primary/30 bg-primary/10 text-primary">프리미엄 공간비방서</div>
+                            </div>
+                            {[
+                                ['공간 점수와 핵심 진단', '요약 점수와 대표 징후', '징후별 원인, 위험도, 우선순위'],
+                                ['오행 분석', '부족 기운 일부 공개', '화·수·목·금·토 균형표와 보완 방식'],
+                                ['비보 처방', '첫 처방 1개 중심', '전체 처방, 배치 위치, 실행 순서'],
+                                ['비방 아트', '키워드 미리보기', '고해상도 생성, 재생성, 다운로드'],
+                                ['수호 오브제', '추천 방향만 공개', '동물, 재질, 색상, 배치 해설'],
+                                ['PDF 보관', '제공 안 됨', '프리미엄 감명서 PDF 저장'],
+                            ].map(([feature, free, premium]) => (
+                                <div key={feature} className="grid grid-cols-3 border-t border-white/10 text-sm">
+                                    <div className="p-5 font-bold text-white">{feature}</div>
+                                    <div className="p-5 border-l border-white/10 text-slate-400">{free}</div>
+                                    <div className="p-5 border-l border-primary/20 bg-primary/[0.04] text-slate-100">
+                                        <CheckCircle2 className="mr-2 inline h-4 w-4 text-primary" />
+                                        {premium}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            {/* ============================================ */}
+            {/* 7. OPENING / GIFT PACKAGES */}
+            {/* ============================================ */}
+            <section id="packages" className="relative py-32 px-6 bg-[#101816] border-y border-white/[0.06]">
+                <div className="max-w-7xl mx-auto">
+                    <div className="text-center mb-16">
+                        <div className="flex w-fit items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 mx-auto mb-6">
+                            <Users className="w-4 h-4 text-primary" />
+                            <span className="text-xs font-bold uppercase tracking-wider text-primary">개업, 이전, 집들이, 선물 패키지</span>
+                        </div>
+                        <h2 className="text-4xl md:text-5xl font-black text-white mb-6">처음 진단한 공간을 오래 쓰는 방법</h2>
+                        <p className="text-lg text-slate-400 max-w-3xl mx-auto leading-relaxed">
+                            새 매장, 사무실 이전, 집들이 선물처럼 공간의 첫 인상이 중요한 순간에는 감명서가 의사결정 자료이자 의미 있는 선물이 됩니다. 프리미엄 감명서에서 액자와 오브제로 자연스럽게 확장됩니다.
+                        </p>
+                    </div>
+
+                    <div className="grid lg:grid-cols-3 gap-6">
+                        {[
+                            {
+                                title: '개업 전 공간 진단',
+                                price: `프리미엄 감명서 ${formatKrw(DIGITAL_PRODUCT_TOTAL_KRW)}`,
+                                desc: '상가, 카페, 미용실, 사무실의 입구, 계산대, 좌석, 대표 자리의 기운을 먼저 확인합니다.',
+                                points: ['주소 기반 입지 분석', '대표 자리와 계산대 방향', '개업 전 체크리스트'],
+                            },
+                            {
+                                title: '비방 액자 선물',
+                                price: '확장 상품 예시 49,000원부터',
+                                desc: '분석 결과에서 나온 비방 아트를 액자나 월페이퍼로 만들어 개업 선물, 집들이 선물로 연결합니다.',
+                                points: ['맞춤형 비방 아트', '공간 목적별 색감', '선물용 설명 문구'],
+                            },
+                            {
+                                title: '수호 오브제 제안',
+                                price: '확장 상품 예시 79,000원부터',
+                                desc: '12간지 수호 오브제를 공간에 맞게 설계하고, 재질과 배치 위치까지 함께 제안합니다.',
+                                points: ['동물·재질·색상 설계', '책상/카운터 배치', '브랜드 스토리화 가능'],
+                            },
+                        ].map((pkg, idx) => (
+                            <div key={pkg.title} className={`rounded-3xl border p-8 ${idx === 0 ? 'border-primary/45 bg-primary/10' : 'border-white/10 bg-white/[0.03]'}`}>
+                                <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-2xl bg-black/35 text-primary">
+                                    {idx === 0 ? <Compass className="w-6 h-6" /> : idx === 1 ? <Heart className="w-6 h-6" /> : <Shield className="w-6 h-6" />}
+                                </div>
+                                <h3 className="text-2xl font-black text-white mb-2">{pkg.title}</h3>
+                                <p className="mb-5 text-sm font-bold text-primary">{pkg.price}</p>
+                                <p className="text-sm leading-relaxed text-slate-400 mb-6">{pkg.desc}</p>
+                                <ul className="space-y-3">
+                                    {pkg.points.map((point) => (
+                                        <li key={point} className="flex items-center gap-2 text-sm text-slate-300">
+                                            <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
+                                            {point}
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        ))}
+                    </div>
+
+                    <div className="mt-14 rounded-3xl border border-primary/20 bg-black/25 p-6 md:p-8">
+                        <div className="grid md:grid-cols-[1fr_auto] gap-6 items-center">
+                            <div>
+                                <h3 className="text-2xl font-black text-white mb-2">개업 선물용 패키지로 자연스럽게 이어집니다</h3>
+                                <p className="text-sm text-slate-400 leading-relaxed">
+                                    “사장님 자리와 계산대 위치를 먼저 봐드립니다”처럼 목적이 분명한 공간은 분석 결과를 바로 실행하기 좋습니다. 감명서, 비방 아트, 카운터용 오브제를 묶으면 선물로도 설득력이 생깁니다.
+                                </p>
+                            </div>
+                            <a href="/analyze" className="inline-flex h-14 items-center justify-center gap-2 rounded-xl bg-primary px-7 text-sm font-black text-[#101816] hover:bg-yellow-400 transition-all">
+                                개업 공간 진단하기 <ArrowRight className="h-4 w-4" />
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            {/* ============================================ */}
+            {/* 8. CASE STUDIES */}
+            {/* ============================================ */}
+            <section className="relative py-32 px-6">
+                <div className="max-w-7xl mx-auto">
+                    <div className="text-center mb-16">
+                        <h2 className="text-4xl font-black text-white mb-4">가장 많이 쓰이는 상황</h2>
+                        <p className="text-slate-400">아래는 실제 후기 대신, 구매자가 바로 이해할 수 있는 대표 활용 사례입니다.</p>
+                    </div>
+                    <div className="grid md:grid-cols-3 gap-6">
+                        {[
+                            {
+                                tag: '신규 카페',
+                                title: '카운터 앞 동선이 너무 빠른 매장',
+                                quote: '손님은 많이 지나가는데 머무는 느낌이 약한 공간입니다.',
+                                outcome: '입구와 계산대 사이에 시선 완충 장치, 원형 조명, 금속 트레이를 배치하는 처방으로 객석 체류감을 강화합니다.',
+                            },
+                            {
+                                tag: '1인 사무실',
+                                title: '대표 자리 뒤가 비어 있는 업무실',
+                                quote: '결정은 많은데 마무리가 늦어지는 구조입니다.',
+                                outcome: '등 뒤 지지면, 북서쪽 금기 보강, 책상 위 오브제 위치를 제안해 업무 집중과 신뢰감을 높입니다.',
+                            },
+                            {
+                                tag: '집들이 선물',
+                                title: '밝지만 차분함이 부족한 신혼집',
+                                quote: '빛은 좋지만 기운이 빨리 빠져나가는 집입니다.',
+                                outcome: '프리미엄 PDF와 맞춤 비방 아트를 함께 전달해 단순 소품이 아닌 의미 있는 선물로 만듭니다.',
+                            },
+                        ].map((item) => (
+                            <div key={item.title} className="rounded-3xl border border-white/10 bg-white/[0.03] p-7 hover:border-primary/35 transition-colors">
+                                <div className="mb-5 inline-flex rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-black text-primary">{item.tag}</div>
+                                <h3 className="text-xl font-black text-white mb-4">{item.title}</h3>
+                                <p className="mb-5 border-l-2 border-primary pl-4 text-sm font-bold leading-relaxed text-slate-200">{item.quote}</p>
+                                <p className="text-sm leading-relaxed text-slate-400">{item.outcome}</p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </section>
+
+            {/* ============================================ */}
+            {/* 9. URGENCY & CTA */}
             {/* ============================================ */}
             <section className="relative py-32 border-t border-white/10 bg-gradient-to-b from-transparent to-primary/5">
                 <div className="max-w-4xl mx-auto px-6 text-center">
-                    <div className="inline-block animate-bounce mb-8">
-                        <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-6 py-2 rounded-full font-bold shadow-lg shadow-red-500/10">
-                            🔥 일일 무료 분석 한도 300명 (잔여: 14명)
+                    <div className="inline-block mb-8">
+                        <div className="rounded-full border border-primary/20 bg-primary/10 px-6 py-2 font-bold text-primary shadow-lg shadow-primary/10">
+                            무료 초견은 결제 없이 먼저 확인할 수 있습니다
                         </div>
                     </div>
 
                     <h2 className="text-4xl md:text-6xl font-black text-white mb-8 leading-tight">
-                        운명의 흐름을 바꿀<br />가장 <span className="text-primary">완벽한 타이밍</span>
+                        내 공간의 첫 진단을<br />먼저 <span className="text-primary">받아보세요</span>
                     </h2>
 
                     <p className="text-xl text-slate-300 mb-12 max-w-2xl mx-auto">
-                        더 이상 나쁜 기운이 머무는 공간에 방치하지 마세요.<br />청풍과 명월, 두 대가가 지금 당신의 공간을 기다립니다.
+                        사진을 올리면 핵심 징후와 첫 처방을 확인할 수 있습니다.<br />프리미엄은 필요한 사람만 선택하면 됩니다.
                     </p>
 
                     <a href="/analyze" className="group inline-flex h-20 items-center justify-center gap-4 rounded-full bg-primary px-12 text-2xl font-black text-[#221e10] transition-all hover:bg-yellow-400 hover:scale-105 shadow-2xl shadow-primary/30">
-                        무료 감정 시작하기
+                        무료 초견 시작하기
                         <ArrowRight className="w-8 h-8 transition-transform group-hover:translate-x-2" />
                     </a>
 
-                    {/* Mini Testimonials */}
+                    {/* Usage Notes */}
                     <div className="mt-16 grid md:grid-cols-2 gap-6 text-left">
                         <div className="bg-black/40 backdrop-blur-md border border-white/5 p-6 rounded-2xl">
-                            <div className="flex text-primary mb-3"><Star className="w-4 h-4 fill-current" /><Star className="w-4 h-4 fill-current" /><Star className="w-4 h-4 fill-current" /><Star className="w-4 h-4 fill-current" /><Star className="w-4 h-4 fill-current" /></div>
-                            <p className="text-sm text-slate-300 font-medium mb-4">"침대 방향을 바꾸라는 조언대로 한 뒤, 거짓말처럼 몇 년간 시달리던 불면증이 사라졌습니다. 처방해주신 연꽃 비방 아트를 폰 배경으로 쓰고 있어요."</p>
-                            <div className="text-xs text-slate-500 font-bold">- 김*영 님 (아파트 안방 감정)</div>
+                            <div className="mb-3 text-xs font-black uppercase tracking-[0.2em] text-primary">Home</div>
+                            <p className="text-sm text-slate-300 font-medium mb-4">침실, 거실, 현관처럼 매일 오래 머무는 공간은 채광과 동선, 시야 안정이 중요합니다.</p>
+                            <div className="text-xs text-slate-500 font-bold">추천: 이사 전, 가구 재배치 전, 집들이 선물</div>
                         </div>
                         <div className="bg-black/40 backdrop-blur-md border border-white/5 p-6 rounded-2xl">
-                            <div className="flex text-primary mb-3"><Star className="w-4 h-4 fill-current" /><Star className="w-4 h-4 fill-current" /><Star className="w-4 h-4 fill-current" /><Star className="w-4 h-4 fill-current" /><Star className="w-4 h-4 fill-current" /></div>
-                            <p className="text-sm text-slate-300 font-medium mb-4">"오픈한 카페의 매출이 오르지 않아 고민이었는데, 현관 거울 위치와 목(木) 기운 부족을 짚어주셨어요. 화분 2개를 적재적소에 놓았더니 손님이 늘었습니다."</p>
-                            <div className="text-xs text-slate-500 font-bold">- 이*준 님 (상가 감정)</div>
+                            <div className="mb-3 text-xs font-black uppercase tracking-[0.2em] text-primary">Business</div>
+                            <p className="text-sm text-slate-300 font-medium mb-4">카운터, 대표 자리, 입구 동선은 매장의 첫 인상과 체류감을 좌우합니다.</p>
+                            <div className="text-xs text-slate-500 font-bold">추천: 개업 전, 사무실 이전, 상담 공간 정리</div>
                         </div>
                     </div>
                 </div>
@@ -335,7 +642,7 @@ export default function Landing() {
                         <span className="font-bold text-white tracking-widest uppercase">풍수지리 AI</span>
                     </div>
                     <p className="text-slate-500 text-xs text-center max-w-md leading-relaxed">
-                        본 서비스는 두 대가의 40년 풍수 이론을 학습한 AI가 제공합니다.<br />엔터테인먼트 및 인테리어 기획 단계의 참고용으로 활용하시길 권장합니다.
+                        본 서비스는 전통 풍수 이론과 공간 분석 프롬프트를 기반으로 한 AI 참고 서비스입니다.<br />엔터테인먼트 및 인테리어 기획 단계의 보조 자료로 활용하시길 권장합니다.
                     </p>
                     <p className="text-slate-600 text-[10px]">© 2026 Feng Shui Grand Master AI. All rights reserved.</p>
                 </div>

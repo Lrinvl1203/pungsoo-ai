@@ -1,13 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useUserSettings } from '../hooks/useUserSettings';
 import {
     ArrowLeft, User, LogOut, Clock, ShoppingBag,
-    Image as ImageIcon, Settings, Trash2, ShieldCheck, Download
+    Image as ImageIcon, Settings, Trash2, ShieldCheck, Download, RotateCcw
 } from 'lucide-react';
 import { AnalysisResult } from '../types';
 import { supabase } from '../services/supabaseClient';
+import { trackEvent } from '../services/analyticsService';
 
 interface HistoryItem {
     result: AnalysisResult;
@@ -23,6 +24,21 @@ export default function MyPage() {
     const [history, setHistory] = useState<HistoryItem[]>([]);
     const [purchases, setPurchases] = useState<any[]>([]);
     const [activeTab, setActiveTab] = useState<'profile' | 'history' | 'orders' | 'gallery' | 'settings'>('history');
+    const [requestingRefundId, setRequestingRefundId] = useState<string | null>(null);
+
+    const fetchPurchases = useCallback(async () => {
+        if (!user) return;
+
+        const { data, error } = await supabase
+            .from('purchases')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false });
+
+        if (data && !error) {
+            setPurchases(data);
+        }
+    }, [user]);
 
     useEffect(() => {
         if (loading) return;
@@ -40,20 +56,8 @@ export default function MyPage() {
             }
         }
 
-        const fetchPurchases = async () => {
-            const { data, error } = await supabase
-                .from('purchases')
-                .select('*')
-                .eq('user_id', user.id)
-                .order('created_at', { ascending: false });
-
-            if (data && !error) {
-                setPurchases(data);
-            }
-        };
-
         fetchPurchases();
-    }, [user, loading, navigate]);
+    }, [user, loading, navigate, fetchPurchases]);
 
     const handleSignOut = async () => {
         try {
@@ -102,6 +106,191 @@ export default function MyPage() {
         if (h.zodiacImage) images.push({ url: h.zodiacImage, keyword: h.result.zodiac_remedy_object?.animal || '12간지 비방' });
         return images;
     });
+
+    const visiblePurchases = purchases.filter((purchase) => purchase.order_type !== 'refund');
+
+    const purchaseStatusLabel = (status: string) => {
+        if (status === 'COMPLETED') return '결제완료';
+        if (status === 'REQUESTED') return '요청접수';
+        if (status === 'REFUNDED') return '환불완료';
+        return status;
+    };
+
+    const purchaseStatusClass = (status: string) => {
+        if (status === 'COMPLETED') return 'bg-primary/10 text-primary border border-primary/20';
+        if (status === 'REQUESTED') return 'bg-sky-500/10 text-sky-300 border border-sky-500/20';
+        if (status === 'REFUNDED') return 'bg-red-500/10 text-red-300 border border-red-500/20';
+        return 'bg-white/10 text-slate-300 border border-white/20';
+    };
+
+    const refundRequestFor = (purchase: any) => {
+        return purchases.find((item) =>
+            item.order_type === 'refund'
+            && item.payment_key === `refund_request_${purchase.order_id}`
+        );
+    };
+
+    const hasRefundRequestFor = (purchase: any) => {
+        return refundRequestFor(purchase)?.status === 'REQUESTED';
+    };
+
+    const formatTimelineDate = (value?: string | null) => {
+        if (!value) return '시간 확인 중';
+        return new Date(value).toLocaleString('ko-KR', {
+            year: 'numeric',
+            month: 'numeric',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+        });
+    };
+
+    const refundReasonFrom = (refundRequest: any) => {
+        const text = refundRequest?.contact_info || '';
+        const marker = '환불 사유:';
+        const markerIndex = text.indexOf(marker);
+        if (markerIndex < 0) return '';
+        return text.slice(markerIndex + marker.length).split('환불 완료 시각:')[0].trim();
+    };
+
+    const refundCompletedAtFrom = (refundRequest: any) => {
+        const text = refundRequest?.contact_info || '';
+        const marker = '환불 완료 시각:';
+        const markerIndex = text.indexOf(marker);
+        if (markerIndex < 0) return '';
+        return text.slice(markerIndex + marker.length).trim().split('\n')[0]?.trim() || '';
+    };
+
+    const refundTimelineFor = (purchase: any) => {
+        const refundRequest = refundRequestFor(purchase);
+        if (!refundRequest && purchase.status !== 'REFUNDED') return [];
+
+        const reason = refundReasonFrom(refundRequest);
+        const completionTime = purchase.refunded_at || refundRequest?.refunded_at || refundCompletedAtFrom(refundRequest) || null;
+        const timeline: Array<{ title: string; description: string; time?: string | null; done: boolean }> = [
+            {
+                title: '결제 완료',
+                description: '프리미엄 열람권이 활성화되었습니다.',
+                time: purchase.created_at,
+                done: true,
+            },
+        ];
+
+        if (refundRequest) {
+            timeline.push({
+                title: '환불 요청 접수',
+                description: reason ? `사유: ${reason}` : '환불 요청이 접수되었습니다.',
+                time: refundRequest.created_at,
+                done: true,
+            });
+        }
+
+        if (purchase.status === 'REFUNDED') {
+            timeline.push({
+                title: '환불 완료',
+                description: '운영자 확인 후 Polar에서 환불 처리가 완료되었습니다.',
+                time: completionTime,
+                done: true,
+            });
+        } else if (refundRequest) {
+            timeline.push({
+                title: '운영자 확인 중',
+                description: '운영자가 결제사에서 환불을 처리하면 완료로 바뀝니다.',
+                time: null,
+                done: false,
+            });
+        }
+
+        return timeline;
+    };
+
+    const orderTypeLabel = (orderType: string) => {
+        if (orderType === 'report') return '초정밀 도사 감명서 프리미엄 열람';
+        if (orderType === 'remedy') return '맞춤형 디지털 비방 아트워크 다운로드';
+        if (orderType === 'zodiac') return '12간지 비방 오브제 설계도 열람';
+        if (orderType === 'frame') return '디지털 액자 제작 의뢰';
+        if (orderType === 'refund') return '환불 요청 접수';
+        return '비방 오브제 제작 의뢰';
+    };
+
+    const handleRefundRequest = async (purchase: any) => {
+        const reason = window.prompt('환불 사유를 입력해 주세요. 관리자 확인 후 처리됩니다.');
+        if (reason === null) return;
+        if (!reason.trim()) {
+            alert('환불 사유를 입력해야 요청할 수 있습니다.');
+            return;
+        }
+
+        setRequestingRefundId(purchase.order_id);
+        try {
+            const response = await fetch('/api/send-order', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    orderType: 'refund',
+                    name: displayName,
+                    contact: user.email,
+                    message: reason,
+                    refundData: {
+                        orderId: purchase.order_id,
+                        orderType: purchase.order_type,
+                        amount: purchase.amount,
+                        status: purchase.status,
+                        analysisId: purchase.analysis_id,
+                    },
+                }),
+            });
+
+            if (!response.ok) {
+                let message = '환불 요청 접수 중 오류가 발생했습니다.';
+                try {
+                    const data = await response.json();
+                    if (data.error) message = data.error;
+                } catch {
+                    // keep default message
+                }
+                throw new Error(message);
+            }
+
+            alert('환불 요청이 접수되었습니다. 관리자 확인 후 처리됩니다.');
+            await fetchPurchases();
+            setActiveTab('orders');
+            trackEvent('refund_requested', {
+                userId: user.id,
+                analysisId: purchase.analysis_id,
+                orderId: purchase.order_id,
+                orderType: purchase.order_type,
+                amount: purchase.amount,
+                metadata: {
+                    reasonLength: reason?.length || 0,
+                },
+            });
+        } catch (error: any) {
+            trackEvent('refund_request_failed', {
+                userId: user.id,
+                analysisId: purchase.analysis_id,
+                orderId: purchase.order_id,
+                orderType: purchase.order_type,
+                amount: purchase.amount,
+                metadata: {
+                    message: error instanceof Error ? error.message : String(error),
+                    reasonLength: reason?.length || 0,
+                },
+            });
+            const mailSubject = encodeURIComponent(`[41Pungsoo 환불 요청] ${purchase.order_id}`);
+            const mailBody = encodeURIComponent([
+                `주문번호: ${purchase.order_id}`,
+                `상품유형: ${purchase.order_type}`,
+                `결제금액: ${purchase.amount}`,
+                `분석ID: ${purchase.analysis_id || '-'}`,
+                `환불 사유: ${reason || ''}`,
+            ].join('\n'));
+            alert(`${error.message || '환불 요청 접수에 실패했습니다.'}\n메일 작성 화면으로 연결합니다.`);
+            window.location.href = `mailto:lrinvl1203@gmail.com?subject=${mailSubject}&body=${mailBody}`;
+        } finally {
+            setRequestingRefundId(null);
+        }
+    };
 
     return (
         <div className="min-h-screen bg-[#0c0a06] text-slate-100 font-display selection:bg-primary/30 antialiased overflow-x-hidden">
@@ -232,7 +421,7 @@ export default function MyPage() {
                                         {history.map((item, idx) => (
                                             <div key={idx} className="bg-[#1a1508] rounded-3xl p-5 md:p-6 shadow-xl border border-white/5 flex flex-col sm:flex-row gap-6 group hover:border-primary/30 transition-all hover:shadow-primary/5">
                                                 <div className="w-full sm:w-40 aspect-square rounded-2xl overflow-hidden bg-black/50 border border-white/10 shrink-0 relative">
-                                                    <img src={item.remedyArt} alt="Remedy" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                                                    <img src={item.remedyArt || item.image || '/images/masters/cheongpung.jpeg'} alt="Remedy" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
                                                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
                                                 </div>
                                                 <div className="flex-1 flex flex-col justify-center">
@@ -271,7 +460,7 @@ export default function MyPage() {
                         {activeTab === 'orders' && (
                             <div className="space-y-6 animate-in fade-in duration-300">
                                 <h3 className="text-2xl md:text-3xl font-black text-white tracking-tight mb-8">의뢰 및 주문 내역</h3>
-                                {purchases.length === 0 ? (
+                                {visiblePurchases.length === 0 ? (
                                     <div className="bg-[#1a1508]/50 border-2 border-dashed border-white/10 rounded-3xl p-10 md:p-16 text-center shadow-lg">
                                         <div className="w-20 h-20 bg-black/40 rounded-3xl flex items-center justify-center mx-auto mb-6 border border-white/5 shadow-inner">
                                             <ShoppingBag className="w-10 h-10 text-primary opacity-80" />
@@ -291,31 +480,59 @@ export default function MyPage() {
                                     </div>
                                 ) : (
                                     <div className="space-y-4">
-                                        {purchases.map((purchase, idx) => (
+                                        {visiblePurchases.map((purchase, idx) => (
                                             <div key={idx} className="bg-[#1a1508] rounded-3xl p-5 md:p-6 shadow-xl border border-white/5 flex flex-col md:flex-row gap-4 items-start md:items-center group hover:border-primary/30 transition-all">
                                                 <div className="flex-1">
                                                     <div className="flex items-center gap-3 mb-3">
-                                                        <span className={`inline-block px-3 py-1 rounded-lg text-xs font-black tracking-widest uppercase shadow-sm ${purchase.status === 'COMPLETED' ? 'bg-primary/10 text-primary border border-primary/20' : 'bg-white/10 text-slate-300 border border-white/20'}`}>
-                                                            {purchase.status === 'COMPLETED' ? '결제완료' : purchase.status}
+                                                        <span className={`inline-block px-3 py-1 rounded-lg text-xs font-black tracking-widest uppercase shadow-sm ${purchaseStatusClass(purchase.status)}`}>
+                                                            {purchaseStatusLabel(purchase.status)}
                                                         </span>
                                                         <span className="text-xs text-slate-400">{new Date(purchase.created_at).toLocaleDateString('ko-KR')}</span>
                                                     </div>
                                                     <h4 className="font-bold text-white text-lg mb-1">
-                                                        {purchase.order_type === 'report' ? '초정밀 도사 감명서 프리미엄 열람'
-                                                            : purchase.order_type === 'remedy' ? '맞춤형 디지털 비방 아트워크 다운로드'
-                                                                : purchase.order_type === 'zodiac' ? '12간지 비방 오브제 설계도 열람'
-                                                                    : purchase.order_type === 'frame' ? '디지털 액자 제작 의뢰'
-                                                                        : '비방 오브제 제작 의뢰'}
+                                                        {orderTypeLabel(purchase.order_type)}
                                                     </h4>
                                                     {purchase.analysis_id && (
                                                         <p className="text-[12px] text-slate-500 flex items-center gap-1.5 mt-2">
                                                             <Clock className="w-3 h-3" /> 연관된 분석 내역 (ID: {purchase.analysis_id})
                                                         </p>
                                                     )}
+                                                    {refundTimelineFor(purchase).length > 0 && (
+                                                        <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4">
+                                                            <p className="mb-3 text-[11px] font-black uppercase tracking-widest text-slate-400">환불 처리 흐름</p>
+                                                            <div className="space-y-3">
+                                                                {refundTimelineFor(purchase).map((step, stepIdx, timeline) => (
+                                                                    <div key={`${purchase.order_id}-${step.title}`} className="flex gap-3">
+                                                                        <div className="flex flex-col items-center pt-1">
+                                                                            <span className={`h-2.5 w-2.5 rounded-full ${step.done ? 'bg-primary shadow-[0_0_12px_rgba(242,185,13,0.45)]' : 'bg-slate-500'}`} />
+                                                                            {stepIdx < timeline.length - 1 && <span className="mt-1 h-10 w-px bg-white/10" />}
+                                                                        </div>
+                                                                        <div className="min-w-0 flex-1">
+                                                                            <div className="flex flex-wrap items-center gap-2">
+                                                                                <p className="text-sm font-bold text-white">{step.title}</p>
+                                                                                <span className="text-[11px] text-slate-500">{formatTimelineDate(step.time)}</span>
+                                                                            </div>
+                                                                            <p className="mt-1 text-[12px] leading-relaxed text-slate-400">{step.description}</p>
+                                                                        </div>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    )}
                                                 </div>
-                                                <div className="text-right flex flex-row md:flex-col justify-between w-full md:w-auto items-center md:items-end mt-2 md:mt-0 pt-4 md:pt-0 border-t border-white/10 md:border-0">
+                                                <div className="text-right flex flex-row md:flex-col justify-between w-full md:w-auto items-center md:items-end mt-2 md:mt-0 pt-4 md:pt-0 border-t border-white/10 md:border-0 gap-3">
                                                     <span className="font-bold text-primary text-xl md:text-2xl">{purchase.amount.toLocaleString()}<span className="text-sm text-slate-400 ml-1">원</span></span>
                                                     <p className="text-[10px] text-slate-500 font-mono mt-1.5 bg-black/30 px-2 py-1 rounded border border-white/5">주문번호: {purchase.order_id.split('_').pop()}</p>
+                                                    {purchase.status === 'COMPLETED' && (
+                                                        <button
+                                                            onClick={() => handleRefundRequest(purchase)}
+                                                            disabled={requestingRefundId === purchase.order_id || hasRefundRequestFor(purchase)}
+                                                            className="mt-3 inline-flex items-center justify-center gap-1.5 rounded-lg border border-red-500/25 bg-red-500/10 px-3 py-2 text-xs font-bold text-red-300 transition-colors hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+                                                        >
+                                                            <RotateCcw className="h-3.5 w-3.5" />
+                                                            {hasRefundRequestFor(purchase) ? '요청 접수됨' : requestingRefundId === purchase.order_id ? '요청 중' : '환불 요청'}
+                                                        </button>
+                                                    )}
                                                 </div>
                                             </div>
                                         ))}

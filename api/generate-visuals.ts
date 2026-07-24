@@ -29,6 +29,18 @@ export default async function handler(req: any, res: any) {
         console.error("FAL_KEY is missing from environment variables!");
         return res.status(500).json({ error: 'FAL_KEY not configured. Please add FAL_KEY to Vercel Environment Variables.' });
     }
+    if (!['to-be', 'remedy', 'zodiac'].includes(type)) {
+        return res.status(400).json({ error: 'type must be one of to-be, remedy, or zodiac.' });
+    }
+    if (type === 'to-be' && (!image || !Array.isArray(solutions))) {
+        return res.status(400).json({ error: 'image and solutions are required for to-be generation.' });
+    }
+    if (type === 'remedy' && !prompt) {
+        return res.status(400).json({ error: 'prompt is required for remedy generation.' });
+    }
+    if (type === 'zodiac' && !zodiacObj?.animal) {
+        return res.status(400).json({ error: 'zodiacObj is required for zodiac generation.' });
+    }
 
     // Configure fal client with the API key from environment
     fal.config({ credentials: falKey });

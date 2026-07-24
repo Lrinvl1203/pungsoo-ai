@@ -16,7 +16,6 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.0/kakao.min.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
@@ -77,40 +76,6 @@
             background: linear-gradient(135deg, #d4af37 0%, #f9f295 50%, #d4af37 100%);
         }
     </style>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            content: [
-                "./index.html",
-                "./src/**/*.{js,ts,jsx,tsx}",
-                "./components/**/*.{js,ts,jsx,tsx}",
-                "./pages/**/*.{js,ts,jsx,tsx}",
-                "./App.tsx"
-            ],
-            theme: {
-                extend: {
-                    colors: {
-                        'primary': '#f2b90d',
-                        'background-light': '#f8f8f5',
-                        'background-dark': '#221e10',
-                    },
-                    fontFamily: {
-                        'display': ['Plus Jakarta Sans', 'Pretendard', 'sans-serif']
-                    },
-                    keyframes: {
-                        'fade-in-up': {
-                            '0%': { opacity: '0', transform: 'translateY(20px)' },
-                            '100%': { opacity: '1', transform: 'translateY(0)' },
-                        }
-                    },
-                    animation: {
-                        'fade-in-up': 'fade-in-up 0.5s ease-out forwards',
-                        'pulse-glow': 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
-                    }
-                },
-            },
-        }
-    </script>
 </head>
 
 <body>

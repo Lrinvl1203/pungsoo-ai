@@ -22,10 +22,11 @@ export default function LoginButton() {
         setIsSigningIn(true);
         setIsOpen(false);
         try {
+            const redirectTo = window.location.href;
             if (provider === 'kakao') {
-                await signInWithKakao();
+                await signInWithKakao(redirectTo);
             } else {
-                await signInWithGoogle();
+                await signInWithGoogle(redirectTo);
             }
         } catch (e) {
             console.error(e);

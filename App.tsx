@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Sparkles, Home, Heart, Send, Loader2, Compass, Box, Menu, X } from 'lucide-react';
 import { UserMetadata, AnalysisResult, ImageSizeOption } from './types';
-import { analyzeFengShui, generateToBeImage, generateRemedyArtImage, generateZodiacArtImage } from './services/geminiService';
+import { analyzeFengShui, generateRemedyArtImage, generateZodiacArtImage } from './services/geminiService';
 import { useAuth } from './contexts/AuthContext';
 import { useUserSettings } from './hooks/useUserSettings';
 import LoginButton from './components/LoginButton';
@@ -12,8 +12,10 @@ import AnalysisForm from './components/AnalysisForm';
 import ResultView from './components/ResultView';
 import Onboarding from './components/Onboarding';
 import DailyFengShui from './components/DailyFengShui';
-import { saveAnalysis, getAnalysisById } from './services/analysisHistoryService';
+import { saveAnalysis, getAnalysisById, updateAnalysisVisuals } from './services/analysisHistoryService';
+import { TEST_SAMPLE_ANALYSIS, TEST_SAMPLE_HISTORY_ITEM, TEST_SAMPLE_REMEDY_ART_IMAGE, TEST_SAMPLE_ZODIAC_IMAGE } from './services/sampleAnalysis';
 import { supabase } from './services/supabaseClient';
+import { trackEvent } from './services/analyticsService';
 
 // Ensure Kakao SDK is typed
 declare global {
@@ -24,6 +26,7 @@ declare global {
 
 export default function App() {
   const location = useLocation();
+  const canUseTestMode = import.meta.env.DEV;
   const [image, setImage] = useState<string | null>(null);
   const [toBeImage, setToBeImage] = useState<string | null>(null);
   const [remedyArt, setRemedyArt] = useState<string | null>(null);
@@ -31,9 +34,14 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [generatingVisuals, setGeneratingVisuals] = useState(false);
   const [isRegeneratingArt, setIsRegeneratingArt] = useState(false);
+  const [isGeneratingZodiacImage, setIsGeneratingZodiacImage] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [currentAnalysisId, setCurrentAnalysisId] = useState<string | null>(null);
+  const [sharedAnalysisMessage, setSharedAnalysisMessage] = useState<string | null>(null);
   const [history, setHistory] = useState<{ result: AnalysisResult, image: string, remedyArt: string, zodiacImage: string | null }[]>([]);
+  const { user, loading: authLoading } = useAuth();
+  const userRef = useRef(user);
+  useEffect(() => { userRef.current = user; }, [user]);
 
   // Address Autocomplete States
   const [addressQuery, setAddressQuery] = useState('');
@@ -49,7 +57,7 @@ export default function App() {
       if (urlParams.get('onboarding') === 'true') {
         return true;
       }
-      return localStorage.getItem('PUNGSOO_ONBOARDING_COMPLETED') !== 'true';
+      return false;
     }
     return true;
   });
@@ -57,16 +65,44 @@ export default function App() {
   // Test Mode State
   const [isTestMode, setIsTestMode] = useState(() => {
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('PUNGSOO_TEST_MODE') === 'true';
+      return canUseTestMode && localStorage.getItem('PUNGSOO_TEST_MODE') === 'true';
+    }
+    return false;
+  });
+  const [isPremiumPreviewUnlocked, setIsPremiumPreviewUnlocked] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return canUseTestMode && localStorage.getItem('PUNGSOO_PREMIUM_PREVIEW') === 'true';
     }
     return false;
   });
 
   const toggleTestMode = () => {
+    if (!canUseTestMode) return;
     const newVal = !isTestMode;
     setIsTestMode(newVal);
     localStorage.setItem('PUNGSOO_TEST_MODE', newVal.toString());
   };
+
+  const togglePremiumPreview = () => {
+    if (!canUseTestMode) return;
+    const newVal = !isPremiumPreviewUnlocked;
+    setIsPremiumPreviewUnlocked(newVal);
+    localStorage.setItem('PUNGSOO_PREMIUM_PREVIEW', newVal.toString());
+  };
+
+  React.useEffect(() => {
+    if (!canUseTestMode) {
+      setIsTestMode(false);
+      setIsPremiumPreviewUnlocked(false);
+      localStorage.removeItem('PUNGSOO_TEST_MODE');
+      localStorage.removeItem('PUNGSOO_PREMIUM_PREVIEW');
+      return;
+    }
+    if (!isTestMode && isPremiumPreviewUnlocked) {
+      setIsPremiumPreviewUnlocked(false);
+      localStorage.removeItem('PUNGSOO_PREMIUM_PREVIEW');
+    }
+  }, [canUseTestMode, isTestMode, isPremiumPreviewUnlocked]);
 
   // Load history from localStorage on mount, and handle shared URL (?id=)
   React.useEffect(() => {
@@ -83,7 +119,9 @@ export default function App() {
     const sharedId = searchParams.get('id');
 
     if (sharedId) {
+      if (authLoading) return;
       setLoading(true);
+      setSharedAnalysisMessage(null);
       getAnalysisById(sharedId)
         .then((data) => {
           if (data) {
@@ -93,24 +131,41 @@ export default function App() {
             setZodiacImage(data.zodiac_image_url);
             setToBeImage(data.to_be_image_url);
             setMetadata(data.metadata);
+            setCurrentAnalysisId(data.id);
+            setSharedAnalysisMessage(null);
 
             // Scroll to analysis result
             setTimeout(() => {
               document.getElementById('analyze-section')?.scrollIntoView({ behavior: 'smooth' });
             }, 500);
           } else {
+            setSharedAnalysisMessage(user ? '분석 결과를 찾을 수 없습니다.' : '로그인 후 구매한 공간비방서를 확인할 수 있습니다.');
             console.error('Shared analysis not found');
           }
         })
         .finally(() => setLoading(false));
+    } else {
+      setSharedAnalysisMessage(null);
     }
 
     // 3. Load local history
     const savedHistory = localStorage.getItem('pungsoo_history');
+    const ensureTestSample = (items: { result: AnalysisResult, image: string, remedyArt: string, zodiacImage: string | null }[]) => {
+      if (!isTestMode) return items;
+      const sampleIndex = items.findIndex((item) => item.result?.analysis_summary === TEST_SAMPLE_ANALYSIS.analysis_summary);
+      if (sampleIndex >= 0) {
+        const nextItems = [...items];
+        nextItems[sampleIndex] = TEST_SAMPLE_HISTORY_ITEM;
+        return nextItems;
+      }
+      return [TEST_SAMPLE_HISTORY_ITEM, ...items].slice(0, 10);
+    };
+
     if (savedHistory) {
       try {
-        const parsedHistory = JSON.parse(savedHistory);
+        const parsedHistory = ensureTestSample(JSON.parse(savedHistory));
         setHistory(parsedHistory);
+        localStorage.setItem('pungsoo_history', JSON.stringify(parsedHistory));
         // Only load if there's no sharedId
         if (!sharedId) {
           if (location.state && typeof location.state.loadHistoryItem === 'number') {
@@ -137,8 +192,12 @@ export default function App() {
       } catch (e) {
         console.error('Failed to parse history', e);
       }
+    } else if (isTestMode) {
+      const sampleHistory = [TEST_SAMPLE_HISTORY_ITEM];
+      setHistory(sampleHistory);
+      localStorage.setItem('pungsoo_history', JSON.stringify(sampleHistory));
     }
-  }, [location.search, location.state]);
+  }, [location.search, location.state, isTestMode, authLoading, user?.id]);
 
   const { settings, updateSettings } = useUserSettings();
 
@@ -165,6 +224,11 @@ export default function App() {
   // Handle address input change with debounce
   React.useEffect(() => {
     const timer = setTimeout(async () => {
+      if (isTestMode) {
+        setAddressSuggestions([]);
+        setShowSuggestions(false);
+        return;
+      }
       if (addressQuery.trim().length > 1) {
         setIsSearchingAddress(true);
         try {
@@ -185,16 +249,13 @@ export default function App() {
       }
     }, 300);
     return () => clearTimeout(timer);
-  }, [addressQuery]);
+  }, [addressQuery, isTestMode]);
 
   // Order Modal States
   const [isInquiryModalOpen, setIsInquiryModalOpen] = useState(false);
   const [orderType, setOrderType] = useState<'frame' | 'object'>('frame');
   const [orderFormData, setOrderFormData] = useState({ name: '', contact: '', message: '', objectSize: { width: 5, height: 5, depth: 5 } });
   const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
-  const { user } = useAuth();
-  const userRef = useRef(user);
-  useEffect(() => { userRef.current = user; }, [user]);
   const isLoggedIn = !!user;
 
   const handleOrderSubmit = async (e: React.FormEvent) => {
@@ -253,54 +314,129 @@ export default function App() {
   const handleAnalyze = async () => {
     if (metadata.analysisType === 'internal' && !image) { alert("분석할 이미지를 업로드해주세요."); return; }
     if (metadata.analysisType === 'external' && !metadata.address) { alert("지리적 입지 분석을 위한 주소를 입력해주세요."); return; }
-    setShowSuggestions(false); setLoading(true); setResult(null); setToBeImage(null); setRemedyArt(null); setZodiacImage(null);
+    trackEvent('analysis_started', {
+      userId: userRef.current?.id,
+      metadata: {
+        analysisType: metadata.analysisType,
+        roomType: metadata.roomType || null,
+        hasImage: Boolean(image),
+        hasAddress: Boolean(metadata.address),
+        concernLength: metadata.concern?.length || 0,
+        isTestMode,
+      },
+    });
+    setShowSuggestions(false); setLoading(true); setGeneratingVisuals(false); setResult(null); setCurrentAnalysisId(null); setToBeImage(null); setRemedyArt(null); setZodiacImage(null);
     try {
       const analysis = await analyzeFengShui({ base64Image: image || undefined, address: metadata.address }, metadata);
-      setResult(analysis); setGeneratingVisuals(true);
-      const promises = [generateRemedyArtImage(analysis.remedy_art.image_generation_prompt, metadata.artStyle, metadata.imageSize)];
-      if (analysis.zodiac_remedy_object) { promises.push(generateZodiacArtImage(analysis.zodiac_remedy_object)); } else { promises.push(Promise.resolve("")); }
-      if (metadata.analysisType === 'internal' && image) { promises.push(generateToBeImage(image, analysis.solution_items)); }
-      const settled = await Promise.allSettled(promises);
-      let remedyObj = settled[0]; let zodiacObjRes = settled[1]; let visualObj = metadata.analysisType === 'internal' ? settled[2] : null;
-      if (visualObj && visualObj.status === 'fulfilled') { setToBeImage(visualObj.value); }
-      else if (visualObj && visualObj.status === 'rejected') { console.error("To-Be image generation failed:", visualObj.reason); setToBeImage('error'); }
-      let newZodiacImage = zodiacObjRes && zodiacObjRes.status === 'fulfilled' && zodiacObjRes.value ? zodiacObjRes.value : null;
-      if (newZodiacImage) setZodiacImage(newZodiacImage);
-      const newRemedyArt = remedyObj && remedyObj.status === 'fulfilled' ? remedyObj.value : null;
-      if (newRemedyArt) setRemedyArt(newRemedyArt);
-      const newHistory = [{ result: analysis, image: metadata.analysisType === 'internal' ? (image || '') : 'https://images.unsplash.com/photo-1524813686514-a57563d77965?auto=format&fit=crop&q=80&w=400', remedyArt: newRemedyArt ?? '', zodiacImage: newZodiacImage }, ...history].slice(0, 10);
+      setResult(analysis);
+      let savedAnalysisId: string | null = null;
+
+      // Keep the free path low-cost. Paid fal.ai visuals are generated only after unlock.
+      const newHistory = [{
+        result: analysis,
+        image: metadata.analysisType === 'internal' ? (image || '') : 'https://images.unsplash.com/photo-1524813686514-a57563d77965?auto=format&fit=crop&q=80&w=400',
+        remedyArt: isTestMode ? TEST_SAMPLE_REMEDY_ART_IMAGE : '',
+        zodiacImage: isTestMode ? TEST_SAMPLE_ZODIAC_IMAGE : null
+      }, ...history].slice(0, 10);
       setHistory(newHistory); localStorage.setItem('pungsoo_history', JSON.stringify(newHistory));
 
       // Save to Supabase — use session from SDK (primary) or userRef (fallback)
       const { data: { session: currentSession } } = await supabase.auth.getSession();
       const currentUserId = currentSession?.user?.id ?? userRef.current?.id;
       if (currentUserId) {
-        const toBeVal = visualObj && visualObj.status === 'fulfilled' ? visualObj.value : null;
-        saveAnalysis({
+        const savedData = await saveAnalysis({
           userId: currentUserId,
           analysisType: metadata.analysisType,
           image: null,
           address: metadata.analysisType === 'external' ? (metadata.address || null) : null,
           metadata,
           result: analysis,
-          remedyArt: newRemedyArt,
-          zodiacImage: newZodiacImage,
-          toBeImage: toBeVal,
-        }).then(savedData => {
-          if (savedData) setCurrentAnalysisId(savedData.id);
-        }).catch(err => console.error('[Supabase] save failed:', err));
+          remedyArt: null,
+          zodiacImage: null,
+          toBeImage: null,
+        });
+        if (savedData) {
+          savedAnalysisId = savedData.id;
+          setCurrentAnalysisId(savedData.id);
+        }
       }
-    } catch (error) { console.error(error); alert("분석 중 오류가 발생했습니다. 다시 시도해주세요."); }
+      trackEvent('analysis_completed', {
+        userId: currentUserId,
+        analysisId: savedAnalysisId,
+        metadata: {
+          analysisType: metadata.analysisType,
+          score: analysis.feng_shui_score,
+          saved: Boolean(savedAnalysisId),
+          isTestMode,
+        },
+      });
+    } catch (error) {
+      console.error(error);
+      trackEvent('analysis_failed', {
+        userId: userRef.current?.id,
+        metadata: {
+          analysisType: metadata.analysisType,
+          message: error instanceof Error ? error.message : String(error),
+          isTestMode,
+        },
+      });
+      alert("분석 중 오류가 발생했습니다. 다시 시도해주세요.");
+    }
     finally { setLoading(false); setGeneratingVisuals(false); }
   };
 
   const handleRegenerateArt = async () => {
     if (!result) return;
     setIsRegeneratingArt(true); setRemedyArt(null);
-    try { const newImage = await generateRemedyArtImage(result.remedy_art.image_generation_prompt, metadata.artStyle, metadata.imageSize); setRemedyArt(newImage); }
+    try {
+      const newImage = await generateRemedyArtImage(result.remedy_art.image_generation_prompt, metadata.artStyle, metadata.imageSize);
+      setRemedyArt(newImage);
+      if (currentAnalysisId) {
+        await updateAnalysisVisuals(currentAnalysisId, { remedy_art_url: newImage });
+      }
+    }
     catch (error) { console.error(error); alert("이미지 재생성에 실패했습니다."); }
     finally { setIsRegeneratingArt(false); }
   };
+
+  const handleGenerateZodiacImage = async () => {
+    if (!result?.zodiac_remedy_object) return;
+    setIsGeneratingZodiacImage(true); setZodiacImage(null);
+    try {
+      const newImage = await generateZodiacArtImage(result.zodiac_remedy_object);
+      setZodiacImage(newImage);
+      if (currentAnalysisId) {
+        await updateAnalysisVisuals(currentAnalysisId, { zodiac_image_url: newImage });
+      }
+    } catch (error) {
+      console.error(error);
+      alert("12간지 비방 이미지 생성에 실패했습니다.");
+    } finally {
+      setIsGeneratingZodiacImage(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!user || !result || currentAnalysisId || loading) return;
+    let cancelled = false;
+
+    (async () => {
+      const savedData = await saveAnalysis({
+        userId: user.id,
+        analysisType: metadata.analysisType,
+        image: null,
+        address: metadata.analysisType === 'external' ? (metadata.address || null) : null,
+        metadata,
+        result,
+        remedyArt,
+        zodiacImage,
+        toBeImage,
+      });
+      if (!cancelled && savedData) setCurrentAnalysisId(savedData.id);
+    })().catch(err => console.error('[Supabase] save after login failed:', err));
+
+    return () => { cancelled = true; };
+  }, [user, result, currentAnalysisId, loading]);
 
   const downloadImage = (dataUrl: string, filename: string) => {
     const link = document.createElement('a'); link.href = dataUrl; link.download = filename; link.click();
@@ -335,9 +471,18 @@ export default function App() {
               </ul>
             </nav>
             <div className="flex items-center justify-end gap-3">
-              <button onClick={toggleTestMode} className={`text-xs px-3 py-1.5 rounded-full border transition-colors shadow-sm ${isTestMode ? 'bg-primary/20 text-primary border-primary font-bold' : 'bg-white/5 text-slate-400 border-white/10 hover:bg-white/10'}`}>
-                {isTestMode ? '🧪 ON' : '🧪 OFF'}
-              </button>
+              {canUseTestMode && (
+                <>
+                  <button onClick={toggleTestMode} className={`text-xs px-3 py-1.5 rounded-full border transition-colors shadow-sm ${isTestMode ? 'bg-primary/20 text-primary border-primary font-bold' : 'bg-white/5 text-slate-400 border-white/10 hover:bg-white/10'}`}>
+                    {isTestMode ? '🧪 ON' : '🧪 OFF'}
+                  </button>
+                  {isTestMode && (
+                    <button onClick={togglePremiumPreview} className={`text-xs px-3 py-1.5 rounded-full border transition-colors shadow-sm ${isPremiumPreviewUnlocked ? 'bg-green-500/20 text-green-300 border-green-400 font-bold' : 'bg-white/5 text-slate-300 border-white/10 hover:bg-white/10'}`}>
+                      {isPremiumPreviewUnlocked ? '🔓 유료보기' : '🔒 유료보기'}
+                    </button>
+                  )}
+                </>
+              )}
               <span className="hidden md:block"><LoginButton /></span>
               <button onClick={() => setMobileMenuOpen(true)} className="md:hidden p-2 text-slate-300 hover:text-primary transition-colors">
                 <Menu className="w-6 h-6" />
@@ -407,6 +552,15 @@ export default function App() {
 
         <main id="analyze-section" className="max-w-2xl mx-auto px-4 py-16 pb-24">
           <div className="flex flex-col gap-16">
+            {sharedAnalysisMessage && (
+              <div className="rounded-2xl border border-primary/30 bg-[#1a1508]/85 p-6 text-center shadow-2xl">
+                <Compass className="mx-auto mb-4 h-10 w-10 text-primary" />
+                <h3 className="mb-2 text-xl font-black text-white">공간비방서 확인이 필요합니다</h3>
+                <p className="mx-auto mb-5 max-w-md text-sm leading-relaxed text-slate-300">{sharedAnalysisMessage}</p>
+                {!user && <LoginButton />}
+              </div>
+            )}
+
             {/* Input Section — Extracted Component */}
             <AnalysisForm
               metadata={metadata} setMetadata={setMetadata} image={image} loading={loading} history={history}
@@ -426,10 +580,12 @@ export default function App() {
               remedyArt={remedyArt} zodiacImage={zodiacImage}
               metadata={metadata} setMetadata={setMetadata}
               isRegeneratingArt={isRegeneratingArt} onRegenerateArt={handleRegenerateArt}
+              isGeneratingZodiacImage={isGeneratingZodiacImage} onGenerateZodiacImage={handleGenerateZodiacImage}
               onDownloadImage={downloadImage}
               onOrderFrame={() => { setOrderType('frame'); setIsInquiryModalOpen(true); }}
               onOrderObject={() => { setOrderType('object'); setIsInquiryModalOpen(true); }}
               currentAnalysisId={currentAnalysisId}
+              premiumPreviewUnlocked={isTestMode && isPremiumPreviewUnlocked}
             />
           </div>
         </main>
