@@ -113,3 +113,7 @@
 
 - `docs/direction-accuracy-todo.md`
 
+인테리어와 화풍의 매핑은 기존 4개 작품군을 유지하면서 10개 인테리어
+외관 프로필을 결합하는 방향으로 설계한다.
+
+- `docs/interior-art-style-mapping.md`
