@@ -212,6 +212,8 @@ interface ArtStylePack {
 
 첫 테스트는 동일한 비방서 3건을 8개 확장 화풍으로 생성해 총 24장을 비교한다.
 
+1차 비교인 `토 부족·용·CIRCULATE` 8종은 완료했다. 결과와 공통 메타 프롬프트 구조는 [Interior Edition 첫 8종 비교 샘플](./samples/remedy-art/interior-edition-first-8/README.md)에 보존한다.
+
 | 비방서 | 목적 |
 |---|---|
 | 목 부족·토끼·PURIFY | 부드러운 화풍의 정화 표현 검증 |
