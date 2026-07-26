@@ -17,6 +17,10 @@ export interface RemedyArt {
   solution_keyword: string;
   image_generation_prompt: string;
   art_story: string;
+  style_family?: import('./utils/remedyArt').RemedyArtStyleFamily;
+  energy_mode?: import('./utils/remedyArt').RemedyEnergyMode;
+  guardian_animal?: string;
+  guardian_visibility?: number;
 }
 
 export interface ZodiacRemedyObject {
@@ -66,6 +70,6 @@ export interface UserMetadata {
   birthDate: string;
   gender: 'male' | 'female';
   concern: string;
-  artStyle: 'modern' | 'buddhist' | 'modern_buddhist';
+  artStyle: 'auto' | 'modern' | 'buddhist' | 'modern_buddhist';
   imageSize: ImageSizeConfig;
 }

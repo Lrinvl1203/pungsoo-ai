@@ -617,26 +617,16 @@ export default function MyPage() {
 
                                     <div className="pt-6 border-t border-white/10">
                                         <label className="block text-xs font-black text-primary uppercase tracking-widest mb-2">
-                                            비방 디자인 선호 스타일
+                                            비방 디자인 방식
                                         </label>
-                                        <p className="text-sm text-slate-400 mb-4 font-medium">비방 아트 생성 시 기본으로 적용될 화풍을 선택합니다.</p>
-                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                            {[
-                                                { id: 'modern', label: '모던 아트' },
-                                                { id: 'buddhist', label: '레트로 아트' },
-                                                { id: 'modern_buddhist', label: '모던+레트로 퓨전' }
-                                            ].map((style) => (
-                                                <button
-                                                    key={style.id}
-                                                    onClick={() => updateSettings({ artStyle: style.id as any })}
-                                                    className={`py-4 px-5 rounded-xl border-2 text-sm font-bold transition-all flex items-center justify-center gap-2 shadow-sm ${settings.artStyle === style.id
-                                                        ? 'bg-primary text-[#0c0a06] border-primary shadow-primary/20'
-                                                        : 'bg-black/30 text-slate-300 border-white/5 hover:bg-white/5 hover:text-white'
-                                                        }`}
-                                                >
-                                                    {style.label}
-                                                </button>
-                                            ))}
+                                        <p className="text-sm text-slate-400 mb-4 font-medium">
+                                            화풍을 미리 고르지 않습니다. 비방서가 오행·공간·고민·수호동물을 해석해 작품군을 자동 선정합니다.
+                                        </p>
+                                        <div className="rounded-xl border-2 border-primary/40 bg-primary/10 px-5 py-4">
+                                            <p className="text-sm font-black text-white">비방서 자동 맞춤</p>
+                                            <p className="mt-2 text-xs leading-relaxed text-slate-300">
+                                                은호 추상화 · 현대 민화형 · 수묵 여백형 · 기하학적 토템형
+                                            </p>
                                         </div>
                                     </div>
 

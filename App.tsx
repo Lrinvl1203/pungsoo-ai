@@ -208,7 +208,7 @@ export default function App() {
     birthDate: settings.birthDate,
     gender: settings.gender,
     concern: '',
-    artStyle: settings.artStyle,
+    artStyle: 'auto',
     imageSize: { preset: '4:3' }
   });
 
@@ -217,9 +217,9 @@ export default function App() {
     updateSettings({
       birthDate: metadata.birthDate,
       gender: metadata.gender,
-      artStyle: metadata.artStyle
+      artStyle: 'auto'
     });
-  }, [metadata.birthDate, metadata.gender, metadata.artStyle]);
+  }, [metadata.birthDate, metadata.gender]);
 
   // Handle address input change with debounce
   React.useEffect(() => {
@@ -389,7 +389,7 @@ export default function App() {
     if (!result) return;
     setIsRegeneratingArt(true); setRemedyArt(null);
     try {
-      const newImage = await generateRemedyArtImage(result.remedy_art.image_generation_prompt, metadata.artStyle, metadata.imageSize);
+      const newImage = await generateRemedyArtImage(result, metadata);
       setRemedyArt(newImage);
       if (currentAnalysisId) {
         await updateAnalysisVisuals(currentAnalysisId, { remedy_art_url: newImage });

@@ -1,4 +1,5 @@
 import { fal } from "@fal-ai/client";
+import { buildRemedyArtPrompt } from "../utils/remedyArt.js";
 
 async function withRetry<T>(fn: () => Promise<T>, retries = 3, delayMs = 3000): Promise<T> {
     for (let attempt = 1; attempt <= retries; attempt++) {
@@ -22,7 +23,7 @@ export default async function handler(req: any, res: any) {
         return res.status(405).json({ error: 'Method Not Allowed' });
     }
 
-    const { type, image, prompt, artStyle, solutions, zodiacObj, imageSize } = req.body;
+    const { type, image, prompt, solutions, zodiacObj, imageSize, remedyContext } = req.body;
     const falKey = process.env.FAL_KEY;
 
     if (!falKey) {
@@ -35,8 +36,8 @@ export default async function handler(req: any, res: any) {
     if (type === 'to-be' && (!image || !Array.isArray(solutions))) {
         return res.status(400).json({ error: 'image and solutions are required for to-be generation.' });
     }
-    if (type === 'remedy' && !prompt) {
-        return res.status(400).json({ error: 'prompt is required for remedy generation.' });
+    if (type === 'remedy' && !prompt && !remedyContext?.remedyArt) {
+        return res.status(400).json({ error: 'prompt or remedyContext is required for remedy generation.' });
     }
     if (type === 'zodiac' && !zodiacObj?.animal) {
         return res.status(400).json({ error: 'zodiacObj is required for zodiac generation.' });
@@ -70,20 +71,14 @@ export default async function handler(req: any, res: any) {
             }));
 
         } else if (type === 'remedy') {
-            let styleKeywords = "";
-            if (artStyle === 'buddhist') {
-                styleKeywords = "Traditional Buddhist Art style, Thangka painting aesthetic, Zen spirituality, golden aura, intricate mandala patterns, temple atmosphere, divine and sacred look";
-            } else if (artStyle === 'modern_buddhist') {
-                styleKeywords = "Fusion of Modern Minimalist and Buddhist Art, sophisticated zen aesthetics, subtle golden lotus or mandala motifs in abstract geometry, contemporary spiritual art, clean lines, meditative atmosphere, gallery quality";
-            } else {
-                styleKeywords = "Modern Abstract Art style, minimalist, aesthetic, spiritual, 3D render, luxurious texture, cinematic lighting";
-            }
-
-            const t2iPrompt = `Create a high-quality portrait artistic talisman/digital art based on this concept: ${prompt}. 
-      
-      Design Style Instructions: ${styleKeywords}.
-      
-      The image must be suitable for a mobile wallpaper or framed wall art. High resolution, 8k.`;
+            const { prompt: t2iPrompt, profile } = buildRemedyArtPrompt({
+                ...remedyContext,
+                remedyArt: remedyContext?.remedyArt || {
+                    deficiency: 'earth',
+                    solution_keyword: prompt,
+                    image_generation_prompt: prompt,
+                },
+            });
 
             let finalImageSize: any = "portrait_4_3"; // Default
 
@@ -115,6 +110,10 @@ export default async function handler(req: any, res: any) {
                 },
             }));
 
+            if (result && typeof result === 'object') {
+                result.remedyArtProfile = profile;
+            }
+
         } else if (type === 'zodiac') {
             const t2iPrompt = `A full-body 3D low-poly geometric sculpture of a ${zodiacObj.animal} for modern interior decor. Placed in a majestic pose. Crafted from luxurious ${zodiacObj.material_and_color}. Special feature: ${zodiacObj.specific_pose_or_feature}. High-end minimalist art object photography, professional studio lighting with dramatic reflections, clean neutral background, 8k resolution, C4D Arnold render style, ready for 3D printing aesthetic.`;
 
@@ -134,7 +133,10 @@ export default async function handler(req: any, res: any) {
         const images = result?.data?.images || result?.images;
 
         if (images && images.length > 0) {
-            return res.status(200).json({ image: images[0].url });
+            return res.status(200).json({
+                image: images[0].url,
+                remedyArtProfile: type === 'remedy' ? result?.remedyArtProfile : undefined,
+            });
         }
 
         console.error("Fal.ai unexpected result structure:", JSON.stringify(result).slice(0, 500));

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, MapPin, Loader2, Sparkles, Send, RefreshCw, Palette, Flower2 } from 'lucide-react';
+import { Home, MapPin, Loader2, Sparkles, Send, RefreshCw } from 'lucide-react';
 import { UserMetadata, AnalysisResult, ImageSizeOption } from '../types';
 
 interface AddressSuggestion {
@@ -205,17 +205,15 @@ export default function AnalysisForm({
                     </div>
 
                     <div>
-                        <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">기본 비방 아트 스타일</label>
-                        <div className="grid grid-cols-3 gap-2">
-                            <button onClick={() => setMetadata({ ...metadata, artStyle: 'modern' })}
-                                className={`flex flex-col items-center justify-center gap-1 p-2 rounded-lg border transition-all text-xs ${metadata.artStyle === 'modern' ? 'bg-[#d4af37] text-white border-primary font-bold shadow-md' : 'bg-black/30 text-white text-slate-200 border-white/10 hover:border-primary'}`}
-                            ><Palette className="w-4 h-4" /> 모던</button>
-                            <button onClick={() => setMetadata({ ...metadata, artStyle: 'buddhist' })}
-                                className={`flex flex-col items-center justify-center gap-1 p-2 rounded-lg border transition-all text-xs ${metadata.artStyle === 'buddhist' ? 'bg-[#d4af37] text-white border-primary font-bold shadow-md' : 'bg-black/30 text-white text-slate-200 border-white/10 hover:border-primary'}`}
-                            ><div className="w-4 h-4 rounded-full border border-current flex items-center justify-center text-[8px]">卍</div> 레트로</button>
-                            <button onClick={() => setMetadata({ ...metadata, artStyle: 'modern_buddhist' })}
-                                className={`flex flex-col items-center justify-center gap-1 p-2 rounded-lg border transition-all text-xs ${metadata.artStyle === 'modern_buddhist' ? 'bg-[#d4af37] text-white border-primary font-bold shadow-md' : 'bg-black/30 text-white text-slate-200 border-white/10 hover:border-primary'}`}
-                            ><Flower2 className="w-4 h-4" /> 모던 + 레트로</button>
+                        <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">비방화 자동 조형</label>
+                        <div className="rounded-lg border border-primary/30 bg-primary/10 px-3 py-3 flex items-start gap-2">
+                            <Sparkles className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+                            <div>
+                                <p className="text-xs font-bold text-white">비방서가 작품군을 직접 정합니다</p>
+                                <p className="text-[11px] leading-relaxed text-slate-300 mt-1">
+                                    오행·공간·고민·수호동물을 종합해 추상화, 현대 민화, 수묵 여백, 기하 토템 중 가장 맞는 방식을 자동 적용합니다.
+                                </p>
+                            </div>
                         </div>
                     </div>
 

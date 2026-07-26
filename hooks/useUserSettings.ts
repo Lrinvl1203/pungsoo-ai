@@ -3,13 +3,13 @@ import { useState, useEffect } from 'react';
 export interface UserSettings {
     birthDate: string;
     gender: 'male' | 'female';
-    artStyle: 'modern' | 'buddhist' | 'modern_buddhist';
+    artStyle: 'auto' | 'modern' | 'buddhist' | 'modern_buddhist';
 }
 
 const DEFAULT_SETTINGS: UserSettings = {
     birthDate: '',
     gender: 'male',
-    artStyle: 'modern'
+    artStyle: 'auto'
 };
 
 export function useUserSettings() {
@@ -19,7 +19,7 @@ export function useUserSettings() {
         try {
             const saved = localStorage.getItem('pungsoo_user_settings');
             if (saved) {
-                return { ...DEFAULT_SETTINGS, ...JSON.parse(saved) };
+                return { ...DEFAULT_SETTINGS, ...JSON.parse(saved), artStyle: 'auto' };
             }
         } catch (error) {
             console.error('Failed to load user settings:', error);

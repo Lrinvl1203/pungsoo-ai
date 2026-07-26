@@ -1,5 +1,5 @@
 
-import { UserMetadata, AnalysisResult, SolutionItem, ImageSizeConfig } from "../types";
+import { UserMetadata, AnalysisResult, SolutionItem } from "../types";
 import { TEST_SAMPLE_ANALYSIS, TEST_SAMPLE_REMEDY_ART_IMAGE, TEST_SAMPLE_ZODIAC_IMAGE } from "./sampleAnalysis";
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -63,9 +63,8 @@ export const generateToBeImage = async (
 };
 
 export const generateRemedyArtImage = async (
-  prompt: string,
-  style: 'modern' | 'buddhist' | 'modern_buddhist' = 'modern',
-  imageSize?: ImageSizeConfig
+  result: AnalysisResult,
+  metadata: UserMetadata
 ): Promise<string> => {
   if (isTestMode()) {
     await delay(1500);
@@ -75,7 +74,20 @@ export const generateRemedyArtImage = async (
   const response = await fetch('/api/generate-visuals', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ type: 'remedy', prompt, artStyle: style, imageSize }),
+    body: JSON.stringify({
+      type: 'remedy',
+      prompt: result.remedy_art.image_generation_prompt,
+      imageSize: metadata.imageSize,
+      remedyContext: {
+        remedyArt: result.remedy_art,
+        fiveElements: result.five_elements,
+        zodiacObject: result.zodiac_remedy_object,
+        fengShuiScore: result.feng_shui_score,
+        concern: metadata.concern,
+        roomType: metadata.roomType,
+        analysisType: metadata.analysisType,
+      },
+    }),
   });
 
   if (!response.ok) {

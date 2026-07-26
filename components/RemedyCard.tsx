@@ -6,6 +6,7 @@ import DigitalPaymentModal from './DigitalPaymentModal';
 import LoginPromptModal from './LoginPromptModal';
 import { supabase } from '../services/supabaseClient';
 import { DIGITAL_PRODUCT_TOTAL_KRW, formatKrw } from '../services/pricing';
+import { getRemedyArtProfile } from '../utils/remedyArt';
 
 interface RemedyCardProps {
     result: AnalysisResult;
@@ -35,6 +36,15 @@ export default function RemedyCard({
     const [isUnlocked, setIsUnlocked] = useState(false);
     const [hasRequestedPaidImage, setHasRequestedPaidImage] = useState(false);
     const effectiveUnlocked = isUnlocked || premiumPreviewUnlocked;
+    const artProfile = getRemedyArtProfile({
+        remedyArt: result.remedy_art,
+        fiveElements: result.five_elements,
+        zodiacObject: result.zodiac_remedy_object,
+        fengShuiScore: result.feng_shui_score,
+        concern: metadata.concern,
+        roomType: metadata.roomType,
+        analysisType: metadata.analysisType,
+    });
 
     // Auth and Modals
     const { user } = useAuth();
@@ -192,25 +202,26 @@ export default function RemedyCard({
                             </div>
                         </div>
 
-                        {/* Style Controls for Regeneration */}
+                        {/* Automatic style profile and regeneration controls */}
                         {isUnlocked && (
                         <div className="p-5 bg-white/5 backdrop-blur-md rounded-xl border border-white/10 shadow-sm space-y-5">
                             <div>
                                 <h5 className="text-[14px] font-bold text-slate-300 flex items-center gap-2 mb-3">
-                                    <Palette className="w-4 h-4" /> 옵션 변경하여 재생성 (스타일/사이즈)
+                                    <Palette className="w-4 h-4" /> 비방서 자동 조형 결과
                                 </h5>
                                 <div className="space-y-4">
                                     <div>
-                                        <label className="block text-[11px] font-semibold text-slate-400 uppercase mb-1.5">스타일</label>
-                                        <div className="grid grid-cols-3 gap-2">
-                                            {(['modern', 'buddhist', 'modern_buddhist'] as const).map((style) => (
-                                                <button key={style}
-                                                    onClick={() => setMetadata({ ...metadata, artStyle: style })}
-                                                    className={`py-2.5 text-[12px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 ${metadata.artStyle === style ? 'bg-[#4a443b] text-white shadow-md' : 'bg-black/30 text-white text-slate-200 hover:bg-white/10'}`}
-                                                >
-                                                    {style === 'modern' ? '모던' : style === 'buddhist' ? '레트로' : '모던+레트로'}
-                                                </button>
-                                            ))}
+                                        <label className="block text-[11px] font-semibold text-slate-400 uppercase mb-1.5">선정된 작품군</label>
+                                        <div className="rounded-lg bg-[#4a443b] px-4 py-3 text-white shadow-md">
+                                            <div className="flex items-center justify-between gap-3">
+                                                <span className="text-[13px] font-black">{artProfile.styleLabelKo}</span>
+                                                <span className="text-[10px] rounded-full bg-white/10 px-2 py-1 font-bold">
+                                                    {artProfile.energyMode}
+                                                </span>
+                                            </div>
+                                            <p className="mt-2 text-[11px] leading-relaxed text-slate-200">
+                                                {artProfile.targetElement.toUpperCase()} 기운 · 수호동물 {artProfile.guardianAnimalKo} · 형상 농도 약 {artProfile.guardianVisibility}%
+                                            </p>
                                         </div>
                                     </div>
                                     <div>
@@ -249,7 +260,7 @@ export default function RemedyCard({
                                 className="w-full py-3.5 bg-gradient-to-r from-[#d4af37] to-[#c29d2f] text-white text-[15px] font-bold rounded-xl hover:shadow-lg transition-all flex items-center justify-center gap-2"
                             >
                                 {isRegeneratingArt ? <Loader2 className="w-5 h-5 animate-spin" /> : <RefreshCw className="w-5 h-5" />}
-                                위 옵션으로 비방 다시 그리기
+                                비방서 기준으로 다시 그리기
                             </button>
                         </div>
                         )}
