@@ -1,5 +1,5 @@
 import { fal } from "@fal-ai/client";
-import { buildRemedyArtPrompt } from "../utils/remedyArt.js";
+import { buildRemedyArtPrompt, isInteriorArtStyleId } from "../utils/remedyArt.js";
 
 async function withRetry<T>(fn: () => Promise<T>, retries = 3, delayMs = 3000): Promise<T> {
     for (let attempt = 1; attempt <= retries; attempt++) {
@@ -73,6 +73,9 @@ export default async function handler(req: any, res: any) {
         } else if (type === 'remedy') {
             const { prompt: t2iPrompt, profile } = buildRemedyArtPrompt({
                 ...remedyContext,
+                interiorStyle: isInteriorArtStyleId(remedyContext?.interiorStyle)
+                    ? remedyContext.interiorStyle
+                    : null,
                 remedyArt: remedyContext?.remedyArt || {
                     deficiency: 'earth',
                     solution_keyword: prompt,

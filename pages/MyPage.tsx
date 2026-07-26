@@ -630,6 +630,9 @@ export default function MyPage() {
                                             <p className="mt-2 text-xs leading-relaxed text-slate-300">
                                                 은호 추상화 · 현대 민화형 · 수묵 여백형 · 기하학적 토템형
                                             </p>
+                                            <p className="mt-3 border-t border-white/10 pt-3 text-xs leading-relaxed text-slate-300">
+                                                완성 후에는 방 분위기에 맞는 인테리어 에디션 3종을 추천받아 같은 비방을 다른 화풍으로 제작할 수 있습니다.
+                                            </p>
                                         </div>
                                     </div>
 

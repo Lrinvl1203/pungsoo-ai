@@ -50,6 +50,7 @@
 
 import { supabase } from './supabaseClient';
 import { AnalysisResult, UserMetadata } from '../types';
+import { InteriorArtStyleId } from '../utils/remedyArt';
 
 export interface AnalysisHistoryRow {
     id: string;
@@ -61,6 +62,8 @@ export interface AnalysisHistoryRow {
     metadata: UserMetadata;
     result: AnalysisResult;
     remedy_art_url: string | null;
+    interior_remedy_art_url: string | null;
+    interior_style_id: InteriorArtStyleId | null;
     zodiac_image_url: string | null;
     to_be_image_url: string | null;
     feng_shui_score: number;
@@ -78,24 +81,31 @@ export async function saveAnalysis(params: {
     metadata: UserMetadata;
     result: AnalysisResult;
     remedyArt: string | null;
+    interiorRemedyArt?: string | null;
+    interiorStyleId?: InteriorArtStyleId | null;
     zodiacImage: string | null;
     toBeImage: string | null;
 }): Promise<AnalysisHistoryRow | null> {
     try {
+        const insertPayload: Record<string, unknown> = {
+            user_id: params.userId,
+            analysis_type: params.analysisType,
+            image_url: params.image,
+            address: params.address,
+            metadata: params.metadata,
+            result: params.result,
+            remedy_art_url: params.remedyArt,
+            zodiac_image_url: params.zodiacImage,
+            to_be_image_url: params.toBeImage,
+            feng_shui_score: params.result.feng_shui_score,
+        };
+        if (params.interiorRemedyArt) {
+            insertPayload.interior_remedy_art_url = params.interiorRemedyArt;
+            insertPayload.interior_style_id = params.interiorStyleId || null;
+        }
         const { data, error } = await supabase
             .from('analysis_history')
-            .insert({
-                user_id: params.userId,
-                analysis_type: params.analysisType,
-                image_url: params.image,
-                address: params.address,
-                metadata: params.metadata,
-                result: params.result,
-                remedy_art_url: params.remedyArt,
-                zodiac_image_url: params.zodiacImage,
-                to_be_image_url: params.toBeImage,
-                feng_shui_score: params.result.feng_shui_score,
-            })
+            .insert(insertPayload)
             .select()
             .single();
 
@@ -183,7 +193,7 @@ export async function deleteAnalysis(id: string): Promise<boolean> {
  */
 export async function updateAnalysisVisuals(
     id: string,
-    updates: Partial<Pick<AnalysisHistoryRow, 'remedy_art_url' | 'zodiac_image_url' | 'to_be_image_url'>>
+    updates: Partial<Pick<AnalysisHistoryRow, 'remedy_art_url' | 'interior_remedy_art_url' | 'interior_style_id' | 'zodiac_image_url' | 'to_be_image_url'>>
 ): Promise<boolean> {
     try {
         const { error } = await supabase

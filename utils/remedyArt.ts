@@ -6,6 +6,16 @@ export type RemedyArtStyleFamily =
   | 'ink_wash'
   | 'geometric_totem';
 
+export type InteriorArtStyleId =
+  | 'art_nouveau'
+  | 'bauhaus'
+  | 'art_deco'
+  | 'midcentury'
+  | 'renaissance'
+  | 'impressionist'
+  | 'ukiyoe'
+  | 'cinematic_anime';
+
 export type FiveElementKey = 'wood' | 'fire' | 'earth' | 'metal' | 'water';
 
 export interface RemedyArtRoutingInput {
@@ -32,17 +42,30 @@ export interface RemedyArtRoutingInput {
   concern?: string;
   roomType?: string;
   analysisType?: 'internal' | 'external' | string;
+  spatialFeatures?: string[];
+  interiorStyle?: InteriorArtStyleId | null;
 }
 
 export interface RemedyArtProfile {
   targetElement: FiveElementKey;
   excessElement: FiveElementKey | null;
   energyMode: RemedyEnergyMode;
+  edition: 'signature' | 'interior';
   styleFamily: RemedyArtStyleFamily;
+  interiorStyle: InteriorArtStyleId | null;
   styleLabelKo: string;
   guardianAnimal: string;
   guardianAnimalKo: string;
   guardianVisibility: number;
+}
+
+export interface InteriorArtStylePack {
+  id: InteriorArtStyleId;
+  labelKo: string;
+  labelEn: string;
+  description: string;
+  bestFor: string;
+  previewUrl: string;
 }
 
 export const REMEDY_STYLE_LABELS: Record<RemedyArtStyleFamily, string> = {
@@ -50,6 +73,73 @@ export const REMEDY_STYLE_LABELS: Record<RemedyArtStyleFamily, string> = {
   modern_minhwa: '현대 민화형',
   ink_wash: '수묵 여백형',
   geometric_totem: '기하학적 토템형',
+};
+
+export const INTERIOR_ART_STYLE_PACKS: Record<InteriorArtStyleId, InteriorArtStylePack> = {
+  art_nouveau: {
+    id: 'art_nouveau',
+    labelKo: '아르누보 가디언',
+    labelEn: 'Art Nouveau Guardian',
+    description: '유기적인 곡선과 식물성 장식으로 기운의 흐름을 부드럽게 연결합니다.',
+    bestFor: '내추럴 · 플랜테리어 · 곡선 가구',
+    previewUrl: '/images/interior-editions/art-nouveau.jpg',
+  },
+  bauhaus: {
+    id: 'bauhaus',
+    labelKo: '바우하우스 오행',
+    labelEn: 'Bauhaus Elemental',
+    description: '절제된 기하 색면으로 오행의 균형과 이동 방향을 선명하게 보여줍니다.',
+    bestFor: '미니멀 · 모던 · 업무 공간',
+    previewUrl: '/images/interior-editions/bauhaus.jpg',
+  },
+  art_deco: {
+    id: 'art_deco',
+    labelKo: '아르데코 가디언',
+    labelEn: 'Art Deco Guardian',
+    description: '대칭과 부조 같은 깊이로 수호의 존재감과 고급감을 강화합니다.',
+    bestFor: '호텔라이크 · 클래식 모던 · 현관',
+    previewUrl: '/images/interior-editions/art-deco.jpg',
+  },
+  midcentury: {
+    id: 'midcentury',
+    labelKo: '미드센추리 가디언',
+    labelEn: 'Mid-century Guardian',
+    description: '따뜻한 레트로 색면과 유연한 형태로 거실에 편안하게 스며듭니다.',
+    bestFor: '우드톤 · 레트로 · 가족 거실',
+    previewUrl: '/images/interior-editions/midcentury.jpg',
+  },
+  renaissance: {
+    id: 'renaissance',
+    labelKo: '르네상스 명암',
+    labelEn: 'Renaissance Chiaroscuro',
+    description: '고전 회화의 깊은 명암과 재료감으로 중후한 수호상을 만듭니다.',
+    bestFor: '클래식 · 앤티크 · 서재',
+    previewUrl: '/images/interior-editions/renaissance.jpg',
+  },
+  impressionist: {
+    id: 'impressionist',
+    labelKo: '인상주의 기운',
+    labelEn: 'Impressionist Atmosphere',
+    description: '빛과 붓질 속에 수호동물이 나타나도록 회화적으로 번역합니다.',
+    bestFor: '밝은 공간 · 침실 · 아트월',
+    previewUrl: '/images/interior-editions/impressionist.jpg',
+  },
+  ukiyoe: {
+    id: 'ukiyoe',
+    labelKo: '우키요에 가디언',
+    labelEn: 'Ukiyo-e Guardian',
+    description: '판화의 선과 평면 색채로 수호동물과 순환 경로를 또렷하게 만듭니다.',
+    bestFor: '재팬디 · 동양적 미니멀 · 포인트 월',
+    previewUrl: '/images/interior-editions/ukiyoe.jpg',
+  },
+  cinematic_anime: {
+    id: 'cinematic_anime',
+    labelKo: '시네마틱 애니메이션',
+    labelEn: 'Cinematic Anime Guardian',
+    description: '절제된 셀 명암과 빛의 깊이로 수호동물을 현대적으로 강조합니다.',
+    bestFor: '콘텐츠 룸 · 스튜디오 · 젊은 취향',
+    previewUrl: '/images/interior-editions/cinematic-anime.jpg',
+  },
 };
 
 const ELEMENT_PALETTES: Record<FiveElementKey, string> = {
@@ -151,6 +241,59 @@ export function selectRemedyArtStyle(
   return 'guardian_abstract';
 }
 
+export function isInteriorArtStyleId(value: unknown): value is InteriorArtStyleId {
+  return typeof value === 'string' && value in INTERIOR_ART_STYLE_PACKS;
+}
+
+export function recommendInteriorArtStyles(input: RemedyArtRoutingInput): InteriorArtStylePack[] {
+  const context = [
+    input.roomType,
+    input.concern,
+    input.remedyArt?.solution_keyword,
+    ...(input.spatialFeatures || []),
+  ].filter(Boolean).join(' ').toLowerCase();
+  const energyMode = deriveRemedyEnergyMode(input);
+  const scores: Record<InteriorArtStyleId, number> = {
+    art_nouveau: 5,
+    bauhaus: 5,
+    art_deco: 6,
+    midcentury: 6,
+    renaissance: 2,
+    impressionist: 5,
+    ukiyoe: 5,
+    cinematic_anime: 3,
+  };
+  const add = (ids: InteriorArtStyleId[], amount: number) => ids.forEach(id => { scores[id] += amount; });
+
+  if (includesAny(context, ['모던', '미니멀', '깔끔', '사무', '업무', '오피스'])) {
+    add(['bauhaus', 'art_deco', 'midcentury'], 5);
+  }
+  if (includesAny(context, ['우드', '나무', '내추럴', '식물', '플랜테리어', '곡선'])) {
+    add(['art_nouveau', 'midcentury', 'impressionist'], 5);
+  }
+  if (includesAny(context, ['클래식', '앤티크', '고전', '호텔', '대리석', '중후'])) {
+    add(['art_deco', 'renaissance', 'art_nouveau'], 6);
+  }
+  if (includesAny(context, ['재팬디', '동양', '한옥', '다다미', '명상', '여백'])) {
+    add(['ukiyoe', 'art_nouveau', 'impressionist'], 5);
+  }
+  if (includesAny(context, ['레트로', '빈티지', '가족', '거실', '따뜻'])) {
+    add(['midcentury', 'art_nouveau', 'impressionist'], 4);
+  }
+  if (includesAny(context, ['애니', '게임', '콘텐츠', '스튜디오', '취미'])) {
+    add(['cinematic_anime', 'ukiyoe', 'bauhaus'], 6);
+  }
+  if (input.analysisType === 'external') add(['art_deco', 'bauhaus', 'ukiyoe'], 3);
+  if (energyMode === 'PURIFY') add(['impressionist', 'art_nouveau', 'ukiyoe'], 3);
+  if (energyMode === 'CIRCULATE') add(['art_nouveau', 'midcentury', 'ukiyoe'], 3);
+  if (energyMode === 'AMPLIFY') add(['art_deco', 'bauhaus', 'cinematic_anime'], 3);
+
+  return (Object.keys(scores) as InteriorArtStyleId[])
+    .sort((a, b) => scores[b] - scores[a])
+    .slice(0, 3)
+    .map(id => INTERIOR_ART_STYLE_PACKS[id]);
+}
+
 export function getRemedyArtProfile(input: RemedyArtRoutingInput): RemedyArtProfile {
   const targetElement =
     normalizeElement(input.fiveElements?.deficient)
@@ -160,6 +303,7 @@ export function getRemedyArtProfile(input: RemedyArtRoutingInput): RemedyArtProf
   const energyMode = deriveRemedyEnergyMode(input);
   const styleFamily = selectRemedyArtStyle(input, energyMode);
   const animal = resolveAnimal(input.zodiacObject?.animal);
+  const interiorStyle = isInteriorArtStyleId(input.interiorStyle) ? input.interiorStyle : null;
 
   const visibilityAdjustment: Record<RemedyArtStyleFamily, number> = {
     guardian_abstract: 0,
@@ -172,12 +316,35 @@ export function getRemedyArtProfile(input: RemedyArtRoutingInput): RemedyArtProf
     targetElement,
     excessElement,
     energyMode,
+    edition: interiorStyle ? 'interior' : 'signature',
     styleFamily,
-    styleLabelKo: REMEDY_STYLE_LABELS[styleFamily],
+    interiorStyle,
+    styleLabelKo: interiorStyle ? INTERIOR_ART_STYLE_PACKS[interiorStyle].labelKo : REMEDY_STYLE_LABELS[styleFamily],
     guardianAnimal: animal.english,
     guardianAnimalKo: animal.korean,
     guardianVisibility: Math.min(64, animal.visibility + visibilityAdjustment[styleFamily]),
   };
+}
+
+function buildInteriorStyleInstruction(style: InteriorArtStyleId): string {
+  switch (style) {
+    case 'art_nouveau':
+      return 'INTERIOR EDITION — ART NOUVEAU GUARDIAN: use elegant botanical curves, flowing ornamental line, matte hand-crafted surface, and asymmetrical organic framing. No copied poster, named artist, decorative border, or jewel-like excess.';
+    case 'bauhaus':
+      return 'INTERIOR EDITION — BAUHAUS ELEMENTAL: use flat geometric color blocks, disciplined circles and rectangles, clear visual hierarchy, and restrained paper texture. No typography, logo, copied school poster, or sterile corporate graphic.';
+    case 'art_deco':
+      return 'INTERIOR EDITION — ART DECO GUARDIAN: use stepped geometry, controlled symmetry, shallow mineral-plaster relief, and restrained architectural glamour. No chrome, jewelry display, literal building, or excessive gold.';
+    case 'midcentury':
+      return 'INTERIOR EDITION — MID-CENTURY GUARDIAN: use warm organic color fields, simplified elegant contour, screen-print texture, and balanced retro rhythm. No advertising copy, kitsch mascot, furniture illustration, or copied vintage poster.';
+    case 'renaissance':
+      return 'INTERIOR EDITION — RENAISSANCE CHIAROSCURO: use quiet classical chiaroscuro, layered oil-glaze depth, aged fresco and tapestry-like abstract planes. Keep it non-narrative and flat enough for wall art; no palace, battle, landscape, costume, religious scene, or fantasy creature treatment.';
+    case 'impressionist':
+      return 'INTERIOR EDITION — IMPRESSIONIST ATMOSPHERE: use broken color, visible short brushwork, optical mixing, softened edges, diffused daylight, and rich matte canvas texture. Keep all fields abstract; no literal landscape or copied famous painting.';
+    case 'ukiyoe':
+      return 'INTERIOR EDITION — UKIYO-E GUARDIAN: use carved dark contour, flat mineral blocks, restrained bokashi-like gradation, washi grain, elegant asymmetry, and controlled negative space. No famous wave, Mount Fuji, historic print copy, Japanese text, or red seal.';
+    case 'cinematic_anime':
+      return 'INTERIOR EDITION — CINEMATIC ANIMATION GUARDIAN: use refined cel-shaped values, luminous atmospheric depth, restrained line economy, and hand-painted abstract background texture. No named studio, franchise, scenic adventure, ruins, city, mountains, action pose, or cute character treatment.';
+  }
 }
 
 function buildStyleInstruction(style: RemedyArtStyleFamily): string {
@@ -246,7 +413,9 @@ export function buildRemedyArtPrompt(input: RemedyArtRoutingInput): {
     excessText,
     buildEnergyInstruction(profile.energyMode),
     '',
-    buildStyleInstruction(profile.styleFamily),
+    profile.interiorStyle
+      ? buildInteriorStyleInstruction(profile.interiorStyle)
+      : buildStyleInstruction(profile.styleFamily),
     '',
     'GUARDIAN',
     `Integrate exactly one ${profile.guardianAnimal} guardian at approximately ${profile.guardianVisibility}% perceptual recognition.`,

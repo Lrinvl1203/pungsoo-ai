@@ -1,22 +1,33 @@
 import React, { useState } from 'react';
-import { Loader2, Download, RefreshCw, Palette, ShoppingBag, Lock } from 'lucide-react';
+import { Loader2, Download, RefreshCw, Palette, ShoppingBag, Lock, Sparkles, Check } from 'lucide-react';
 import { AnalysisResult, UserMetadata, ImageSizeOption } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import DigitalPaymentModal from './DigitalPaymentModal';
 import LoginPromptModal from './LoginPromptModal';
 import { supabase } from '../services/supabaseClient';
 import { DIGITAL_PRODUCT_TOTAL_KRW, formatKrw } from '../services/pricing';
-import { getRemedyArtProfile } from '../utils/remedyArt';
+import {
+    getRemedyArtProfile,
+    InteriorArtStyleId,
+    INTERIOR_ART_STYLE_PACKS,
+    recommendInteriorArtStyles,
+} from '../utils/remedyArt';
 
 interface RemedyCardProps {
     result: AnalysisResult;
     remedyArt: string | null;
+    interiorRemedyArt: string | null;
+    interiorStyleId: InteriorArtStyleId | null;
     metadata: UserMetadata;
     setMetadata: React.Dispatch<React.SetStateAction<UserMetadata>>;
     isRegeneratingArt: boolean;
-    onRegenerateArt: () => void;
+    onRegenerateArt: (interiorStyle?: InteriorArtStyleId | null) => void;
     onDownloadImage: (dataUrl: string, filename: string) => void;
-    onOrderFrame: () => void;
+    onOrderFrame: (selection: {
+        edition: 'signature' | 'interior';
+        styleId: InteriorArtStyleId | null;
+        artworkUrl: string | null;
+    }) => void;
     currentAnalysisId?: string | null;
     premiumPreviewUnlocked?: boolean;
 }
@@ -24,6 +35,8 @@ interface RemedyCardProps {
 export default function RemedyCard({
     result,
     remedyArt,
+    interiorRemedyArt,
+    interiorStyleId,
     metadata,
     setMetadata,
     isRegeneratingArt,
@@ -44,7 +57,24 @@ export default function RemedyCard({
         concern: metadata.concern,
         roomType: metadata.roomType,
         analysisType: metadata.analysisType,
+        spatialFeatures: result.spatial_features,
     });
+    const interiorRecommendations = recommendInteriorArtStyles({
+        remedyArt: result.remedy_art,
+        fiveElements: result.five_elements,
+        zodiacObject: result.zodiac_remedy_object,
+        fengShuiScore: result.feng_shui_score,
+        concern: metadata.concern,
+        roomType: metadata.roomType,
+        analysisType: metadata.analysisType,
+        spatialFeatures: result.spatial_features,
+    });
+    const [selectedInteriorStyle, setSelectedInteriorStyle] = useState<InteriorArtStyleId>(
+        interiorStyleId || interiorRecommendations[0].id
+    );
+    const [artView, setArtView] = useState<'signature' | 'interior'>(
+        interiorRemedyArt ? 'interior' : 'signature'
+    );
 
     // Auth and Modals
     const { user } = useAuth();
@@ -93,6 +123,15 @@ export default function RemedyCard({
         }
     }, [isUnlocked, remedyArt, isRegeneratingArt, hasRequestedPaidImage, onRegenerateArt]);
 
+    React.useEffect(() => {
+        if (interiorStyleId) {
+            setSelectedInteriorStyle(interiorStyleId);
+        } else {
+            setSelectedInteriorStyle(interiorRecommendations[0].id);
+        }
+        setArtView(interiorRemedyArt ? 'interior' : 'signature');
+    }, [interiorStyleId, interiorRemedyArt, interiorRecommendations[0].id]);
+
     const handleUnlockRemedy = () => {
         if (!user) {
             localStorage.setItem('pending_payment_intent', JSON.stringify({ type: 'remedy' }));
@@ -110,6 +149,12 @@ export default function RemedyCard({
                 : metadata.imageSize.preset === '3:4' ? 'aspect-[3/4]'
                     : metadata.imageSize.preset === '4:3' ? 'aspect-[4/3] w-full max-w-md'
                         : 'aspect-[3/4]';
+    const displayedArt = artView === 'interior' && interiorRemedyArt
+        ? interiorRemedyArt
+        : remedyArt;
+    const displayedStyleLabel = artView === 'interior' && interiorStyleId
+        ? INTERIOR_ART_STYLE_PACKS[interiorStyleId].labelKo
+        : artProfile.styleLabelKo;
 
     return (
         <section className="bg-[#14100a] backdrop-blur-xl rounded-2xl overflow-hidden shadow-2xl border border-primary/45 ring-4 ring-primary/10 mt-10 stagger-item" style={{ animationDelay: '0.5s' }}>
@@ -121,12 +166,30 @@ export default function RemedyCard({
             </div>
             <div className="p-6 md:p-8">
                 <div className="flex flex-col gap-8">
+                    {effectiveUnlocked && interiorRemedyArt && (
+                        <div className="mx-auto flex w-full max-w-sm rounded-xl border border-white/10 bg-black/30 p-1">
+                            <button
+                                type="button"
+                                onClick={() => setArtView('signature')}
+                                className={`flex-1 rounded-lg px-3 py-2 text-xs font-black transition-all ${artView === 'signature' ? 'bg-primary text-[#171107]' : 'text-slate-300 hover:text-white'}`}
+                            >
+                                PUNGSOO 시그니처
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setArtView('interior')}
+                                className={`flex-1 rounded-lg px-3 py-2 text-xs font-black transition-all ${artView === 'interior' ? 'bg-primary text-[#171107]' : 'text-slate-300 hover:text-white'}`}
+                            >
+                                인테리어 에디션
+                            </button>
+                        </div>
+                    )}
                     {/* Art Display with Paywall */}
                     <div className={`w-full max-w-sm mx-auto ${aspectClass} bg-[#fcfbfa] rounded-2xl overflow-hidden relative shadow-inner ring-1 ring-black/5 transition-all duration-300`}>
-                        {remedyArt ? (
+                        {displayedArt ? (
                             <>
                                 <img
-                                    src={remedyArt}
+                                    src={displayedArt}
                                     alt="Remedy Art"
                                     className={`w-full h-full object-cover transition-all duration-700 ${!effectiveUnlocked ? 'scale-110 brightness-50' : 'scale-100'}`}
                                     style={{ filter: !effectiveUnlocked ? 'blur(12px)' : 'none' }}
@@ -174,15 +237,20 @@ export default function RemedyCard({
                                 </button>
                             </div>
                         )}
-                        {(remedyArt && effectiveUnlocked) && (
+                        {(displayedArt && effectiveUnlocked) && (
                             <div className="absolute bottom-4 right-4 flex gap-2 z-20">
                                 <button
-                                    onClick={() => onDownloadImage(remedyArt, 'FengShui_Remedy.png')}
+                                    onClick={() => displayedArt && onDownloadImage(displayedArt, artView === 'interior' ? 'Pungsoo_Interior_Edition.png' : 'Pungsoo_Signature.png')}
                                     className="bg-black/60 backdrop-blur-md shadow-xl p-3 rounded-full text-white hover:bg-black/80 hover:scale-105 transition-all"
                                     title="이미지 다운로드"
                                 >
                                     <Download className="w-5 h-5" />
                                 </button>
+                            </div>
+                        )}
+                        {effectiveUnlocked && displayedArt && (
+                            <div className="absolute left-4 top-4 z-20 rounded-full border border-white/20 bg-black/65 px-3 py-1.5 text-[10px] font-black tracking-wide text-white backdrop-blur-md">
+                                {displayedStyleLabel}
                             </div>
                         )}
                     </div>
@@ -255,13 +323,91 @@ export default function RemedyCard({
                                 </div>
                             </div>
                             <button
-                                onClick={onRegenerateArt}
+                                onClick={() => onRegenerateArt()}
                                 disabled={isRegeneratingArt}
                                 className="w-full py-3.5 bg-gradient-to-r from-[#d4af37] to-[#c29d2f] text-white text-[15px] font-bold rounded-xl hover:shadow-lg transition-all flex items-center justify-center gap-2"
                             >
                                 {isRegeneratingArt ? <Loader2 className="w-5 h-5 animate-spin" /> : <RefreshCw className="w-5 h-5" />}
                                 비방서 기준으로 다시 그리기
                             </button>
+
+                            <div className="border-t border-white/10 pt-5">
+                                <div className="mb-4 flex items-start gap-3">
+                                    <div className="rounded-lg bg-primary/15 p-2 text-primary">
+                                        <Sparkles className="h-5 w-5" />
+                                    </div>
+                                    <div>
+                                        <h5 className="text-[15px] font-black text-white">내 공간에 맞춘 인테리어 에디션</h5>
+                                        <p className="mt-1 text-[12px] leading-relaxed text-slate-300">
+                                            비방은 그대로 유지하고 공간 분위기에 어울리는 표현 방식 3가지만 추천했습니다.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="grid gap-3 sm:grid-cols-3">
+                                    {interiorRecommendations.map((style, index) => {
+                                        const isSelected = selectedInteriorStyle === style.id;
+                                        const isGenerated = interiorStyleId === style.id && Boolean(interiorRemedyArt);
+                                        return (
+                                            <button
+                                                type="button"
+                                                key={style.id}
+                                                onClick={() => setSelectedInteriorStyle(style.id)}
+                                                className={`group overflow-hidden rounded-xl border text-left transition-all ${isSelected ? 'border-primary bg-primary/10 ring-2 ring-primary/15' : 'border-white/10 bg-black/25 hover:border-white/30'}`}
+                                            >
+                                                <div className="relative aspect-[3/4] overflow-hidden bg-[#2a241b]">
+                                                    <img
+                                                        src={style.previewUrl}
+                                                        alt={`${style.labelKo} 예시`}
+                                                        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                                    />
+                                                    {index === 0 && (
+                                                        <span className="absolute left-2 top-2 rounded-full bg-primary px-2 py-1 text-[9px] font-black text-[#171107]">
+                                                            가장 추천
+                                                        </span>
+                                                    )}
+                                                    {isGenerated && (
+                                                        <span className="absolute right-2 top-2 rounded-full bg-black/70 p-1.5 text-primary">
+                                                            <Check className="h-3.5 w-3.5" />
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <div className="p-3">
+                                                    <p className="text-[12px] font-black text-white">{style.labelKo}</p>
+                                                    <p className="mt-1 line-clamp-2 text-[10px] leading-relaxed text-slate-400">{style.bestFor}</p>
+                                                </div>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+
+                                <div className="mt-4 rounded-xl border border-white/10 bg-black/25 p-4">
+                                    <p className="text-xs font-black text-white">
+                                        {INTERIOR_ART_STYLE_PACKS[selectedInteriorStyle].labelKo}
+                                    </p>
+                                    <p className="mt-1 text-[11px] leading-relaxed text-slate-300">
+                                        {INTERIOR_ART_STYLE_PACKS[selectedInteriorStyle].description}
+                                    </p>
+                                </div>
+
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        if (interiorStyleId === selectedInteriorStyle && interiorRemedyArt) {
+                                            setArtView('interior');
+                                            return;
+                                        }
+                                        onRegenerateArt(selectedInteriorStyle);
+                                    }}
+                                    disabled={isRegeneratingArt}
+                                    className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-primary bg-primary/10 py-3.5 text-[14px] font-black text-primary transition-all hover:bg-primary hover:text-[#171107] disabled:cursor-wait disabled:opacity-60"
+                                >
+                                    {isRegeneratingArt ? <Loader2 className="h-5 w-5 animate-spin" /> : <Palette className="h-5 w-5" />}
+                                    {interiorStyleId === selectedInteriorStyle && interiorRemedyArt
+                                        ? '완성된 인테리어 에디션 보기'
+                                        : '이 화풍으로 내 작품 제작'}
+                                </button>
+                            </div>
                         </div>
                         )}
 
@@ -285,8 +431,12 @@ export default function RemedyCard({
                         {/* Order Button */}
                         <div className="space-y-2">
                             <button
-                                disabled={!remedyArt}
-                                onClick={onOrderFrame}
+                                disabled={!displayedArt}
+                                onClick={() => onOrderFrame({
+                                    edition: artView,
+                                    styleId: artView === 'interior' ? interiorStyleId : null,
+                                    artworkUrl: displayedArt,
+                                })}
                                 className="w-full py-3 border border-primary text-primary font-bold rounded-lg hover:bg-[#d4af37]/10 transition-colors flex items-center justify-center gap-2"
                             >
                                 <ShoppingBag className="w-4 h-4" />

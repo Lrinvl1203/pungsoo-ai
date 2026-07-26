@@ -21,6 +21,7 @@ export interface RemedyArt {
   energy_mode?: import('./utils/remedyArt').RemedyEnergyMode;
   guardian_animal?: string;
   guardian_visibility?: number;
+  interior_style?: import('./utils/remedyArt').InteriorArtStyleId;
 }
 
 export interface ZodiacRemedyObject {

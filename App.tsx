@@ -17,6 +17,7 @@ import { TEST_SAMPLE_ANALYSIS, TEST_SAMPLE_HISTORY_ITEM, TEST_SAMPLE_REMEDY_ART_
 import { supabase } from './services/supabaseClient';
 import { trackEvent } from './services/analyticsService';
 import { getProductDescriptor } from './services/productCatalog';
+import { InteriorArtStyleId, INTERIOR_ART_STYLE_PACKS } from './utils/remedyArt';
 
 // Ensure Kakao SDK is typed
 declare global {
@@ -31,6 +32,8 @@ export default function App() {
   const [image, setImage] = useState<string | null>(null);
   const [toBeImage, setToBeImage] = useState<string | null>(null);
   const [remedyArt, setRemedyArt] = useState<string | null>(null);
+  const [interiorRemedyArt, setInteriorRemedyArt] = useState<string | null>(null);
+  const [interiorStyleId, setInteriorStyleId] = useState<InteriorArtStyleId | null>(null);
   const [zodiacImage, setZodiacImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [generatingVisuals, setGeneratingVisuals] = useState(false);
@@ -39,7 +42,14 @@ export default function App() {
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [currentAnalysisId, setCurrentAnalysisId] = useState<string | null>(null);
   const [sharedAnalysisMessage, setSharedAnalysisMessage] = useState<string | null>(null);
-  const [history, setHistory] = useState<{ result: AnalysisResult, image: string, remedyArt: string, zodiacImage: string | null }[]>([]);
+  const [history, setHistory] = useState<{
+    result: AnalysisResult;
+    image: string;
+    remedyArt: string;
+    interiorRemedyArt?: string | null;
+    interiorStyleId?: InteriorArtStyleId | null;
+    zodiacImage: string | null;
+  }[]>([]);
   const { user, loading: authLoading } = useAuth();
   const userRef = useRef(user);
   useEffect(() => { userRef.current = user; }, [user]);
@@ -129,6 +139,8 @@ export default function App() {
             setResult(data.result);
             setImage(data.image_url);
             setRemedyArt(data.remedy_art_url);
+            setInteriorRemedyArt(data.interior_remedy_art_url || null);
+            setInteriorStyleId(data.interior_style_id || null);
             setZodiacImage(data.zodiac_image_url);
             setToBeImage(data.to_be_image_url);
             setMetadata(data.metadata);
@@ -151,7 +163,14 @@ export default function App() {
 
     // 3. Load local history
     const savedHistory = localStorage.getItem('pungsoo_history');
-    const ensureTestSample = (items: { result: AnalysisResult, image: string, remedyArt: string, zodiacImage: string | null }[]) => {
+    const ensureTestSample = (items: {
+      result: AnalysisResult;
+      image: string;
+      remedyArt: string;
+      interiorRemedyArt?: string | null;
+      interiorStyleId?: InteriorArtStyleId | null;
+      zodiacImage: string | null;
+    }[]) => {
       if (!isTestMode) return items;
       const sampleIndex = items.findIndex((item) => item.result?.analysis_summary === TEST_SAMPLE_ANALYSIS.analysis_summary);
       if (sampleIndex >= 0) {
@@ -176,6 +195,8 @@ export default function App() {
               setResult(item.result);
               setImage(item.image);
               setRemedyArt(item.remedyArt);
+              setInteriorRemedyArt(item.interiorRemedyArt || null);
+              setInteriorStyleId(item.interiorStyleId || null);
               setZodiacImage(item.zodiacImage || null);
               setToBeImage(null);
               window.history.replaceState({}, document.title);
@@ -186,6 +207,8 @@ export default function App() {
             setResult(latest.result);
             setImage(latest.image);
             setRemedyArt(latest.remedyArt);
+            setInteriorRemedyArt(latest.interiorRemedyArt || null);
+            setInteriorStyleId(latest.interiorStyleId || null);
             setZodiacImage(latest.zodiacImage || null);
             setToBeImage(null);
           }
@@ -210,7 +233,7 @@ export default function App() {
     gender: settings.gender,
     concern: '',
     artStyle: 'auto',
-    imageSize: { preset: '4:3' }
+    imageSize: { preset: '3:4' }
   });
 
   // Save specific settings when they change
@@ -255,6 +278,11 @@ export default function App() {
   // Order Modal States
   const [isInquiryModalOpen, setIsInquiryModalOpen] = useState(false);
   const [orderType, setOrderType] = useState<'frame' | 'object'>('frame');
+  const [frameArtworkSelection, setFrameArtworkSelection] = useState<{
+    edition: 'signature' | 'interior';
+    styleId: InteriorArtStyleId | null;
+    artworkUrl: string | null;
+  }>({ edition: 'signature', styleId: null, artworkUrl: null });
   const [orderFormData, setOrderFormData] = useState({ name: '', contact: '', message: '', objectSize: { width: 5, height: 5, depth: 5 } });
   const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
   const isLoggedIn = !!user;
@@ -278,7 +306,14 @@ export default function App() {
           contact: orderCustomerContact,
           message: orderFormData.message, userId: user?.id,
           objectSize: orderType === 'object' ? orderFormData.objectSize : undefined,
-          analysisData: result ? { remedyArtKeyword: result.remedy_art?.solution_keyword, deficiency: result.remedy_art?.deficiency, zodiacAnimal: result.zodiac_remedy_object?.animal } : null
+          analysisData: result ? {
+            remedyArtKeyword: result.remedy_art?.solution_keyword,
+            deficiency: result.remedy_art?.deficiency,
+            zodiacAnimal: result.zodiac_remedy_object?.animal,
+            artEdition: orderType === 'frame' ? frameArtworkSelection.edition : null,
+            interiorStyleId: orderType === 'frame' ? frameArtworkSelection.styleId : null,
+            artworkUrl: orderType === 'frame' ? frameArtworkSelection.artworkUrl : null,
+          } : null
         })
       });
       if (response.ok) {
@@ -310,7 +345,7 @@ export default function App() {
           const ctx = canvas.getContext('2d');
           if (ctx) { ctx.drawImage(img, 0, 0, width, height); setImage(canvas.toDataURL('image/jpeg', 0.8)); }
           else { setImage(reader.result as string); }
-          setToBeImage(null); setRemedyArt(null); setZodiacImage(null); setResult(null);
+          setToBeImage(null); setRemedyArt(null); setInteriorRemedyArt(null); setInteriorStyleId(null); setZodiacImage(null); setResult(null);
         };
         img.src = reader.result as string;
       };
@@ -332,7 +367,7 @@ export default function App() {
         isTestMode,
       },
     });
-    setShowSuggestions(false); setLoading(true); setGeneratingVisuals(false); setResult(null); setCurrentAnalysisId(null); setToBeImage(null); setRemedyArt(null); setZodiacImage(null);
+    setShowSuggestions(false); setLoading(true); setGeneratingVisuals(false); setResult(null); setCurrentAnalysisId(null); setToBeImage(null); setRemedyArt(null); setInteriorRemedyArt(null); setInteriorStyleId(null); setZodiacImage(null);
     try {
       const analysis = await analyzeFengShui({ base64Image: image || undefined, address: metadata.address }, metadata);
       setResult(analysis);
@@ -343,6 +378,8 @@ export default function App() {
         result: analysis,
         image: metadata.analysisType === 'internal' ? (image || '') : 'https://images.unsplash.com/photo-1524813686514-a57563d77965?auto=format&fit=crop&q=80&w=400',
         remedyArt: isTestMode ? TEST_SAMPLE_REMEDY_ART_IMAGE : '',
+        interiorRemedyArt: null,
+        interiorStyleId: null,
         zodiacImage: isTestMode ? TEST_SAMPLE_ZODIAC_IMAGE : null
       }, ...history].slice(0, 10);
       setHistory(newHistory); localStorage.setItem('pungsoo_history', JSON.stringify(newHistory));
@@ -359,6 +396,8 @@ export default function App() {
           metadata,
           result: analysis,
           remedyArt: null,
+          interiorRemedyArt: null,
+          interiorStyleId: null,
           zodiacImage: null,
           toBeImage: null,
         });
@@ -392,17 +431,50 @@ export default function App() {
     finally { setLoading(false); setGeneratingVisuals(false); }
   };
 
-  const handleRegenerateArt = async () => {
+  const handleRegenerateArt = async (requestedInteriorStyle?: InteriorArtStyleId | null) => {
     if (!result) return;
-    setIsRegeneratingArt(true); setRemedyArt(null);
+    setIsRegeneratingArt(true);
+    if (!requestedInteriorStyle) setRemedyArt(null);
+    trackEvent(requestedInteriorStyle ? 'interior_art_generation_started' : 'remedy_art_regeneration_started', {
+      userId: userRef.current?.id,
+      analysisId: currentAnalysisId,
+      metadata: {
+        interiorStyle: requestedInteriorStyle || null,
+        targetElement: result.five_elements?.deficient || result.remedy_art?.deficiency || null,
+        guardianAnimal: result.zodiac_remedy_object?.animal || null,
+      },
+    });
     try {
-      const newImage = await generateRemedyArtImage(result, metadata);
-      setRemedyArt(newImage);
-      if (currentAnalysisId) {
-        await updateAnalysisVisuals(currentAnalysisId, { remedy_art_url: newImage });
+      const newImage = await generateRemedyArtImage(result, metadata, requestedInteriorStyle);
+      if (requestedInteriorStyle) {
+        setInteriorRemedyArt(newImage);
+        setInteriorStyleId(requestedInteriorStyle);
+      } else {
+        setRemedyArt(newImage);
       }
+      if (currentAnalysisId) {
+        await updateAnalysisVisuals(currentAnalysisId, requestedInteriorStyle
+          ? { interior_remedy_art_url: newImage, interior_style_id: requestedInteriorStyle }
+          : { remedy_art_url: newImage });
+      }
+      trackEvent(requestedInteriorStyle ? 'interior_art_generation_completed' : 'remedy_art_regeneration_completed', {
+        userId: userRef.current?.id,
+        analysisId: currentAnalysisId,
+        metadata: { interiorStyle: requestedInteriorStyle || null },
+      });
     }
-    catch (error) { console.error(error); alert("이미지 재생성에 실패했습니다."); }
+    catch (error) {
+      console.error(error);
+      trackEvent(requestedInteriorStyle ? 'interior_art_generation_failed' : 'remedy_art_regeneration_failed', {
+        userId: userRef.current?.id,
+        analysisId: currentAnalysisId,
+        metadata: {
+          interiorStyle: requestedInteriorStyle || null,
+          message: error instanceof Error ? error.message : String(error),
+        },
+      });
+      alert("이미지 재생성에 실패했습니다.");
+    }
     finally { setIsRegeneratingArt(false); }
   };
 
@@ -436,6 +508,8 @@ export default function App() {
         metadata,
         result,
         remedyArt,
+        interiorRemedyArt,
+        interiorStyleId,
         zodiacImage,
         toBeImage,
       });
@@ -575,9 +649,9 @@ export default function App() {
               addressSuggestions={addressSuggestions} isSearchingAddress={isSearchingAddress}
               showSuggestions={showSuggestions} setShowSuggestions={setShowSuggestions}
               onImageUpload={handleImageUpload}
-              onClearImage={() => { setImage(null); setResult(null); setToBeImage(null); setRemedyArt(null); setZodiacImage(null); }}
+              onClearImage={() => { setImage(null); setResult(null); setToBeImage(null); setRemedyArt(null); setInteriorRemedyArt(null); setInteriorStyleId(null); setZodiacImage(null); }}
               onAnalyze={handleAnalyze}
-              onLoadHistory={(idx) => { const item = history[idx]; setResult(item.result); setImage(item.image); setRemedyArt(item.remedyArt); setZodiacImage(item.zodiacImage || null); setToBeImage(null); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+              onLoadHistory={(idx) => { const item = history[idx]; setResult(item.result); setImage(item.image); setRemedyArt(item.remedyArt); setInteriorRemedyArt(item.interiorRemedyArt || null); setInteriorStyleId(item.interiorStyleId || null); setZodiacImage(item.zodiacImage || null); setToBeImage(null); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
               onClearHistory={() => { localStorage.removeItem('pungsoo_history'); setHistory([]); }}
             />
 
@@ -585,11 +659,16 @@ export default function App() {
             <ResultView
               result={result} loading={loading} generatingVisuals={generatingVisuals} image={image} toBeImage={toBeImage}
               remedyArt={remedyArt} zodiacImage={zodiacImage}
+              interiorRemedyArt={interiorRemedyArt} interiorStyleId={interiorStyleId}
               metadata={metadata} setMetadata={setMetadata}
               isRegeneratingArt={isRegeneratingArt} onRegenerateArt={handleRegenerateArt}
               isGeneratingZodiacImage={isGeneratingZodiacImage} onGenerateZodiacImage={handleGenerateZodiacImage}
               onDownloadImage={downloadImage}
-              onOrderFrame={() => { setOrderType('frame'); setIsInquiryModalOpen(true); }}
+              onOrderFrame={(selection) => {
+                setFrameArtworkSelection(selection);
+                setOrderType('frame');
+                setIsInquiryModalOpen(true);
+              }}
               onOrderObject={() => { setOrderType('object'); setIsInquiryModalOpen(true); }}
               currentAnalysisId={currentAnalysisId}
               premiumPreviewUnlocked={isTestMode && isPremiumPreviewUnlocked}
@@ -608,6 +687,16 @@ export default function App() {
               <p className="text-slate-300 text-sm mb-6 leading-relaxed">
                 {selectedPhysicalProduct.shortDescriptionKo} 권장 배치: {selectedPhysicalProduct.placementKo}.
               </p>
+              {orderType === 'frame' && (
+                <div className="mb-5 rounded-xl border border-primary/25 bg-primary/10 px-4 py-3">
+                  <p className="text-[10px] font-black uppercase tracking-wider text-primary">선택 작품</p>
+                  <p className="mt-1 text-sm font-black text-white">
+                    {frameArtworkSelection.edition === 'interior' && frameArtworkSelection.styleId
+                      ? `인테리어 에디션 · ${INTERIOR_ART_STYLE_PACKS[frameArtworkSelection.styleId].labelKo}`
+                      : 'PUNGSOO 시그니처'}
+                  </p>
+                </div>
+              )}
               <form onSubmit={handleOrderSubmit} className="space-y-4 mb-6">
                 {!isLoggedIn && (<>
                   <div><label className="block text-xs font-semibold text-slate-300 mb-1">이름</label>
@@ -690,7 +779,16 @@ export default function App() {
                       localStorage.setItem('temp_order_userId', user?.id || '');
                       if (currentAnalysisId) { localStorage.setItem('temp_order_analysisId', currentAnalysisId); }
                       if (orderType === 'object') { localStorage.setItem('temp_order_objectSize', JSON.stringify(orderFormData.objectSize)); }
-                      if (result) { localStorage.setItem('temp_order_analysisData', JSON.stringify({ remedyArtKeyword: result.remedy_art?.solution_keyword, deficiency: result.remedy_art?.deficiency, zodiacAnimal: result.zodiac_remedy_object?.animal })); }
+                      if (result) {
+                        localStorage.setItem('temp_order_analysisData', JSON.stringify({
+                          remedyArtKeyword: result.remedy_art?.solution_keyword,
+                          deficiency: result.remedy_art?.deficiency,
+                          zodiacAnimal: result.zodiac_remedy_object?.animal,
+                          artEdition: orderType === 'frame' ? frameArtworkSelection.edition : null,
+                          interiorStyleId: orderType === 'frame' ? frameArtworkSelection.styleId : null,
+                          artworkUrl: orderType === 'frame' ? frameArtworkSelection.artworkUrl : null,
+                        }));
+                      }
                     }}
                     onFail={handlePaymentFail}
                     disabled={!isLoggedIn ? (!orderFormData.name || !orderFormData.contact) : false} />

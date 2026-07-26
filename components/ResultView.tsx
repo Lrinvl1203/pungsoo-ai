@@ -9,6 +9,7 @@ import LoginPromptModal from './LoginPromptModal';
 import { supabase } from '../services/supabaseClient';
 import { trackEvent } from '../services/analyticsService';
 import { DIGITAL_PRODUCT_TOTAL_KRW, formatKrw } from '../services/pricing';
+import { InteriorArtStyleId } from '../utils/remedyArt';
 
 interface ResultViewProps {
     result: AnalysisResult | null;
@@ -17,15 +18,21 @@ interface ResultViewProps {
     image: string | null;
     toBeImage: string | null;
     remedyArt: string | null;
+    interiorRemedyArt: string | null;
+    interiorStyleId: InteriorArtStyleId | null;
     zodiacImage: string | null;
     metadata: UserMetadata;
     setMetadata: React.Dispatch<React.SetStateAction<UserMetadata>>;
     isRegeneratingArt: boolean;
-    onRegenerateArt: () => void;
+    onRegenerateArt: (interiorStyle?: InteriorArtStyleId | null) => void;
     isGeneratingZodiacImage: boolean;
     onGenerateZodiacImage: () => void;
     onDownloadImage: (dataUrl: string, filename: string) => void;
-    onOrderFrame: () => void;
+    onOrderFrame: (selection: {
+        edition: 'signature' | 'interior';
+        styleId: InteriorArtStyleId | null;
+        artworkUrl: string | null;
+    }) => void;
     onOrderObject: () => void;
     currentAnalysisId?: string | null;
     premiumPreviewUnlocked?: boolean;
@@ -137,6 +144,8 @@ export default function ResultView({
     image,
     toBeImage,
     remedyArt,
+    interiorRemedyArt,
+    interiorStyleId,
     zodiacImage,
     metadata,
     setMetadata,
@@ -831,6 +840,8 @@ export default function ResultView({
                     <RemedyCard
                         result={result}
                         remedyArt={remedyArt}
+                        interiorRemedyArt={interiorRemedyArt}
+                        interiorStyleId={interiorStyleId}
                         metadata={metadata}
                         setMetadata={setMetadata}
                         isRegeneratingArt={isRegeneratingArt}

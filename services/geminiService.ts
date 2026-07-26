@@ -1,5 +1,6 @@
 
 import { UserMetadata, AnalysisResult, SolutionItem } from "../types";
+import { InteriorArtStyleId, INTERIOR_ART_STYLE_PACKS } from "../utils/remedyArt";
 import { TEST_SAMPLE_ANALYSIS, TEST_SAMPLE_REMEDY_ART_IMAGE, TEST_SAMPLE_ZODIAC_IMAGE } from "./sampleAnalysis";
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -64,10 +65,12 @@ export const generateToBeImage = async (
 
 export const generateRemedyArtImage = async (
   result: AnalysisResult,
-  metadata: UserMetadata
+  metadata: UserMetadata,
+  interiorStyle?: InteriorArtStyleId | null
 ): Promise<string> => {
   if (isTestMode()) {
     await delay(1500);
+    if (interiorStyle) return INTERIOR_ART_STYLE_PACKS[interiorStyle].previewUrl;
     return TEST_SAMPLE_REMEDY_ART_IMAGE;
   }
 
@@ -86,6 +89,8 @@ export const generateRemedyArtImage = async (
         concern: metadata.concern,
         roomType: metadata.roomType,
         analysisType: metadata.analysisType,
+        spatialFeatures: result.spatial_features,
+        interiorStyle: interiorStyle || null,
       },
     }),
   });
