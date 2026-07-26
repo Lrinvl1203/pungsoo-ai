@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Loader2, Download, Sparkles, MapPin, ExternalLink, Box, Lock } from 'lucide-react';
-import { ZodiacRemedyObject } from '../types';
+import { UserMetadata, ZodiacRemedyObject } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import DigitalPaymentModal from './DigitalPaymentModal';
 import LoginPromptModal from './LoginPromptModal';
@@ -16,9 +16,10 @@ interface ZodiacCardProps {
     onOrderObject: () => void;
     currentAnalysisId?: string | null;
     premiumPreviewUnlocked?: boolean;
+    analysisScope: UserMetadata['analysisType'];
 }
 
-export default function ZodiacCard({ zodiacObject, zodiacImage, isGeneratingZodiacImage, onGenerateZodiacImage, onDownloadImage, onOrderObject, currentAnalysisId, premiumPreviewUnlocked = false }: ZodiacCardProps) {
+export default function ZodiacCard({ zodiacObject, zodiacImage, isGeneratingZodiacImage, onGenerateZodiacImage, onDownloadImage, onOrderObject, currentAnalysisId, premiumPreviewUnlocked = false, analysisScope }: ZodiacCardProps) {
     const [isUnlocked, setIsUnlocked] = useState(false);
     const [hasRequestedPaidImage, setHasRequestedPaidImage] = useState(false);
     const effectiveUnlocked = isUnlocked || premiumPreviewUnlocked;
@@ -191,7 +192,8 @@ export default function ZodiacCard({ zodiacObject, zodiacImage, isGeneratingZodi
                                 </a>
                                 <button onClick={onOrderObject}
                                     className="w-full py-3 bg-[#d4af37] text-white font-bold rounded-lg hover:bg-[#c29d2f] transition-all flex items-center justify-center gap-2 shadow-sm">
-                                    <Box className="w-4 h-4" /> 천지인 거사님께 오브제 제작 의뢰하기
+                                    <Box className="w-4 h-4" />
+                                    {analysisScope === 'internal' ? '데스크 가디언 오브제 제작 의뢰하기' : '게이트 가디언 오브제 제작 의뢰하기'}
                                 </button>
                             </div>
                         )}
@@ -208,6 +210,7 @@ export default function ZodiacCard({ zodiacObject, zodiacImage, isGeneratingZodi
                 orderName="12간지 비방 오브제 설계도 열람"
                 orderType="zodiac"
                 analysisId={currentAnalysisId}
+                analysisScope={analysisScope}
             />
         </section>
     );

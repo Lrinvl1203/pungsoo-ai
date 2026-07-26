@@ -1,12 +1,19 @@
 import { Resend } from 'resend';
 import { createClient } from '@supabase/supabase-js';
+import { getProductDescriptor, isAnalysisScope, isProductSku } from '../services/productCatalog.js';
 
 export default async function handler(req: any, res: any) {
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Method Not Allowed' });
     }
 
-    const { paymentKey, orderId, amount, name, contact, message, orderType, analysisData, userId, objectSize, analysisId } = req.body;
+    const { paymentKey, orderId, amount, name, contact, message, orderType, analysisData, userId, objectSize, analysisId, analysisScope, productSku } = req.body;
+    const resolvedScope = isAnalysisScope(analysisScope) ? analysisScope : null;
+    const resolvedProductSku = isProductSku(productSku)
+        ? productSku
+        : resolvedScope && ['report', 'remedy', 'zodiac', 'frame', 'object'].includes(orderType)
+            ? getProductDescriptor(resolvedScope, orderType).sku
+            : null;
 
     if (!paymentKey || !orderId || !amount) {
         return res.status(400).json({ error: 'Missing payment information' });
@@ -64,7 +71,9 @@ export default async function handler(req: any, res: any) {
                     status: 'COMPLETED',
                     buyer_name: name || '비회원',
                     contact_info: contact || null,
-                    analysis_id: analysisId || null
+                    analysis_id: analysisId || null,
+                    analysis_scope: resolvedScope,
+                    product_sku: resolvedProductSku,
                 }
             ]);
 
@@ -79,7 +88,9 @@ export default async function handler(req: any, res: any) {
 
         if (isPhysicalOrder && resendKey) {
             const resend = new Resend(resendKey);
-            const orderTypeName = orderType === 'frame' ? '디지털 액자' : '오브제';
+            const orderTypeName = resolvedScope
+                ? getProductDescriptor(resolvedScope, orderType).labelKo
+                : orderType === 'frame' ? '디지털 액자' : '오브제';
 
             let emailHtml = `
         <h2>결제완료: 새로운 제작 의뢰 (${orderTypeName})</h2>
@@ -122,12 +133,15 @@ export default async function handler(req: any, res: any) {
         // 4. Send confirmation email to CUSTOMER
         if (resendKey && contact && contact.includes('@')) {
             const resend = new Resend(resendKey);
-            const orderTypeLabel = orderType === 'frame' ? '디지털 액자 제작'
+            const scopedProductLabel = resolvedScope && ['report', 'remedy', 'zodiac', 'frame', 'object'].includes(orderType)
+                ? getProductDescriptor(resolvedScope, orderType).labelKo
+                : null;
+            const orderTypeLabel = scopedProductLabel || (orderType === 'frame' ? '디지털 액자 제작'
                 : orderType === 'object' ? '12간지 비방 오브제 제작'
                 : orderType === 'report' ? '초정밀 도사 감명서'
                 : orderType === 'remedy' ? '맞춤형 디지털 비방 아트워크'
                 : orderType === 'zodiac' ? '12간지 비방 오브제 설계'
-                : '풍수AI 서비스';
+                : '풍수AI 서비스');
 
             const customerHtml = `
         <div style="font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;max-width:520px;margin:0 auto;background:#0c0a06;color:#e2e0dc;border-radius:16px;overflow:hidden;">

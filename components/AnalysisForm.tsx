@@ -52,15 +52,20 @@ export default function AnalysisForm({
                     onClick={() => setMetadata({ ...metadata, analysisType: 'internal' })}
                     className={`flex-1 py-3 rounded-lg font-bold text-sm transition-all ${metadata.analysisType === 'internal' ? 'bg-white/5 backdrop-blur-md text-primary shadow-sm' : 'text-slate-300 hover:text-white'}`}
                 >
-                    내부 공간 (인테리어)
+                    내부 공간 분석
                 </button>
                 <button
                     onClick={() => setMetadata({ ...metadata, analysisType: 'external' })}
                     className={`flex-1 py-3 rounded-lg font-bold text-sm transition-all ${metadata.analysisType === 'external' ? 'bg-white/5 backdrop-blur-md text-primary shadow-sm' : 'text-slate-300 hover:text-white'}`}
                 >
-                    외부 공간 (지리적 입지)
+                    외부 입지 분석
                 </button>
             </div>
+            <p className="rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-[12px] leading-relaxed text-slate-300">
+                {metadata.analysisType === 'internal'
+                    ? '방 사진과 구조를 분석해 룸 가디언 액자와 데스크 오브제로 이어집니다.'
+                    : '주소 주변의 산세·물길·도로 흐름을 분석해 사이트 가디언 액자와 현관·카운터 오브제로 이어집니다.'}
+            </p>
 
             {metadata.analysisType === 'internal' ? (
                 <section className="bg-white/5 backdrop-blur-md rounded-2xl p-6 shadow-sm border border-white/10 animate-in slide-in-from-left-4 duration-300">

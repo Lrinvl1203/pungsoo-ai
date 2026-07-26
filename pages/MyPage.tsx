@@ -492,6 +492,9 @@ export default function MyPage() {
                                                     <h4 className="font-bold text-white text-lg mb-1">
                                                         {orderTypeLabel(purchase.order_type)}
                                                     </h4>
+                                                    {purchase.product_sku && (
+                                                        <p className="font-mono text-[11px] text-primary/80">{purchase.product_sku}</p>
+                                                    )}
                                                     {purchase.analysis_id && (
                                                         <p className="text-[12px] text-slate-500 flex items-center gap-1.5 mt-2">
                                                             <Clock className="w-3 h-3" /> 연관된 분석 내역 (ID: {purchase.analysis_id})

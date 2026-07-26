@@ -289,7 +289,8 @@ export default function RemedyCard({
                                 onClick={onOrderFrame}
                                 className="w-full py-3 border border-primary text-primary font-bold rounded-lg hover:bg-[#d4af37]/10 transition-colors flex items-center justify-center gap-2"
                             >
-                                <ShoppingBag className="w-4 h-4" /> 천지인 거사님께 액자 제작 의뢰하기
+                                <ShoppingBag className="w-4 h-4" />
+                                {metadata.analysisType === 'internal' ? '룸 가디언 액자 제작 의뢰하기' : '사이트 가디언 액자 제작 의뢰하기'}
                             </button>
                         </div>
                     </div>
@@ -305,6 +306,7 @@ export default function RemedyCard({
                 orderName="맞춤형 디지털 비방 아트워크 다운로드"
                 orderType="remedy"
                 analysisId={currentAnalysisId}
+                analysisScope={metadata.analysisType}
             />
         </section>
     );

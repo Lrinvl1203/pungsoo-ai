@@ -32,6 +32,8 @@ interface Purchase {
     buyer_name: string | null;
     contact_info: string | null;
     analysis_id?: string | null;
+    analysis_scope?: 'internal' | 'external' | null;
+    product_sku?: string | null;
 }
 
 interface AnalyticsEvent {
@@ -432,6 +434,7 @@ export default function AdminDashboard() {
                                             </td>
                                             <td className="px-4 py-3">
                                                 <span className="px-2 py-1 rounded-md bg-primary/10 text-primary text-[11px] font-bold">{orderTypeLabel(purchase.order_type)}</span>
+                                                {purchase.product_sku && <p className="mt-1 font-mono text-[9px] text-slate-500">{purchase.product_sku}</p>}
                                             </td>
                                             <td className="px-4 py-3">
                                                 <button onClick={() => copyText(purchase.order_id)} className="font-mono text-[10px] text-slate-400 hover:text-primary">

@@ -64,6 +64,10 @@ export default async function handler(req: any, res: any) {
             analysisId: toStringValue(metadata.analysisId) || null,
             buyerName: toStringValue(checkout.customer_name || checkout.customer_billing_name) || null,
             contactInfo: toStringValue(checkout.customer_email) || null,
+            analysisScope: metadata.analysisScope === 'internal' || metadata.analysisScope === 'external'
+                ? metadata.analysisScope
+                : null,
+            productSku: toStringValue(metadata.productSku) || null,
         });
 
         if (savedPurchase.status === 'REFUNDED') {
@@ -79,6 +83,8 @@ export default async function handler(req: any, res: any) {
             orderId,
             orderType,
             analysisId: toStringValue(metadata.analysisId) || null,
+            analysisScope: metadata.analysisScope || null,
+            productSku: metadata.productSku || null,
         });
     } catch (error: any) {
         console.error('Polar payment confirmation failed:', error);

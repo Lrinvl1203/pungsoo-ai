@@ -1,4 +1,5 @@
 import { Resend } from 'resend';
+import { getProductDescriptor, isAnalysisScope, isProductSku } from '../services/productCatalog.js';
 import { getClientIp, getSupabaseAdmin, toNumberValue, toStringValue } from '../server/polar-shared.js';
 
 const ADMIN_EMAIL = 'lrinvl1203@gmail.com';
@@ -41,7 +42,7 @@ export default async function handler(req: any, res: any) {
 
     try {
         const resendKey = process.env.RESEND_KEY || process.env.RESEND_API_KEY;
-        const { action, orderType, name, contact, message, analysisData, objectSize, refundData } = req.body;
+        const { action, orderType, name, contact, message, analysisData, objectSize, refundData, analysisScope, productSku, analysisId } = req.body;
 
         if (action === 'track-event') {
             const eventName = truncate(req.body?.eventName, 80);
@@ -130,7 +131,7 @@ export default async function handler(req: any, res: any) {
             const supabase = getSupabaseAdmin();
             const { data: originalPurchase, error: lookupError } = await supabase
                 .from('purchases')
-                .select('user_id, order_id, order_type, amount, status, analysis_id')
+                .select('user_id, order_id, order_type, amount, status, analysis_id, analysis_scope, product_sku')
                 .eq('order_id', originalOrderId)
                 .maybeSingle();
 
@@ -158,6 +159,8 @@ export default async function handler(req: any, res: any) {
                 buyer_name: name,
                 contact_info: `${contact}${message ? `\n\n환불 사유:\n${message}` : ''}`,
                 analysis_id: originalPurchase.analysis_id || refundData?.analysisId || null,
+                analysis_scope: originalPurchase.analysis_scope || null,
+                product_sku: originalPurchase.product_sku || null,
             };
 
             const { data: existingRequest } = await supabase
@@ -215,26 +218,39 @@ export default async function handler(req: any, res: any) {
 
         const resend = new Resend(resendKey);
 
-        const orderTypeName = orderType === 'frame' ? '디지털 액자' : '오브제';
+        if (!['frame', 'object'].includes(orderType)) {
+            return res.status(400).json({ error: 'Invalid physical order type.' });
+        }
+
+        const resolvedScope = isAnalysisScope(analysisScope) ? analysisScope : 'internal';
+        const resolvedProduct = getProductDescriptor(resolvedScope, orderType);
+        const resolvedProductSku = isProductSku(productSku) && productSku === resolvedProduct.sku
+            ? productSku
+            : resolvedProduct.sku;
+        const orderTypeName = resolvedProduct.labelKo;
 
         let emailHtml = `
       <h2>새로운 제작 의뢰: ${orderTypeName}</h2>
-      <p><strong>의뢰자 이름:</strong> ${name}</p>
-      <p><strong>연락처:</strong> ${contact}</p>
-      <p><strong>추가 요청사항:</strong><br/>${message ? message.replace(/\n/g, '<br/>') : '없음'}</p>
+      <p><strong>상품 SKU:</strong> ${escapeHtml(resolvedProductSku)}</p>
+      <p><strong>분석 범위:</strong> ${resolvedScope === 'internal' ? '내부 공간' : '외부 입지'}</p>
+      <p><strong>분석 ID:</strong> ${escapeHtml(analysisId || '-')}</p>
+      <p><strong>권장 배치:</strong> ${escapeHtml(resolvedProduct.placementKo)}</p>
+      <p><strong>의뢰자 이름:</strong> ${escapeHtml(name)}</p>
+      <p><strong>연락처:</strong> ${escapeHtml(contact)}</p>
+      <p><strong>추가 요청사항:</strong><br/>${message ? escapeHtml(message).replace(/\n/g, '<br/>') : '없음'}</p>
       <hr />
       <h3>분석 데이터 (처방 정보)</h3>
     `;
 
         if (analysisData) {
             if (analysisData.remedyArtKeyword) {
-                emailHtml += `<p><strong>처방 아트 키워드:</strong> ${analysisData.remedyArtKeyword}</p>`;
+                emailHtml += `<p><strong>처방 아트 키워드:</strong> ${escapeHtml(analysisData.remedyArtKeyword)}</p>`;
             }
             if (analysisData.deficiency) {
-                emailHtml += `<p><strong>보완할 오행 기운:</strong> ${analysisData.deficiency}</p>`;
+                emailHtml += `<p><strong>보완할 오행 기운:</strong> ${escapeHtml(analysisData.deficiency)}</p>`;
             }
             if (orderType === 'object' && analysisData.zodiacAnimal) {
-                emailHtml += `<p><strong>추천 12간지 동물:</strong> ${analysisData.zodiacAnimal}</p>`;
+                emailHtml += `<p><strong>추천 12간지 동물:</strong> ${escapeHtml(analysisData.zodiacAnimal)}</p>`;
             }
         } else {
             emailHtml += `<p>분석 데이터 없음</p>`;
@@ -244,9 +260,9 @@ export default async function handler(req: any, res: any) {
             emailHtml += `
       <hr />
       <h3>제작 사이즈</h3>
-      <p><strong>가로 (W):</strong> ${objectSize.width} cm</p>
-      <p><strong>세로 (D):</strong> ${objectSize.height} cm</p>
-      <p><strong>높이 (H):</strong> ${objectSize.depth} cm</p>
+      <p><strong>가로 (W):</strong> ${escapeHtml(objectSize.width)} cm</p>
+      <p><strong>세로 (D):</strong> ${escapeHtml(objectSize.height)} cm</p>
+      <p><strong>높이 (H):</strong> ${escapeHtml(objectSize.depth)} cm</p>
       <p style="color:#888;">※ 최종 사이즈는 상담 후 확정됩니다.</p>
     `;
         }
@@ -254,7 +270,7 @@ export default async function handler(req: any, res: any) {
         const data = await resend.emails.send({
             from: '의뢰알림 <onboarding@resend.dev>',
             to: 'lrinvl1203@gmail.com',
-            subject: `[풍수 AI] ${name}님의 ${orderTypeName} 제작 의뢰`,
+            subject: `[풍수 AI] ${truncate(name, 80)}님의 ${orderTypeName} 제작 의뢰`,
             html: emailHtml,
         });
 

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Sparkles, Compass, Shield, Eye, ArrowRight, CheckCircle2, Users, Target, Heart, TrendingUp, Award, BookOpen, Clock, ChevronRight } from 'lucide-react';
+import { Sparkles, Compass, Shield, Eye, ArrowRight, CheckCircle2, Users, Target, Heart, TrendingUp, Award, BookOpen, Clock, ChevronRight, Home } from 'lucide-react';
 import Onboarding from '../components/Onboarding';
 import DailyFengShui from '../components/DailyFengShui';
 import { trackEvent } from '../services/analyticsService';
@@ -489,37 +489,34 @@ export default function Landing() {
                             <Users className="w-4 h-4 text-primary" />
                             <span className="text-xs font-bold uppercase tracking-wider text-primary">개업, 이전, 집들이, 선물 패키지</span>
                         </div>
-                        <h2 className="text-4xl md:text-5xl font-black text-white mb-6">처음 진단한 공간을 오래 쓰는 방법</h2>
+                        <h2 className="text-4xl md:text-5xl font-black text-white mb-6">방과 터를 따로 읽고, 따로 소장합니다</h2>
                         <p className="text-lg text-slate-400 max-w-3xl mx-auto leading-relaxed">
-                            새 매장, 사무실 이전, 집들이 선물처럼 공간의 첫 인상이 중요한 순간에는 감명서가 의사결정 자료이자 의미 있는 선물이 됩니다. 프리미엄 감명서에서 액자와 오브제로 자연스럽게 확장됩니다.
+                            내부 공간은 사진 속 구조와 사용 목적을, 외부 입지는 주소 주변의 산세·물길·도로 흐름을 분석합니다. 두 분석은 각각 전용 비방서와 액자, 수호 오브제로 이어집니다.
                         </p>
                     </div>
 
-                    <div className="grid lg:grid-cols-3 gap-6">
+                    <div className="grid lg:grid-cols-2 gap-6">
                         {[
                             {
-                                title: '개업 전 공간 진단',
+                                eyebrow: 'INTERIOR BALANCE',
+                                title: '내부 공간 컬렉션',
                                 price: `프리미엄 감명서 ${formatKrw(DIGITAL_PRODUCT_TOTAL_KRW)}`,
-                                desc: '상가, 카페, 미용실, 사무실의 입구, 계산대, 좌석, 대표 자리의 기운을 먼저 확인합니다.',
-                                points: ['주소 기반 입지 분석', '대표 자리와 계산대 방향', '개업 전 체크리스트'],
+                                desc: '방 사진, 용도, 사용자의 오행을 함께 읽고 실제 방 안에 둘 수 있는 처방으로 연결합니다.',
+                                points: ['내부 공간 균형 비방서', '룸 가디언 액자', '책상·선반용 데스크 가디언 오브제'],
                             },
                             {
-                                title: '비방 액자 선물',
-                                price: '확장 상품 예시 49,000원부터',
-                                desc: '분석 결과에서 나온 비방 아트를 액자나 월페이퍼로 만들어 개업 선물, 집들이 선물로 연결합니다.',
-                                points: ['맞춤형 비방 아트', '공간 목적별 색감', '선물용 설명 문구'],
-                            },
-                            {
-                                title: '수호 오브제 제안',
-                                price: '확장 상품 예시 79,000원부터',
-                                desc: '12간지 수호 오브제를 공간에 맞게 설계하고, 재질과 배치 위치까지 함께 제안합니다.',
-                                points: ['동물·재질·색상 설계', '책상/카운터 배치', '브랜드 스토리화 가능'],
+                                eyebrow: 'SITE GUARDIAN',
+                                title: '외부 입지 컬렉션',
+                                price: `프리미엄 감명서 ${formatKrw(DIGITAL_PRODUCT_TOTAL_KRW)}`,
+                                desc: '집과 사업장의 주소를 중심으로 터의 흐름을 읽고 입구와 카운터를 위한 처방으로 연결합니다.',
+                                points: ['외부 입지 수호 비방서', '사이트 가디언 액자', '현관·카운터용 게이트 가디언 오브제'],
                             },
                         ].map((pkg, idx) => (
                             <div key={pkg.title} className={`rounded-3xl border p-8 ${idx === 0 ? 'border-primary/45 bg-primary/10' : 'border-white/10 bg-white/[0.03]'}`}>
                                 <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-2xl bg-black/35 text-primary">
-                                    {idx === 0 ? <Compass className="w-6 h-6" /> : idx === 1 ? <Heart className="w-6 h-6" /> : <Shield className="w-6 h-6" />}
+                                    {idx === 0 ? <Home className="w-6 h-6" /> : <Compass className="w-6 h-6" />}
                                 </div>
+                                <p className="mb-2 text-[11px] font-black tracking-[0.18em] text-primary">{pkg.eyebrow}</p>
                                 <h3 className="text-2xl font-black text-white mb-2">{pkg.title}</h3>
                                 <p className="mb-5 text-sm font-bold text-primary">{pkg.price}</p>
                                 <p className="text-sm leading-relaxed text-slate-400 mb-6">{pkg.desc}</p>

@@ -852,6 +852,7 @@ export default function ResultView({
                             onOrderObject={onOrderObject}
                             currentAnalysisId={currentAnalysisId}
                             premiumPreviewUnlocked={premiumPreviewUnlocked}
+                            analysisScope={metadata.analysisType}
                         />
                     )}
 
@@ -919,6 +920,7 @@ export default function ResultView({
                 orderName="초정밀 도사 감명서 프리미엄 열람"
                 orderType="report"
                 analysisId={currentAnalysisId}
+                analysisScope={metadata.analysisType}
             />
         </div>
     );

@@ -127,6 +127,8 @@ export const upsertPolarPurchase = async (input: {
     analysisId?: string | null;
     buyerName?: string | null;
     contactInfo?: string | null;
+    analysisScope?: 'internal' | 'external' | null;
+    productSku?: string | null;
 }) => {
     const supabase = getSupabaseAdmin();
 
@@ -169,6 +171,8 @@ export const upsertPolarPurchase = async (input: {
         buyer_name: input.buyerName || 'Polar customer',
         contact_info: input.contactInfo || null,
         analysis_id: input.analysisId || null,
+        analysis_scope: input.analysisScope || null,
+        product_sku: input.productSku || null,
     };
 
     const { error } = existingPurchase

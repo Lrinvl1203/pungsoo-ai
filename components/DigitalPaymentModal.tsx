@@ -4,6 +4,7 @@ import { CheckCircle2, ShieldCheck, X, Sparkles } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { trackEvent } from '../services/analyticsService';
 import { DIGITAL_PRODUCT_TAX_NOTE } from '../services/pricing';
+import { AnalysisScope, getProductDescriptor } from '../services/productCatalog';
 
 interface Props {
     isOpen: boolean;
@@ -12,10 +13,12 @@ interface Props {
     orderName: string;
     orderType: 'report' | 'remedy' | 'zodiac';
     analysisId?: string | null;
+    analysisScope: AnalysisScope;
 }
 
-export default function DigitalPaymentModal({ isOpen, onClose, amount, orderName, orderType, analysisId }: Props) {
+export default function DigitalPaymentModal({ isOpen, onClose, amount, orderName, orderType, analysisId, analysisScope }: Props) {
     const { user } = useAuth();
+    const product = getProductDescriptor(analysisScope, orderType);
 
     // Prevent scrolling on background when modal is open
     useEffect(() => {
@@ -26,6 +29,7 @@ export default function DigitalPaymentModal({ isOpen, onClose, amount, orderName
                 analysisId,
                 orderType,
                 amount,
+                metadata: { analysisScope, productSku: product.sku },
             });
         } else {
             document.body.style.overflow = 'auto';
@@ -33,7 +37,7 @@ export default function DigitalPaymentModal({ isOpen, onClose, amount, orderName
         return () => {
             document.body.style.overflow = 'auto';
         };
-    }, [isOpen, user?.id, analysisId, orderType, amount]);
+    }, [isOpen, user?.id, analysisId, orderType, amount, analysisScope, product.sku]);
 
     if (!isOpen) return null;
     const requiresAnalysis = ['report', 'remedy', 'zodiac'].includes(orderType);
@@ -112,9 +116,13 @@ export default function DigitalPaymentModal({ isOpen, onClose, amount, orderName
                         amount={amount}
                         orderName={orderName}
                         orderType={orderType}
+                        analysisScope={analysisScope}
+                        productSku={product.sku}
                         onSuccess={() => {
                             // temporary storage before Toss redirect to confirm-payment
                             localStorage.setItem('temp_order_type', orderType);
+                            localStorage.setItem('temp_order_analysisScope', analysisScope);
+                            localStorage.setItem('temp_order_productSku', product.sku);
                             localStorage.setItem('temp_order_userId', user?.id || '');
                             if (analysisId) {
                                 localStorage.setItem('temp_order_analysisId', analysisId);

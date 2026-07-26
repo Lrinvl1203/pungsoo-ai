@@ -51,6 +51,8 @@ export default async function handler(req: any, res: any) {
         const orderType = customData.orderType || null;
         const userId = customData.userId || null;
         const analysisId = customData.analysisId || null;
+        const analysisScope = ['internal', 'external'].includes(customData.analysisScope) ? customData.analysisScope : null;
+        const productSku = typeof customData.productSku === 'string' ? customData.productSku : null;
         const total = Number(data.details?.totals?.total || 0);
 
         if (!['report', 'remedy', 'zodiac', 'frame', 'object'].includes(orderType)) {
@@ -73,6 +75,8 @@ export default async function handler(req: any, res: any) {
                     buyer_name: data.customer_id || 'Paddle customer',
                     contact_info: data.customer_id || null,
                     analysis_id: analysisId || null,
+                    analysis_scope: analysisScope,
+                    product_sku: productSku,
                 }
             ], { onConflict: 'order_id' });
 
@@ -86,6 +90,8 @@ export default async function handler(req: any, res: any) {
             transactionId,
             orderType,
             analysisId,
+            analysisScope,
+            productSku,
         });
     } catch (error: any) {
         console.error('Paddle confirmation failed:', error);

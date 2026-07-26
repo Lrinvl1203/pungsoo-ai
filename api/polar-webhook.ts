@@ -64,6 +64,10 @@ export default async function handler(req: any, res: any) {
             analysisId: toStringValue(metadata.analysisId) || null,
             buyerName: toStringValue(order.billing_name || order.customer?.name) || null,
             contactInfo: toStringValue(order.customer?.email) || null,
+            analysisScope: metadata.analysisScope === 'internal' || metadata.analysisScope === 'external'
+                ? metadata.analysisScope
+                : null,
+            productSku: toStringValue(metadata.productSku) || null,
         });
 
         return res.status(200).json({ success: true, orderId, type: event.type });

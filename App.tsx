@@ -16,6 +16,7 @@ import { saveAnalysis, getAnalysisById, updateAnalysisVisuals } from './services
 import { TEST_SAMPLE_ANALYSIS, TEST_SAMPLE_HISTORY_ITEM, TEST_SAMPLE_REMEDY_ART_IMAGE, TEST_SAMPLE_ZODIAC_IMAGE } from './services/sampleAnalysis';
 import { supabase } from './services/supabaseClient';
 import { trackEvent } from './services/analyticsService';
+import { getProductDescriptor } from './services/productCatalog';
 
 // Ensure Kakao SDK is typed
 declare global {
@@ -257,6 +258,9 @@ export default function App() {
   const [orderFormData, setOrderFormData] = useState({ name: '', contact: '', message: '', objectSize: { width: 5, height: 5, depth: 5 } });
   const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
   const isLoggedIn = !!user;
+  const selectedPhysicalProduct = getProductDescriptor(metadata.analysisType, orderType);
+  const orderCustomerName = isLoggedIn ? (user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email || '회원') : orderFormData.name;
+  const orderCustomerContact = isLoggedIn ? (user?.email || orderFormData.contact) : orderFormData.contact;
 
   const handleOrderSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -267,8 +271,11 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           orderType,
-          name: isLoggedIn ? (user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email || '회원') : orderFormData.name,
-          contact: isLoggedIn ? (user?.email || orderFormData.contact) : orderFormData.contact,
+          analysisScope: metadata.analysisType,
+          productSku: selectedPhysicalProduct.sku,
+          analysisId: currentAnalysisId,
+          name: orderCustomerName,
+          contact: orderCustomerContact,
           message: orderFormData.message, userId: user?.id,
           objectSize: orderType === 'object' ? orderFormData.objectSize : undefined,
           analysisData: result ? { remedyArtKeyword: result.remedy_art?.solution_keyword, deficiency: result.remedy_art?.deficiency, zodiacAnimal: result.zodiac_remedy_object?.animal } : null
@@ -594,9 +601,12 @@ export default function App() {
         {isInquiryModalOpen && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
             <div className="bg-[#221e10]/95 backdrop-blur-xl border border-white/10 rounded-3xl max-w-md w-full p-8 shadow-2xl animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto custom-scrollbar">
-              <h3 className="font-bold text-2xl text-white mb-2">{orderType === 'frame' ? '액자 제작 의뢰' : '오브제 제작 의뢰'}</h3>
+              <div className="mb-3 inline-flex rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-[11px] font-black tracking-wider text-primary">
+                {metadata.analysisType === 'internal' ? 'INTERIOR PRODUCT' : 'SITE PRODUCT'} · {selectedPhysicalProduct.sku}
+              </div>
+              <h3 className="font-bold text-2xl text-white mb-2">{selectedPhysicalProduct.labelKo} 제작 의뢰</h3>
               <p className="text-slate-300 text-sm mb-6 leading-relaxed">
-                {orderType === 'frame' ? 'AI가 처방한 당신만의 디지털 비방을 최고급 린넨 캔버스 액자로 간직하세요.' : '추천받은 12간지 비방 오브제를 3D 프린팅으로 맞춤 제작해 드립니다.'}
+                {selectedPhysicalProduct.shortDescriptionKo} 권장 배치: {selectedPhysicalProduct.placementKo}.
               </p>
               <form onSubmit={handleOrderSubmit} className="space-y-4 mb-6">
                 {!isLoggedIn && (<>
@@ -669,12 +679,16 @@ export default function App() {
                   </div>
 
                   <PaymentButton amount={orderType === 'frame' ? 49000 : 79000}
-                    orderName={`[풍수AI] ${orderType === 'frame' ? '디지털 액자' : '12간지 비방 오브제'} 제작 의뢰`}
+                    orderName={`[풍수AI] ${selectedPhysicalProduct.labelKo} 제작 의뢰`}
                     orderType={orderType}
+                    analysisScope={metadata.analysisType}
+                    productSku={selectedPhysicalProduct.sku}
                     onSuccess={() => {
-                      localStorage.setItem('temp_order_name', orderFormData.name); localStorage.setItem('temp_order_contact', orderFormData.contact);
+                      localStorage.setItem('temp_order_name', orderCustomerName); localStorage.setItem('temp_order_contact', orderCustomerContact);
                       localStorage.setItem('temp_order_message', orderFormData.message); localStorage.setItem('temp_order_type', orderType);
+                      localStorage.setItem('temp_order_analysisScope', metadata.analysisType); localStorage.setItem('temp_order_productSku', selectedPhysicalProduct.sku);
                       localStorage.setItem('temp_order_userId', user?.id || '');
+                      if (currentAnalysisId) { localStorage.setItem('temp_order_analysisId', currentAnalysisId); }
                       if (orderType === 'object') { localStorage.setItem('temp_order_objectSize', JSON.stringify(orderFormData.objectSize)); }
                       if (result) { localStorage.setItem('temp_order_analysisData', JSON.stringify({ remedyArtKeyword: result.remedy_art?.solution_keyword, deficiency: result.remedy_art?.deficiency, zodiacAnimal: result.zodiac_remedy_object?.animal })); }
                     }}

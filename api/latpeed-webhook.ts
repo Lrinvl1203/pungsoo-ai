@@ -153,6 +153,22 @@ export default async function handler(req: any, res: any) {
         '분석ID',
     ]));
     const analysisId = extractUuid(rawAnalysisId) || extractUuid(payloadText);
+    const analysisScope = toStringValue(pickField(payload, [
+        'analysisScope',
+        'analysis_scope',
+        'customData.analysisScope',
+        'custom_data.analysis_scope',
+        'metadata.analysisScope',
+        'metadata.analysis_scope',
+    ]));
+    const productSku = toStringValue(pickField(payload, [
+        'productSku',
+        'product_sku',
+        'customData.productSku',
+        'custom_data.product_sku',
+        'metadata.productSku',
+        'metadata.product_sku',
+    ]));
     const amount = toAmount(pickField(payload, [
         'amount',
         'totalAmount',
@@ -221,6 +237,8 @@ export default async function handler(req: any, res: any) {
             buyer_name: buyerName || 'Latpeed customer',
             contact_info: contactInfo || null,
             analysis_id: analysisId || null,
+            analysis_scope: ['internal', 'external'].includes(analysisScope) ? analysisScope : null,
+            product_sku: /^(internal|external)_(report|remedy|zodiac|frame|object)$/.test(productSku) ? productSku : null,
         }], { onConflict: 'order_id' });
 
     if (error) {
@@ -233,5 +251,7 @@ export default async function handler(req: any, res: any) {
         orderId,
         orderType,
         analysisId: analysisId || null,
+        analysisScope: analysisScope || null,
+        productSku: productSku || null,
     });
 }

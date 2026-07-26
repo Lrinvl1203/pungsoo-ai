@@ -7,6 +7,7 @@ import {
     toNumberValue,
     toStringValue,
 } from '../server/polar-shared.js';
+import { isAnalysisScope, isProductSku } from '../services/productCatalog.js';
 
 export default async function handler(req: any, res: any) {
     if (req.method !== 'POST') {
@@ -26,6 +27,8 @@ export default async function handler(req: any, res: any) {
         analysisId,
         customerEmail,
         customerName,
+        analysisScope,
+        productSku,
     } = req.body || {};
 
     if (!orderId || !isValidOrderType(orderType)) {
@@ -57,6 +60,8 @@ export default async function handler(req: any, res: any) {
     const resolvedAnalysisId = toStringValue(analysisId);
     if (resolvedUserId) metadata.userId = resolvedUserId;
     if (resolvedAnalysisId) metadata.analysisId = resolvedAnalysisId;
+    if (isAnalysisScope(analysisScope)) metadata.analysisScope = analysisScope;
+    if (isProductSku(productSku)) metadata.productSku = productSku;
 
     const payload: Record<string, unknown> = {
         products: [productId],

@@ -2,11 +2,14 @@ import React, { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, CreditCard, ExternalLink } from 'lucide-react';
 import { trackEvent } from '../services/analyticsService';
+import { AnalysisScope, ProductSku } from '../services/productCatalog';
 
 interface PaymentButtonProps {
     amount: number;
     orderName: string;
     orderType: 'report' | 'remedy' | 'zodiac' | 'frame' | 'object';
+    analysisScope?: AnalysisScope;
+    productSku?: ProductSku;
     onSuccess: (paymentKey: string, orderId: string, amount: number) => void;
     onFail?: () => void;
     disabled?: boolean;
@@ -79,7 +82,7 @@ const loadPaddleScript = () => {
     });
 };
 
-export default function PaymentButton({ amount, orderName, orderType, onSuccess, onFail, disabled }: PaymentButtonProps) {
+export default function PaymentButton({ amount, orderName, orderType, analysisScope, productSku, onSuccess, onFail, disabled }: PaymentButtonProps) {
     const [isProcessing, setIsProcessing] = useState(false);
     const orderId = useRef('order_' + Date.now() + '_' + crypto.randomUUID().replace(/-/g, '').slice(0, 18));
     const navigate = useNavigate();
@@ -116,7 +119,7 @@ export default function PaymentButton({ amount, orderName, orderType, onSuccess,
             orderId: orderId.current,
             orderType,
             amount,
-            metadata: { provider: providerName, orderName },
+            metadata: { provider: providerName, orderName, analysisScope, productSku },
         });
 
         try {
@@ -148,6 +151,8 @@ export default function PaymentButton({ amount, orderName, orderType, onSuccess,
                     source: 'pungsoo-ai',
                     order_id: orderId.current,
                     order_type: orderType,
+                    analysis_scope: analysisScope || '',
+                    product_sku: productSku || '',
                     analysis_id: analysisId,
                     user_id: userId,
                     amount,
@@ -176,6 +181,8 @@ export default function PaymentButton({ amount, orderName, orderType, onSuccess,
                         orderName,
                         userId: localStorage.getItem('temp_order_userId') || '',
                         analysisId: localStorage.getItem('temp_order_analysisId') || '',
+                        analysisScope,
+                        productSku,
                     }),
                 });
 
@@ -241,6 +248,8 @@ export default function PaymentButton({ amount, orderName, orderType, onSuccess,
                         orderType,
                         userId: localStorage.getItem('temp_order_userId') || '',
                         analysisId: localStorage.getItem('temp_order_analysisId') || '',
+                        analysisScope: analysisScope || '',
+                        productSku: productSku || '',
                         app: 'pungsoo-ai',
                     },
                 });
