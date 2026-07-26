@@ -2,6 +2,10 @@
 
 기준일: 2026-07-27
 
+관련 확장 연구:
+
+- [PUNGSOO 확장 화풍 스터디](./expanded-art-style-study.md)
+
 ## 1. 현재 작품군
 
 현재 앱은 사용자가 화풍을 고르지 않고 비방서의 목적과 공간에 따라 다음
@@ -198,4 +202,3 @@ art 검색 증가를 소개하고, 서로 어울리는 시리즈와 실제 공�
 - [Etsy Seller Trend Report: Spring and Summer 2026](https://www.etsy.com/seller-handbook/article/1473931456647)
 - [Houzz: 34 Home Design Trends That Will Define 2025](https://www.houzz.com/magazine/34-home-design-trends-that-will-define-2025-stsetivw-vs~179446190)
 - [Houzz: 2025 Fall Design Trends Report](https://www.houzz.com/magazine/2025-u-s-houzz-fall-design-trends-report-stsetivw-vs~183119767)
-
