@@ -1,5 +1,10 @@
 # K-Pungsoo Western Product Strategy
 
+Current execution status:
+
+- [Physical product MVP status](./physical-product-mvp-status.md)
+- [Deferred direction-accuracy TODO](./direction-accuracy-todo.md)
+
 ## 1. Positioning
 
 Use **Pungsoo (풍수)** as the owned Korean category name and explain it once as
@@ -124,4 +129,3 @@ Good gifting occasions:
 - [Seoul Metropolitan Government: Haechi as Seoul’s guardian](https://english.seoul.go.kr/seoul-views/seoul-symbols/3-symbol/)
 - [Etsy: Fall/Winter 2025 trend report](https://www.etsy.com/nz/seller-handbook/article/1417223353768)
 - [Etsy: Marketplace Insights](https://www.etsy.com/seller-handbook/article/1404564905677)
-
