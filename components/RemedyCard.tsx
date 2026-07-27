@@ -271,7 +271,7 @@ export default function RemedyCard({
                         </div>
 
                         {/* Automatic style profile and regeneration controls */}
-                        {isUnlocked && (
+                        {effectiveUnlocked && (
                         <div className="p-5 bg-white/5 backdrop-blur-md rounded-xl border border-white/10 shadow-sm space-y-5">
                             <div>
                                 <h5 className="text-[14px] font-bold text-slate-300 flex items-center gap-2 mb-3">
