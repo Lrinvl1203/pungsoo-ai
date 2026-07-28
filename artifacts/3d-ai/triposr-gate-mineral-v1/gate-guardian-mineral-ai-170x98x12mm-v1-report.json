@@ -1,0 +1,16 @@
+{
+  "source": "P:\\0_지키기\\02_PROJECT\\99_Working\\41_pungsoo-ai\\artifacts\\3d-ai\\triposr-gate-mineral-v1\\0\\mesh.obj",
+  "stl": "P:\\0_지키기\\02_PROJECT\\99_Working\\41_pungsoo-ai\\artifacts\\3d-ai\\triposr-gate-mineral-v1\\gate-guardian-mineral-ai-170x98x12mm-v1.stl",
+  "dimensions_mm": [
+    97.761,
+    170.0,
+    12.0
+  ],
+  "vertices": 17802,
+  "faces": 35608,
+  "components": 1,
+  "watertight": true,
+  "winding_consistent": true,
+  "euler_number": -2,
+  "volume_cm3": 55.352
+}
