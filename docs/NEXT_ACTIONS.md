@@ -33,11 +33,17 @@ Vercel → Settings → Environment Variables. Production과 Preview 모두.
 | `ADMIN_EMAIL` | 운영자 이메일 | **아래 주의사항** |
 | `RESEND_API_KEY` | Resend API 키 | 기존 `RESEND_KEY`도 fallback 인정 |
 
-`RATE_LIMIT_SALT` 생성:
+`RATE_LIMIT_SALT` 생성 (암호학적 난수 48바이트):
 
 ```powershell
-[Convert]::ToBase64String((1..48 | ForEach-Object { Get-Random -Maximum 256 }))
+$b = New-Object byte[] 48
+[System.Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($b)
+[Convert]::ToBase64String($b)
 ```
+
+`Get-Random`은 암호용 난수가 아니므로 salt 생성에 쓰지 않는다.
+같은 값을 Vercel과 로컬 `.env.local` 양쪽에 넣어야 사용량 카운트가 일관된다.
+Vercel에서는 Sensitive를 켠다.
 
 `ADMIN_EMAIL` 주의: PostgreSQL RLS는 Vercel 환경변수를 읽을 수 없어서, 관리자
 조회 정책에 이메일이 SQL 문자열로 박혀 있다. 두 값이 다르면 관리자 화면이

@@ -33,11 +33,16 @@ Production, Preview 모두 설정한다. 설정 후 재배포해야 반영된다
 | `ADMIN_EMAIL` | 운영자 이메일. **2절의 주의사항을 꼭 읽을 것.** | 관리자 알림 메일과 관리자 조회가 동작하지 않는다. |
 | `RESEND_API_KEY` | Resend 대시보드의 API 키. 기존에 `RESEND_KEY`로 넣어둔 값이 있으면 코드가 fallback으로 계속 인정하지만, 신규 정본은 이 이름이다. | 주문·환불 알림 메일이 발송되지 않는다(결제는 성공 처리됨). |
 
-`RATE_LIMIT_SALT` 생성 예시 (PowerShell):
+`RATE_LIMIT_SALT` 생성 (PowerShell, 암호학적 난수 48바이트):
 
 ```powershell
-[Convert]::ToBase64String((1..48 | ForEach-Object { Get-Random -Maximum 256 }))
+$b = New-Object byte[] 48
+[System.Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($b)
+[Convert]::ToBase64String($b)
 ```
+
+`Get-Random`은 암호용 난수가 아니므로 salt 생성에 쓰지 않는다.
+Vercel과 로컬 `.env.local`에 같은 값을 넣고, Vercel에서는 Sensitive를 켠다.
 
 ## 2. `ADMIN_EMAIL` 주의사항
 
