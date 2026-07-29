@@ -44,7 +44,12 @@ Last updated: 2026-07-30
 
 ### 1. 운영 DB 마이그레이션
 
-Supabase SQL Editor에서 다음을 순서대로 수동 실행한다.
+절차 정본은 `SUPABASE_MIGRATION_RUNBOOK.md`다. 사전 점검 쿼리, 붙여넣기용
+통합 파일 `supabase/apply/2026-07-30-security-apply.sql`, 적용 후 검증
+쿼리와 비상 롤백이 모두 그 문서에 있다. 환경변수는 `DEPLOY_ENV_SETUP.md`를
+따른다.
+
+원본을 개별 실행할 경우 Supabase SQL Editor에서 다음 순서를 지킨다.
 
 1. `supabase/migrations/20260729_payment_unlock_security_baseline.sql`
 2. `supabase/migrations/20260730_api_abuse_protection.sql`
