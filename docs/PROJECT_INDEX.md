@@ -1,6 +1,6 @@
 # PUNGSOO AI 프로젝트 정본 인덱스
 
-Last updated: 2026-07-29
+Last updated: 2026-07-30
 
 이 문서는 Codex, Claude Code와 사람이 동일한 맥락에서 작업하기 위한 문서
 지도다. 새 세션은 대화 전체를 옮기지 말고 이 인덱스와 연결된 정본을 읽는다.
@@ -27,7 +27,8 @@ Last updated: 2026-07-29
 
 ### 분석 정확도
 
-- `direction-accuracy-todo.md`: 주소, 지도 축, 외부·내부 방위 정밀화
+- `direction-accuracy-todo.md`: 구현된 지도 추정 방위와 남은 센서·도면
+  기반 외부·내부 방위 정밀화
 - `PROJECT_STATE.md`: 현재 실제 입력 범위와 한계
 
 ### 비방화와 이미지
