@@ -1,15 +1,15 @@
 import { Resend } from 'resend';
 import { getProductDescriptor, isAnalysisScope, isProductSku } from '../services/productCatalog.js';
 import { getClientIp, getSupabaseAdmin, toNumberValue, toStringValue } from '../server/polar-shared.js';
-
-const ADMIN_EMAIL = 'lrinvl1203@gmail.com';
-
-const escapeHtml = (value: unknown) => String(value ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
+import { authenticateSupabaseRequest } from '../server/supabase-auth.js';
+import { getAdminEmail, getResendApiKey } from '../server/email-config.js';
+import {
+    consumeRateLimits,
+    getIpRateLimitSubject,
+    sendRateLimitResponse,
+    sendRateLimitUnavailableResponse,
+} from '../server/rate-limit.js';
+import { escapeHtml } from '../utils/escapeHtml.js';
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -41,13 +41,27 @@ export default async function handler(req: any, res: any) {
     }
 
     try {
-        const resendKey = process.env.RESEND_KEY || process.env.RESEND_API_KEY;
+        const resendKey = getResendApiKey();
+        const adminEmail = getAdminEmail();
         const { action, orderType, name, contact, message, analysisData, objectSize, refundData, analysisScope, productSku, analysisId } = req.body;
 
         if (action === 'track-event') {
             const eventName = truncate(req.body?.eventName, 80);
             if (!/^[a-z0-9_.:-]+$/i.test(eventName)) {
                 return res.status(400).json({ error: 'Invalid eventName.' });
+            }
+
+            try {
+                const rateLimit = await consumeRateLimits(
+                    getIpRateLimitSubject(req),
+                    [{ action: 'track-event.ip.minute', limit: 120, windowSeconds: 60 }],
+                );
+                if (!rateLimit.allowed) {
+                    return sendRateLimitResponse(res, rateLimit, '이벤트 요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.');
+                }
+            } catch (rateLimitError) {
+                console.error('[track-event] Rate limit check failed:', rateLimitError);
+                return sendRateLimitUnavailableResponse(res);
             }
 
             try {
@@ -80,6 +94,9 @@ export default async function handler(req: any, res: any) {
         }
 
         if (action === 'admin-list-purchases') {
+            if (!adminEmail) {
+                return res.status(503).json({ error: 'Admin access is not configured.' });
+            }
             const authHeader = String(req.headers?.authorization || '');
             const accessToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';
             if (!accessToken) {
@@ -88,7 +105,7 @@ export default async function handler(req: any, res: any) {
 
             const supabase = getSupabaseAdmin();
             const { data: userData, error: userError } = await supabase.auth.getUser(accessToken);
-            if (userError || userData?.user?.email !== ADMIN_EMAIL) {
+            if (userError || userData?.user?.email?.toLowerCase() !== adminEmail) {
                 return res.status(403).json({ error: 'Admin access denied.' });
             }
 
@@ -128,7 +145,12 @@ export default async function handler(req: any, res: any) {
                 return res.status(400).json({ error: 'Refund request is missing orderId.' });
             }
 
-            const supabase = getSupabaseAdmin();
+            const auth = await authenticateSupabaseRequest(req);
+            if (auth.ok === false) {
+                return res.status(auth.status).json({ error: auth.error });
+            }
+
+            const supabase = auth.supabase;
             const { data: originalPurchase, error: lookupError } = await supabase
                 .from('purchases')
                 .select('user_id, order_id, order_type, amount, status, analysis_id, analysis_scope, product_sku')
@@ -140,6 +162,9 @@ export default async function handler(req: any, res: any) {
             }
             if (!originalPurchase?.user_id) {
                 return res.status(404).json({ error: 'Original purchase was not found.' });
+            }
+            if (originalPurchase.user_id !== auth.user.id) {
+                return res.status(403).json({ error: '본인 주문만 환불 요청할 수 있습니다.' });
             }
             if (originalPurchase.status === 'REFUNDED') {
                 return res.status(409).json({ error: '이미 환불 완료된 주문입니다.' });
@@ -181,12 +206,12 @@ export default async function handler(req: any, res: any) {
                 throw new Error(`Failed to save refund request: ${saveError.message}`);
             }
 
-            if (resendKey) {
+            if (resendKey && adminEmail) {
                 try {
                     const resend = new Resend(resendKey);
                     await resend.emails.send({
                         from: '환불요청 <onboarding@resend.dev>',
-                        to: 'lrinvl1203@gmail.com',
+                        to: adminEmail,
                         subject: `[풍수 AI] 환불 요청 - ${originalOrderId}`,
                         html: `
                             <h2>환불 요청이 접수되었습니다</h2>
@@ -208,19 +233,35 @@ export default async function handler(req: any, res: any) {
                 }
             }
 
-            return res.status(200).json({ success: true, saved: true, emailed: Boolean(resendKey) });
+            return res.status(200).json({ success: true, saved: true, emailed: Boolean(resendKey && adminEmail) });
         }
-
-        if (!resendKey) {
-            console.error("API Key not found");
-            return res.status(500).json({ error: 'Email service configuration error' });
-        }
-
-        const resend = new Resend(resendKey);
 
         if (!['frame', 'object'].includes(orderType)) {
             return res.status(400).json({ error: 'Invalid physical order type.' });
         }
+
+        try {
+            const inquiryLimit = await consumeRateLimits(
+                getIpRateLimitSubject(req),
+                [
+                    { action: 'order-inquiry.ip.hour', limit: 5, windowSeconds: 60 * 60 },
+                    { action: 'order-inquiry.ip.day', limit: 20, windowSeconds: 24 * 60 * 60 },
+                ],
+            );
+            if (!inquiryLimit.allowed) {
+                return sendRateLimitResponse(res, inquiryLimit, '제작 문의 요청 한도를 초과했습니다. 잠시 후 다시 시도해 주세요.');
+            }
+        } catch (rateLimitError) {
+            console.error('[send-order] Rate limit check failed:', rateLimitError);
+            return sendRateLimitUnavailableResponse(res);
+        }
+
+        if (!resendKey || !adminEmail) {
+            console.error('RESEND_API_KEY or ADMIN_EMAIL is not configured.');
+            return res.status(503).json({ error: 'Email service is temporarily unavailable.' });
+        }
+
+        const resend = new Resend(resendKey);
 
         const resolvedScope = isAnalysisScope(analysisScope) ? analysisScope : 'internal';
         const resolvedProduct = getProductDescriptor(resolvedScope, orderType);
@@ -269,7 +310,7 @@ export default async function handler(req: any, res: any) {
 
         const data = await resend.emails.send({
             from: '의뢰알림 <onboarding@resend.dev>',
-            to: 'lrinvl1203@gmail.com',
+            to: adminEmail,
             subject: `[풍수 AI] ${truncate(name, 80)}님의 ${orderTypeName} 제작 의뢰`,
             html: emailHtml,
         });
