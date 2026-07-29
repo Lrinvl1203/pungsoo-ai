@@ -20,18 +20,29 @@ Status: `ACTIVE`
 
 ---
 
-## 1. 환경변수 입력 — 지금 할 일
+## 1. 환경변수 — 2026-07-30 완료
 
-Vercel → Settings → Environment Variables. Production과 Preview 모두.
-상세 설명은 `DEPLOY_ENV_SETUP.md`.
+Vercel Production에 아래 5개를 추가했고 `vercel env ls`로 확인했다.
+로컬 `.env.local`에도 같은 값이 들어 있다. 상세는 `DEPLOY_ENV_SETUP.md`.
 
-| 이름 | 값 | 비고 |
+| 이름 | 값 | Sensitive |
 |---|---|---|
-| `RATE_LIMIT_SALT` | 긴 임의 문자열 | 한 번 정하면 바꾸지 않는다 |
-| `ANALYZE_DAILY_CAP` | `100` | rolling 24시간 |
-| `VISUALS_DAILY_CAP` | `50` | fal.ai 비용 직결. 보수적으로 시작 |
-| `ADMIN_EMAIL` | 운영자 이메일 | **아래 주의사항** |
-| `RESEND_API_KEY` | Resend API 키 | 기존 `RESEND_KEY`도 fallback 인정 |
+| `RATE_LIMIT_SALT` | 암호학적 난수 48바이트 base64 | ON |
+| `ANALYZE_DAILY_CAP` | `100` (rolling 24시간) | OFF |
+| `VISUALS_DAILY_CAP` | `50` (fal.ai 비용 직결) | OFF |
+| `ADMIN_EMAIL` | `lrinvl1203@gmail.com` | OFF |
+| `RESEND_API_KEY` | 기존 `RESEND_KEY`와 동일 값 | ON |
+
+`SUPABASE_SERVICE_ROLE_KEY`는 이미 Production에 있었다(55일 전 설정).
+
+`ADMIN_EMAIL`이 마이그레이션 RLS 정책의 이메일 리터럴과 일치하므로 DB 변경은
+필요 없었다. 운영자 계정을 바꿀 때는 두 곳을 함께 바꾼다.
+
+확인된 문제: Resend 키가 프로덕션에 아예 없었다. 코드가 키 없으면 조용히
+건너뛰고 결제를 성공 처리하므로, 그동안 주문·환불 알림 메일이 발송되지
+않았을 가능성이 높다. 과거 주문 문의 누락 여부를 확인할 필요가 있다.
+
+Preview 환경에는 비밀키를 넣지 않았다. 의도된 상태이며 이유는 D-027에 있다.
 
 `RATE_LIMIT_SALT` 생성 (암호학적 난수 48바이트):
 
