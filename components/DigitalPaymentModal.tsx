@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { trackEvent } from '../services/analyticsService';
 import { DIGITAL_PRODUCT_TAX_NOTE } from '../services/pricing';
 import { AnalysisScope, getProductDescriptor } from '../services/productCatalog';
+import { useModalFocusTrap } from '../hooks/useModalFocusTrap';
 
 interface Props {
     isOpen: boolean;
@@ -19,11 +20,10 @@ interface Props {
 export default function DigitalPaymentModal({ isOpen, onClose, amount, orderName, orderType, analysisId, analysisScope }: Props) {
     const { user } = useAuth();
     const product = getProductDescriptor(analysisScope, orderType);
+    const modalRef = useModalFocusTrap(isOpen, onClose);
 
-    // Prevent scrolling on background when modal is open
     useEffect(() => {
         if (isOpen) {
-            document.body.style.overflow = 'hidden';
             trackEvent('payment_modal_viewed', {
                 userId: user?.id,
                 analysisId,
@@ -31,12 +31,7 @@ export default function DigitalPaymentModal({ isOpen, onClose, amount, orderName
                 amount,
                 metadata: { analysisScope, productSku: product.sku },
             });
-        } else {
-            document.body.style.overflow = 'auto';
         }
-        return () => {
-            document.body.style.overflow = 'auto';
-        };
     }, [isOpen, user?.id, analysisId, orderType, amount, analysisScope, product.sku]);
 
     if (!isOpen) return null;
@@ -45,8 +40,8 @@ export default function DigitalPaymentModal({ isOpen, onClose, amount, orderName
     const modalCopy = {
         report: {
             label: '프리미엄 공간비방서',
-            description: '상세 감명서, 오행 균형표, 전체 비보 처방, 비방 아트와 수호 오브제 해설을 한 번에 열람합니다.',
-            items: ['상세 감명서 전체 본문', '전체 비보 처방과 배치 위치', '비방 아트·수호 오브제 해설'],
+            description: '상세 감명서, 오행 균형표와 전체 비보 처방을 열람합니다. 비방화와 수호 오브제는 각각 별도 구매 상품입니다.',
+            items: ['상세 감명서 전체 본문', '오행 균형표와 원인 해석', '전체 비보 처방과 배치 위치'],
         },
         remedy: {
             label: '디지털 비방 아트 원본',
@@ -62,14 +57,21 @@ export default function DigitalPaymentModal({ isOpen, onClose, amount, orderName
 
     return (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-[100] animate-in fade-in duration-200">
-            <div className="bg-[#1a1508] border border-primary/50 flex flex-col rounded-3xl w-full max-w-lg relative shadow-[0_0_50px_rgba(212,175,55,0.15)] overflow-hidden transform animate-in slide-in-from-bottom-8 duration-300">
+            <div
+                ref={modalRef}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="payment-modal-title"
+                tabIndex={-1}
+                className="bg-[#1a1508] border border-primary/50 flex flex-col rounded-3xl w-full max-w-lg relative shadow-[0_0_50px_rgba(212,175,55,0.15)] overflow-hidden transform animate-in slide-in-from-bottom-8 duration-300 outline-none"
+            >
                 {/* Header */}
                 <div className="px-6 py-5 border-b border-white/10 flex items-center justify-between pb-4 bg-gradient-to-r from-primary/10 to-transparent">
                     <div className="flex items-center gap-2">
                         <Sparkles className="w-5 h-5 text-primary" />
-                        <h2 className="text-xl font-bold text-white tracking-tight">{orderName}</h2>
+                        <h2 id="payment-modal-title" className="text-xl font-bold text-white tracking-tight">{orderName}</h2>
                     </div>
-                    <button onClick={onClose} className="p-2 text-slate-400 hover:text-white rounded-full hover:bg-white/5 transition-colors">
+                    <button onClick={onClose} aria-label="결제 창 닫기" className="p-2 text-slate-400 hover:text-white rounded-full hover:bg-white/5 transition-colors">
                         <X className="w-6 h-6" />
                     </button>
                 </div>

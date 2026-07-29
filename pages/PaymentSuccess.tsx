@@ -38,6 +38,15 @@ export default function PaymentSuccess() {
         localStorage.removeItem('temp_latpeed_claim_url');
     };
 
+    const getAuthorizationHeader = async () => {
+        const { data, error } = await supabase.auth.getSession();
+        const accessToken = data.session?.access_token;
+        if (error || !accessToken) {
+            throw new Error('로그인 세션이 없거나 만료되었습니다. 다시 로그인해 주세요.');
+        }
+        return `Bearer ${accessToken}`;
+    };
+
     useEffect(() => {
         if (provider === 'latpeed') {
             const confirmLatpeedPayment = async () => {
@@ -120,6 +129,7 @@ export default function PaymentSuccess() {
         if (provider === 'polar' && polarCheckoutId) {
             const confirmPolarPayment = async () => {
                 try {
+                    const authorization = await getAuthorizationHeader();
                     const orderType = localStorage.getItem('temp_order_type') || 'report';
                     setAnalyticsOrderType(orderType);
                     const analysisId = localStorage.getItem('temp_order_analysisId') || null;
@@ -133,6 +143,7 @@ export default function PaymentSuccess() {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
+                            Authorization: authorization,
                         },
                         body: JSON.stringify({
                             checkoutId: polarCheckoutId,
@@ -182,6 +193,7 @@ export default function PaymentSuccess() {
         if (provider === 'paddle' && paddleTransactionId) {
             const confirmPaddlePayment = async () => {
                 try {
+                    const authorization = await getAuthorizationHeader();
                     const orderType = localStorage.getItem('temp_order_type') || 'report';
                     setAnalyticsOrderType(orderType);
                     const analysisId = localStorage.getItem('temp_order_analysisId') || null;
@@ -195,6 +207,7 @@ export default function PaymentSuccess() {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
+                            Authorization: authorization,
                         },
                         body: JSON.stringify({
                             transactionId: paddleTransactionId,
@@ -245,6 +258,12 @@ export default function PaymentSuccess() {
         }
 
         // Mock 결제 모드: 실제 API 호출 없이 성공 처리 + DB 저장
+        if (paymentKey.startsWith('mock_') && !import.meta.env.DEV) {
+            setStatus('fail');
+            setErrorMessage('Mock 결제는 개발 환경에서만 사용할 수 있습니다.');
+            return;
+        }
+
         if (paymentKey.startsWith('mock_')) {
             (async () => {
                 const orderType = localStorage.getItem('temp_order_type') || 'report';
@@ -289,6 +308,7 @@ export default function PaymentSuccess() {
 
         const confirmPayment = async () => {
             try {
+                const authorization = await getAuthorizationHeader();
                 const orderType = localStorage.getItem('temp_order_type') || 'frame';
                 setAnalyticsOrderType(orderType);
                 const analysisId = localStorage.getItem('temp_order_analysisId') || null;
@@ -302,6 +322,7 @@ export default function PaymentSuccess() {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
+                        Authorization: authorization,
                     },
                     body: JSON.stringify({
                         paymentKey,
@@ -314,7 +335,6 @@ export default function PaymentSuccess() {
                         contact: localStorage.getItem('temp_order_contact') || '',
                         message: localStorage.getItem('temp_order_message') || '',
                         orderType,
-                        userId: localStorage.getItem('temp_order_userId') || '',
                         analysisId,
                         analysisScope: localStorage.getItem('temp_order_analysisScope') || null,
                         productSku: localStorage.getItem('temp_order_productSku') || null,

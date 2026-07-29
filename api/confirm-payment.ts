@@ -1,13 +1,16 @@
 import { Resend } from 'resend';
-import { createClient } from '@supabase/supabase-js';
 import { getProductDescriptor, isAnalysisScope, isProductSku } from '../services/productCatalog.js';
+import { getExpectedPriceKrw, matchesExpectedPriceKrw } from '../server/pricing.js';
+import { authenticateSupabaseRequest } from '../server/supabase-auth.js';
+import { getAdminEmail, getResendApiKey } from '../server/email-config.js';
+import { escapeHtml } from '../utils/escapeHtml.js';
 
 export default async function handler(req: any, res: any) {
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Method Not Allowed' });
     }
 
-    const { paymentKey, orderId, amount, name, contact, message, orderType, analysisData, userId, objectSize, analysisId, analysisScope, productSku } = req.body;
+    const { paymentKey, orderId, amount, name, contact, message, orderType, analysisData, objectSize, analysisId, analysisScope, productSku } = req.body;
     const resolvedScope = isAnalysisScope(analysisScope) ? analysisScope : null;
     const resolvedProductSku = isProductSku(productSku)
         ? productSku
@@ -15,20 +18,33 @@ export default async function handler(req: any, res: any) {
             ? getProductDescriptor(resolvedScope, orderType).sku
             : null;
 
-    if (!paymentKey || !orderId || !amount) {
+    if (!paymentKey || !orderId || amount === undefined || amount === null) {
         return res.status(400).json({ error: 'Missing payment information' });
     }
 
+    const expectedPrice = getExpectedPriceKrw(orderType);
+    if (expectedPrice === null) {
+        return res.status(400).json({ error: 'Invalid orderType.' });
+    }
+    if (!matchesExpectedPriceKrw(orderType, amount)) {
+        return res.status(400).json({ error: '결제 금액이 서버 정가와 일치하지 않습니다.', expectedAmount: expectedPrice });
+    }
+    const numericAmount = Number(amount);
+
     const secretKey = process.env.TOSS_SECRET_KEY;
-    const supabaseUrl = process.env.VITE_SUPABASE_URL || '';
-    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
     if (!secretKey) {
         return res.status(500).json({ error: 'TOSS_SECRET_KEY 환경변수가 설정되지 않았습니다.' });
     }
 
-    if (!supabaseUrl || !supabaseKey) {
-        return res.status(500).json({ error: 'Supabase 서버 저장 환경변수가 설정되지 않았습니다. SUPABASE_SERVICE_ROLE_KEY를 추가해주세요.' });
+    let auth;
+    try {
+        auth = await authenticateSupabaseRequest(req);
+    } catch (error: any) {
+        return res.status(500).json({ error: error.message || 'Supabase 서버 인증 환경변수가 설정되지 않았습니다.' });
+    }
+    if (auth.ok === false) {
+        return res.status(auth.status).json({ error: auth.error });
     }
 
     const encodedKey = Buffer.from(`${secretKey}:`).toString('base64');
@@ -44,7 +60,7 @@ export default async function handler(req: any, res: any) {
             body: JSON.stringify({
                 paymentKey,
                 orderId,
-                amount,
+                amount: numericAmount,
             }),
         });
 
@@ -55,18 +71,22 @@ export default async function handler(req: any, res: any) {
         }
 
         const paymentData = await tossResponse.json();
+        const confirmedAmount = Number(paymentData.totalAmount ?? paymentData.balanceAmount);
+        if (confirmedAmount !== expectedPrice) {
+            return res.status(400).json({ error: '승인된 결제 금액이 서버 정가와 일치하지 않습니다.', expectedAmount: expectedPrice });
+        }
 
         // 2. Save order to Supabase DB with service role, so RLS cannot block server-side confirmations.
-        const supabase = createClient(supabaseUrl, supabaseKey);
+        const supabase = auth.supabase;
 
         const { error } = await supabase
             .from('purchases')
             .insert([
                 {
-                    user_id: userId || null,
+                    user_id: auth.user.id,
                     order_id: orderId,
                     payment_key: paymentKey,
-                    amount: Number(amount),
+                    amount: numericAmount,
                     order_type: orderType,
                     status: 'COMPLETED',
                     buyer_name: name || '비회원',
@@ -84,29 +104,30 @@ export default async function handler(req: any, res: any) {
 
         // 3. Send Order Email (Only for physical items)
         const isPhysicalOrder = orderType === 'frame' || orderType === 'object';
-        const resendKey = process.env.RESEND_KEY;
+        const resendKey = getResendApiKey();
+        const adminEmail = getAdminEmail();
 
-        if (isPhysicalOrder && resendKey) {
+        if (isPhysicalOrder && resendKey && adminEmail) {
             const resend = new Resend(resendKey);
             const orderTypeName = resolvedScope
                 ? getProductDescriptor(resolvedScope, orderType).labelKo
                 : orderType === 'frame' ? '디지털 액자' : '오브제';
 
             let emailHtml = `
-        <h2>결제완료: 새로운 제작 의뢰 (${orderTypeName})</h2>
-        <p><strong>결제 금액:</strong> ${amount.toLocaleString()}원 (결제키: ${paymentKey})</p>
-        <p><strong>의뢰자 이름:</strong> ${name}</p>
-        <p><strong>연락처:</strong> ${contact}</p>
-        <p><strong>고객 ID (Supabase):</strong> ${userId || '비회원'}</p>
-        <p><strong>추가 요청사항:</strong><br/>${message ? message.replace(/\n/g, '<br/>') : '없음'}</p>
+        <h2>결제완료: 새로운 제작 의뢰 (${escapeHtml(orderTypeName)})</h2>
+        <p><strong>결제 금액:</strong> ${escapeHtml(numericAmount.toLocaleString())}원 (결제키: ${escapeHtml(paymentKey)})</p>
+        <p><strong>의뢰자 이름:</strong> ${escapeHtml(name)}</p>
+        <p><strong>연락처:</strong> ${escapeHtml(contact)}</p>
+        <p><strong>고객 ID (Supabase):</strong> ${escapeHtml(auth.user.id)}</p>
+        <p><strong>추가 요청사항:</strong><br/>${message ? escapeHtml(message).replace(/\n/g, '<br/>') : '없음'}</p>
         <hr />
         <h3>분석 데이터 (처방 정보)</h3>
       `;
 
             if (analysisData) {
-                if (analysisData.remedyArtKeyword) emailHtml += `<p><strong>처방 아트 키워드:</strong> ${analysisData.remedyArtKeyword}</p>`;
-                if (analysisData.deficiency) emailHtml += `<p><strong>보완할 오행 기운:</strong> ${analysisData.deficiency}</p>`;
-                if (orderType === 'object' && analysisData.zodiacAnimal) emailHtml += `<p><strong>추천 12간지 동물:</strong> ${analysisData.zodiacAnimal}</p>`;
+                if (analysisData.remedyArtKeyword) emailHtml += `<p><strong>처방 아트 키워드:</strong> ${escapeHtml(analysisData.remedyArtKeyword)}</p>`;
+                if (analysisData.deficiency) emailHtml += `<p><strong>보완할 오행 기운:</strong> ${escapeHtml(analysisData.deficiency)}</p>`;
+                if (orderType === 'object' && analysisData.zodiacAnimal) emailHtml += `<p><strong>추천 12간지 동물:</strong> ${escapeHtml(analysisData.zodiacAnimal)}</p>`;
             } else {
                 emailHtml += `<p>분석 데이터 없음</p>`;
             }
@@ -115,19 +136,21 @@ export default async function handler(req: any, res: any) {
                 emailHtml += `
         <hr />
         <h3>제작 사이즈</h3>
-        <p><strong>가로 (W):</strong> ${objectSize.width} cm</p>
-        <p><strong>세로 (D):</strong> ${objectSize.height} cm</p>
-        <p><strong>높이 (H):</strong> ${objectSize.depth} cm</p>
+        <p><strong>가로 (W):</strong> ${escapeHtml(objectSize.width)} cm</p>
+        <p><strong>세로 (D):</strong> ${escapeHtml(objectSize.height)} cm</p>
+        <p><strong>높이 (H):</strong> ${escapeHtml(objectSize.depth)} cm</p>
         <p style="color:#888;">※ 최종 사이즈는 상담 후 확정됩니다.</p>
       `;
             }
 
             await resend.emails.send({
                 from: '결제완료 <onboarding@resend.dev>',
-                to: 'lrinvl1203@gmail.com',
-                subject: `[결제완료] ${name}님의 ${orderTypeName} 제작 의뢰`,
+                to: adminEmail,
+                subject: `[결제완료] ${String(name || '고객').replace(/[\r\n]/g, ' ')}님의 ${orderTypeName} 제작 의뢰`,
                 html: emailHtml,
             });
+        } else if (isPhysicalOrder && (!resendKey || !adminEmail)) {
+            console.warn('[confirm-payment] Physical-order admin notification skipped because RESEND_API_KEY or ADMIN_EMAIL is not configured.');
         }
 
         // 4. Send confirmation email to CUSTOMER
@@ -152,9 +175,9 @@ export default async function handler(req: any, res: any) {
           <div style="padding:24px;">
             <div style="background:#1a1508;border:1px solid #333;border-radius:12px;padding:20px;margin-bottom:20px;">
               <table style="width:100%;border-collapse:collapse;">
-                <tr><td style="color:#a09882;padding:8px 0;font-size:13px;">주문 상품</td><td style="color:#fff;text-align:right;font-weight:bold;font-size:14px;">${orderTypeLabel}</td></tr>
-                <tr><td style="color:#a09882;padding:8px 0;font-size:13px;border-top:1px solid #222;">결제 금액</td><td style="color:#d4af37;text-align:right;font-weight:bold;font-size:18px;border-top:1px solid #222;">${Number(amount).toLocaleString()}원</td></tr>
-                <tr><td style="color:#a09882;padding:8px 0;font-size:13px;border-top:1px solid #222;">주문 번호</td><td style="color:#888;text-align:right;font-size:11px;font-family:monospace;border-top:1px solid #222;">${orderId}</td></tr>
+                <tr><td style="color:#a09882;padding:8px 0;font-size:13px;">주문 상품</td><td style="color:#fff;text-align:right;font-weight:bold;font-size:14px;">${escapeHtml(orderTypeLabel)}</td></tr>
+                <tr><td style="color:#a09882;padding:8px 0;font-size:13px;border-top:1px solid #222;">결제 금액</td><td style="color:#d4af37;text-align:right;font-weight:bold;font-size:18px;border-top:1px solid #222;">${escapeHtml(numericAmount.toLocaleString())}원</td></tr>
+                <tr><td style="color:#a09882;padding:8px 0;font-size:13px;border-top:1px solid #222;">주문 번호</td><td style="color:#888;text-align:right;font-size:11px;font-family:monospace;border-top:1px solid #222;">${escapeHtml(orderId)}</td></tr>
               </table>
             </div>
             ${isPhysicalOrder ? '<p style="color:#c9c5bd;font-size:13px;line-height:1.7;">의뢰하신 내용이 천지인 거사님께 전달되었습니다.<br/>확인 후 빠르게 연락드리겠습니다.</p>' : '<p style="color:#c9c5bd;font-size:13px;line-height:1.7;">구매하신 콘텐츠가 즉시 활성화됩니다.<br/>앱에 접속하여 확인해 주세요.</p>'}

@@ -5,6 +5,8 @@ import {
     toStringValue,
     upsertPolarPurchase,
 } from '../server/polar-shared.js';
+import { getExpectedPriceKrw, matchesExpectedPriceKrw } from '../server/pricing.js';
+import { authenticateSupabaseRequest } from '../server/supabase-auth.js';
 
 export default async function handler(req: any, res: any) {
     if (req.method !== 'POST') {
@@ -24,6 +26,11 @@ export default async function handler(req: any, res: any) {
     }
 
     try {
+        const auth = await authenticateSupabaseRequest(req);
+        if (auth.ok === false) {
+            return res.status(auth.status).json({ error: auth.error });
+        }
+
         const response = await fetch(`${getPolarApiBaseUrl()}/checkouts/${encodeURIComponent(checkoutId)}`, {
             headers: {
                 Authorization: `Bearer ${accessToken}`,
@@ -52,15 +59,29 @@ export default async function handler(req: any, res: any) {
             return res.status(400).json({ error: 'Polar checkout metadata has an invalid orderType.' });
         }
 
+        const expectedPrice = getExpectedPriceKrw(orderType);
         const orderId = toStringValue(metadata.orderId) || fallbackOrderId || `polar_checkout_${checkoutId}`;
-        const amount = Number(checkout.total_amount || checkout.amount || 0) || toNumberValue(metadata.amount);
+        const amount = toNumberValue(checkout.total_amount ?? checkout.amount);
+        if (expectedPrice === null
+            || !matchesExpectedPriceKrw(orderType, amount)
+            || !matchesExpectedPriceKrw(orderType, metadata.amount)) {
+            return res.status(400).json({
+                error: 'Polar 결제 금액이 서버 정가와 일치하지 않습니다.',
+                expectedAmount: expectedPrice,
+            });
+        }
+
+        const metadataUserId = toStringValue(metadata.userId || checkout.external_customer_id);
+        if (metadataUserId && metadataUserId !== auth.user.id) {
+            return res.status(403).json({ error: 'Polar 결제 사용자와 현재 로그인 사용자가 일치하지 않습니다.' });
+        }
 
         const savedPurchase = await upsertPolarPurchase({
             orderId,
             paymentKey: `polar_checkout_${checkoutId}`,
             amount,
             orderType,
-            userId: toStringValue(metadata.userId || checkout.external_customer_id),
+            userId: auth.user.id,
             analysisId: toStringValue(metadata.analysisId) || null,
             buyerName: toStringValue(checkout.customer_name || checkout.customer_billing_name) || null,
             contactInfo: toStringValue(checkout.customer_email) || null,

@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
+import { getExpectedPriceKrw, matchesExpectedPriceKrw } from '../server/pricing.js';
 
 type FlatPayload = Record<string, unknown>;
 
@@ -36,9 +37,25 @@ const toAmount = (value: unknown) => {
 };
 
 const isCompletedStatus = (value: unknown) => {
-    const status = toStringValue(value);
-    if (!status) return true;
-    return /paid|completed|complete|success|confirmed|approved|결제|완료/i.test(status);
+    const status = toStringValue(value).toLowerCase();
+    if (!status) return false;
+
+    const normalized = status.replace(/[\s_-]+/g, '.');
+    const completedTokens = new Set([
+        'paid',
+        'completed',
+        'complete',
+        'success',
+        'succeeded',
+        'confirmed',
+        'approved',
+        'order.paid',
+        'payment.paid',
+        'payment.completed',
+        'payment.success',
+    ]);
+
+    return completedTokens.has(normalized) || /^(결제)?(완료|승인)$/.test(status.replace(/\s+/g, ''));
 };
 
 const extractUuid = (value: string) => {
@@ -222,6 +239,9 @@ export default async function handler(req: any, res: any) {
         return res.status(400).json({ error: 'Invalid orderType.', orderType });
     }
 
+    const expectedPrice = getExpectedPriceKrw(orderType);
+    const amountMatches = expectedPrice !== null && matchesExpectedPriceKrw(orderType, amount);
+    const purchaseStatus = amountMatches ? 'COMPLETED' : 'PENDING';
     const buyerName = toStringValue(pickField(payload, ['buyerName', 'buyer_name', 'name', 'customerName', 'customer_name', '구매자명']));
     const contactInfo = toStringValue(pickField(payload, ['contact', 'phone', 'email', 'customerEmail', 'customer_email', '구매자연락처', '이메일'])) || extractEmail(payloadText);
 
@@ -231,9 +251,9 @@ export default async function handler(req: any, res: any) {
             user_id: userId,
             order_id: orderId,
             payment_key: paymentKey,
-            amount: amount || 9900,
+            amount,
             order_type: orderType,
-            status: 'COMPLETED',
+            status: purchaseStatus,
             buyer_name: buyerName || 'Latpeed customer',
             contact_info: contactInfo || null,
             analysis_id: analysisId || null,
@@ -247,7 +267,10 @@ export default async function handler(req: any, res: any) {
     }
 
     return res.status(200).json({
-        success: true,
+        success: amountMatches,
+        pending: !amountMatches,
+        status: purchaseStatus,
+        expectedAmount: expectedPrice,
         orderId,
         orderType,
         analysisId: analysisId || null,

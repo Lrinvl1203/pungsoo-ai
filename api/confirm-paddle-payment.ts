@@ -1,4 +1,5 @@
-import { createClient } from '@supabase/supabase-js';
+import { getExpectedPriceKrw, matchesExpectedPriceKrw } from '../server/pricing.js';
+import { authenticateSupabaseRequest } from '../server/supabase-auth.js';
 
 const PADDLE_API_BASE_URL = process.env.PADDLE_ENV === 'sandbox'
     ? 'https://sandbox-api.paddle.com'
@@ -9,25 +10,23 @@ export default async function handler(req: any, res: any) {
         return res.status(405).json({ error: 'Method Not Allowed' });
     }
 
-    const { transactionId, orderId } = req.body || {};
+    const { transactionId } = req.body || {};
 
     if (!transactionId || typeof transactionId !== 'string') {
         return res.status(400).json({ error: 'Paddle transactionId가 필요합니다.' });
     }
 
     const paddleApiKey = process.env.PADDLE_API_KEY || '';
-    const supabaseUrl = process.env.VITE_SUPABASE_URL || '';
-    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-
     if (!paddleApiKey) {
         return res.status(500).json({ error: 'PADDLE_API_KEY 환경변수가 설정되지 않았습니다.' });
     }
 
-    if (!supabaseUrl || !supabaseKey) {
-        return res.status(500).json({ error: 'Supabase 서버 저장 환경변수가 설정되지 않았습니다. SUPABASE_SERVICE_ROLE_KEY를 추가해주세요.' });
-    }
-
     try {
+        const auth = await authenticateSupabaseRequest(req);
+        if (auth.ok === false) {
+            return res.status(auth.status).json({ error: auth.error });
+        }
+
         const paddleResponse = await fetch(`${PADDLE_API_BASE_URL}/transactions/${encodeURIComponent(transactionId)}`, {
             headers: {
                 Authorization: `Bearer ${paddleApiKey}`,
@@ -59,14 +58,25 @@ export default async function handler(req: any, res: any) {
             return res.status(400).json({ error: 'Paddle 거래의 customData.orderType이 올바르지 않습니다.' });
         }
 
-        const supabase = createClient(supabaseUrl, supabaseKey);
-        const purchaseOrderId = orderId || customData.orderId || transactionId;
+        const expectedPrice = getExpectedPriceKrw(orderType);
+        if (expectedPrice === null || !matchesExpectedPriceKrw(orderType, total)) {
+            return res.status(400).json({
+                error: 'Paddle 결제 금액이 서버 정가와 일치하지 않습니다.',
+                expectedAmount: expectedPrice,
+            });
+        }
+        if (userId && userId !== auth.user.id) {
+            return res.status(403).json({ error: 'Paddle 결제 사용자와 현재 로그인 사용자가 일치하지 않습니다.' });
+        }
+
+        const supabase = auth.supabase;
+        const purchaseOrderId = customData.orderId || transactionId;
 
         const { error } = await supabase
             .from('purchases')
             .upsert([
                 {
-                    user_id: userId || null,
+                    user_id: auth.user.id,
                     order_id: purchaseOrderId,
                     payment_key: transactionId,
                     amount: total,
