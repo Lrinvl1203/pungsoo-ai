@@ -68,6 +68,12 @@ export interface UserMetadata {
   analysisType: 'internal' | 'external';
   roomType?: string; // Only for internal
   address?: string; // Only for external
+  latitude?: number; // Confirmed map pin, true-north static map
+  longitude?: number;
+  locationConfirmed?: boolean;
+  entranceBearingDegrees?: number | null; // Clockwise from true north
+  directionMethod?: 'map_arrow' | 'none';
+  directionConfidence?: 'low' | 'none';
   birthDate: string;
   gender: 'male' | 'female';
   concern: string;
