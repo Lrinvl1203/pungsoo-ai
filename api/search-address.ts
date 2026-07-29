@@ -1,4 +1,10 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import {
+    consumeRateLimits,
+    getIpRateLimitSubject,
+    sendRateLimitResponse,
+    sendRateLimitUnavailableResponse,
+} from '../server/rate-limit.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method !== 'GET') {
@@ -10,6 +16,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!q) {
         return res.status(400).json({ error: 'Query parameter "q" is required' });
     }
+    if (q.length > 200) {
+        return res.status(400).json({ error: '검색어가 너무 깁니다.' });
+    }
 
     const kakaoKey = process.env.VITE_KAKAO_REST_API_KEY;
     if (!kakaoKey) {
@@ -17,6 +26,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     try {
+        const rateLimit = await consumeRateLimits(
+            getIpRateLimitSubject(req),
+            [{ action: 'search-address.ip.minute', limit: 30, windowSeconds: 60 }],
+        );
+        if (!rateLimit.allowed) {
+            return sendRateLimitResponse(res, rateLimit, '주소 검색 요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.');
+        }
+
         // 1. 주소 검색 (도로명/지번)
         const addressUrl = `https://dapi.kakao.com/v2/local/search/address.json?query=${encodeURIComponent(q)}&size=5`;
         const addressRes = await fetch(addressUrl, {
@@ -73,8 +90,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     } catch (error: any) {
         console.error("Kakao API Proxy Error:", error);
-        return res.status(500).json({
-            error: error.message || 'Failed to search address',
-        });
+        if (String(error?.message || '').startsWith('API usage counter')) {
+            return sendRateLimitUnavailableResponse(res);
+        }
+        return res.status(500).json({ error: '주소 검색 중 오류가 발생했습니다.', code: 'ADDRESS_SEARCH_FAILED' });
     }
 }
