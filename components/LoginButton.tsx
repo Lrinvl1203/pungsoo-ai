@@ -1,13 +1,24 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { LogOut, User, Key, ChevronDown, UserCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useToast } from './ToastProvider';
 
 export default function LoginButton() {
     const { user, signInWithKakao, signInWithGoogle, signOut, loading } = useAuth();
     const navigate = useNavigate();
+    const { notify } = useToast();
     const [isOpen, setIsOpen] = useState(false);
     const [isSigningIn, setIsSigningIn] = useState(false);
+
+    useEffect(() => {
+        if (!isOpen) return;
+        const closeOnEscape = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') setIsOpen(false);
+        };
+        document.addEventListener('keydown', closeOnEscape);
+        return () => document.removeEventListener('keydown', closeOnEscape);
+    }, [isOpen]);
 
     if (loading) {
         return (
@@ -30,7 +41,7 @@ export default function LoginButton() {
             }
         } catch (e) {
             console.error(e);
-            alert('로그인 처리 중 오류가 발생했습니다.');
+            notify('로그인을 시작하지 못했습니다. 네트워크 상태를 확인하고 다시 시도해 주세요.', 'error');
             setIsSigningIn(false); // only reset on error, on success it will redirect
         }
     };
@@ -41,7 +52,7 @@ export default function LoginButton() {
             setIsOpen(false);
         } catch (e) {
             console.error(e);
-            alert('로그아웃 처리 중 오류가 발생했습니다.');
+            notify('로그아웃하지 못했습니다. 잠시 후 다시 시도해 주세요.', 'error');
         }
     };
 
@@ -53,6 +64,8 @@ export default function LoginButton() {
             {user ? (
                 <button
                     onClick={() => setIsOpen(!isOpen)}
+                    aria-expanded={isOpen}
+                    aria-haspopup="menu"
                     className="flex items-center gap-2 px-3 py-1.5 bg-white border border-[#e5e1da] shadow-sm rounded-full hover:bg-[#faf9f6] transition-all"
                 >
                     {avatarUrl ? (
@@ -68,6 +81,8 @@ export default function LoginButton() {
             ) : (
                 <button
                     onClick={() => setIsOpen(!isOpen)}
+                    aria-expanded={isOpen}
+                    aria-haspopup="menu"
                     disabled={isSigningIn}
                     className="flex items-center gap-2 px-4 py-2 bg-[#d4af37] text-white shadow-sm shadow-[#d4af37]/20 rounded-full text-sm font-bold hover:bg-[#c29d2f] transition-all"
                 >
@@ -82,7 +97,7 @@ export default function LoginButton() {
 
             {/* Dropdown Menu */}
             {isOpen && (
-                <div className="absolute right-0 mt-2 w-48 bg-white border border-[#e5e1da] rounded-xl shadow-xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                <div role="menu" className="absolute right-0 mt-2 w-48 bg-white border border-[#e5e1da] rounded-xl shadow-xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
                     {user ? (
                         <div className="p-1">
                             <div className="px-4 py-3 border-b border-[#e5e1da] mb-1 bg-[#faf9f6]">

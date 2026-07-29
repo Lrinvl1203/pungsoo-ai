@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { Loader2, CreditCard, ExternalLink } from 'lucide-react';
 import { trackEvent } from '../services/analyticsService';
 import { AnalysisScope, ProductSku } from '../services/productCatalog';
+import { useToast } from './ToastProvider';
+import { getActionableErrorMessage } from '../utils/apiError';
 
 interface PaymentButtonProps {
     amount: number;
@@ -84,6 +86,7 @@ const loadPaddleScript = () => {
 
 export default function PaymentButton({ amount, orderName, orderType, analysisScope, productSku, onSuccess, onFail, disabled }: PaymentButtonProps) {
     const [isProcessing, setIsProcessing] = useState(false);
+    const { notify } = useToast();
     const orderId = useRef('order_' + Date.now() + '_' + crypto.randomUUID().replace(/-/g, '').slice(0, 18));
     const navigate = useNavigate();
     const isTestMode = import.meta.env.DEV && typeof window !== 'undefined' && localStorage.getItem('PUNGSOO_TEST_MODE') === 'true';
@@ -297,7 +300,7 @@ export default function PaymentButton({ amount, orderName, orderType, analysisSc
                 },
             });
             onFail?.();
-            alert(error instanceof Error ? error.message : '결제 요청 중 문제가 발생했습니다.');
+            notify(getActionableErrorMessage(error, '결제 요청을 시작하지 못했습니다. 잠시 후 다시 시도해 주세요.'), 'error');
             setIsProcessing(false);
         }
     };

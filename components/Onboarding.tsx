@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
 import { Compass, Sparkles, MapPin, ChevronRight, Check } from 'lucide-react';
+import { useModalFocusTrap } from '../hooks/useModalFocusTrap';
+
+export const ONBOARDING_COMPLETED_KEY = 'PUNGSOO_ONBOARDING_COMPLETED';
 
 interface OnboardingProps {
     onComplete: () => void;
@@ -7,6 +10,11 @@ interface OnboardingProps {
 
 export default function Onboarding({ onComplete }: OnboardingProps) {
     const [currentStep, setCurrentStep] = useState(0);
+    const completeOnboarding = () => {
+        localStorage.setItem(ONBOARDING_COMPLETED_KEY, 'true');
+        onComplete();
+    };
+    const modalRef = useModalFocusTrap(true, completeOnboarding);
 
     const slides = [
         {
@@ -33,9 +41,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
         if (currentStep < slides.length - 1) {
             setCurrentStep(currentStep + 1);
         } else {
-            // Save completion status to localStorage
-            localStorage.setItem('PUNGSOO_ONBOARDING_COMPLETED', 'true');
-            onComplete();
+            completeOnboarding();
         }
     };
 
@@ -43,7 +49,14 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
         <div className="fixed inset-0 z-[100] bg-background-dark flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-gradient-to-b from-[#4a443b]/40 to-background-dark pointer-events-none"></div>
 
-            <div className="relative w-full max-w-md bg-[#221e10] rounded-3xl overflow-hidden shadow-2xl border border-primary/20 flex flex-col h-[600px] max-h-[90vh]">
+            <div
+                ref={modalRef}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="onboarding-title"
+                tabIndex={-1}
+                className="relative w-full max-w-md bg-[#221e10] rounded-3xl overflow-hidden shadow-2xl border border-primary/20 flex flex-col h-[600px] max-h-[90vh] outline-none"
+            >
 
                 {/* Progress Bar */}
                 <div className="flex gap-2 p-6 pb-0">
@@ -70,7 +83,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
                             </div>
                         )}
 
-                        <h2 className="text-2xl md:text-3xl font-bold text-white mb-4 whitespace-pre-line leading-tight">
+                        <h2 id="onboarding-title" className="text-2xl md:text-3xl font-bold text-white mb-4 whitespace-pre-line leading-tight">
                             {slides[currentStep].title}
                         </h2>
 
@@ -95,10 +108,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
 
                     {currentStep < slides.length - 1 && (
                         <button
-                            onClick={() => {
-                                localStorage.setItem('PUNGSOO_ONBOARDING_COMPLETED', 'true');
-                                onComplete();
-                            }}
+                            onClick={completeOnboarding}
                             className="w-full mt-4 py-2 text-slate-400 font-medium text-sm hover:text-white transition-colors"
                         >
                             건너뛰기

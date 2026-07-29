@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useToast } from '../components/ToastProvider';
 import { useNavigate } from 'react-router-dom';
 import {
     AlertTriangle,
@@ -122,6 +123,7 @@ const splitContactAndReason = (contactInfo?: string | null) => {
 };
 
 export default function AdminDashboard() {
+    const { notify } = useToast();
     const { user, session, loading: authLoading } = useAuth();
     const navigate = useNavigate();
     const [purchases, setPurchases] = useState<Purchase[]>([]);
@@ -224,7 +226,7 @@ export default function AdminDashboard() {
 
     const copyText = async (text: string) => {
         await navigator.clipboard.writeText(text);
-        alert('복사되었습니다.');
+        notify('주문 정보를 복사했습니다.', 'success');
     };
 
     if (authLoading || loading) {

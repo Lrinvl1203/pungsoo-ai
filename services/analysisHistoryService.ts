@@ -52,6 +52,25 @@ import { supabase } from './supabaseClient';
 import { AnalysisResult, UserMetadata } from '../types';
 import { InteriorArtStyleId } from '../utils/remedyArt';
 
+const normalizeMetadataForStorage = (metadata: UserMetadata): UserMetadata => {
+    const rawBearing = Number(metadata.entranceBearingDegrees);
+    const hasMapArrow = metadata.analysisType === 'external'
+        && metadata.directionMethod === 'map_arrow'
+        && Number.isFinite(rawBearing);
+
+    return {
+        ...metadata,
+        latitude: Number.isFinite(metadata.latitude) ? Number(metadata.latitude) : undefined,
+        longitude: Number.isFinite(metadata.longitude) ? Number(metadata.longitude) : undefined,
+        locationConfirmed: metadata.locationConfirmed === true,
+        entranceBearingDegrees: hasMapArrow
+            ? Math.round((((rawBearing % 360) + 360) % 360) * 10) / 10
+            : null,
+        directionMethod: hasMapArrow ? 'map_arrow' : 'none',
+        directionConfidence: hasMapArrow ? 'low' : 'none',
+    };
+};
+
 export interface AnalysisHistoryRow {
     id: string;
     user_id: string;
@@ -92,7 +111,7 @@ export async function saveAnalysis(params: {
             analysis_type: params.analysisType,
             image_url: params.image,
             address: params.address,
-            metadata: params.metadata,
+            metadata: normalizeMetadataForStorage(params.metadata),
             result: params.result,
             remedy_art_url: params.remedyArt,
             zodiac_image_url: params.zodiacImage,
@@ -111,13 +130,11 @@ export async function saveAnalysis(params: {
 
         if (error) {
             console.error('❌ [Supabase Save Error]', JSON.stringify(error, null, 2));
-            alert(`저장 실패 (콘솔 확인 필요): ${error.message}`);
             return null;
         }
         return data as AnalysisHistoryRow;
     } catch (err) {
         console.error('❌ [Supabase Catch Error]', err);
-        alert(`저장 에러 발생: ${err}`);
         return null;
     }
 }
@@ -170,18 +187,20 @@ export async function getAnalysisById(id: string): Promise<AnalysisHistoryRow | 
 /**
  * Delete an analysis history entry.
  */
-export async function deleteAnalysis(id: string): Promise<boolean> {
+export async function deleteAnalysis(id: string, userId: string): Promise<boolean> {
     try {
-        const { error } = await supabase
+        const { data, error } = await supabase
             .from('analysis_history')
             .delete()
-            .eq('id', id);
+            .eq('id', id)
+            .eq('user_id', userId)
+            .select('id');
 
         if (error) {
             console.error('Failed to delete analysis:', error);
             return false;
         }
-        return true;
+        return Boolean(data && data.length > 0);
     } catch (err) {
         console.error('Error deleting analysis:', err);
         return false;

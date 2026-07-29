@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Sparkles, Compass, Shield, Eye, ArrowRight, CheckCircle2, Users, Target, Heart, TrendingUp, Award, BookOpen, Clock, ChevronRight, Home } from 'lucide-react';
-import Onboarding from '../components/Onboarding';
+import Onboarding, { ONBOARDING_COMPLETED_KEY } from '../components/Onboarding';
 import DailyFengShui from '../components/DailyFengShui';
 import { trackEvent } from '../services/analyticsService';
 import { DIGITAL_PRODUCT_TOTAL_KRW, formatKrw } from '../services/pricing';
@@ -13,7 +13,7 @@ export default function Landing() {
             if (urlParams.get('onboarding') === 'true') {
                 return true;
             }
-            return false;
+            return localStorage.getItem(ONBOARDING_COMPLETED_KEY) !== 'true';
         }
         return true;
     });

@@ -10,7 +10,7 @@ import LoginButton from './components/LoginButton';
 import PaymentButton from './components/PaymentButton';
 import AnalysisForm from './components/AnalysisForm';
 import ResultView from './components/ResultView';
-import Onboarding from './components/Onboarding';
+import Onboarding, { ONBOARDING_COMPLETED_KEY } from './components/Onboarding';
 import DailyFengShui from './components/DailyFengShui';
 import { saveAnalysis, getAnalysisById, updateAnalysisVisuals } from './services/analysisHistoryService';
 import { TEST_SAMPLE_ANALYSIS, TEST_SAMPLE_HISTORY_ITEM, TEST_SAMPLE_REMEDY_ART_IMAGE, TEST_SAMPLE_ZODIAC_IMAGE } from './services/sampleAnalysis';
@@ -18,6 +18,47 @@ import { supabase } from './services/supabaseClient';
 import { trackEvent } from './services/analyticsService';
 import { getProductDescriptor } from './services/productCatalog';
 import { InteriorArtStyleId, INTERIOR_ART_STYLE_PACKS } from './utils/remedyArt';
+import { clearLocalHistory, readLocalHistory, writeLocalHistory } from './services/localHistory';
+import { useToast } from './components/ToastProvider';
+import { useModalFocusTrap } from './hooks/useModalFocusTrap';
+import { apiErrorFromResponse, getActionableErrorMessage } from './utils/apiError';
+
+const ENABLE_PHYSICAL_PRODUCT_IMMEDIATE_PAYMENT = false;
+const MAX_INPUT_IMAGES = 3;
+
+const replaceAnalysisIdInUrl = (analysisId: string | null) => {
+  const url = new URL(window.location.href);
+  if (analysisId) url.searchParams.set('id', analysisId);
+  else url.searchParams.delete('id');
+  window.history.replaceState(window.history.state, document.title, `${url.pathname}${url.search}${url.hash}`);
+};
+
+const compressImageFile = (file: File) => new Promise<string>((resolve, reject) => {
+  const reader = new FileReader();
+  reader.onerror = () => reject(new Error('사진을 읽지 못했습니다.'));
+  reader.onload = () => {
+    const source = String(reader.result || '');
+    const uploadedImage = new Image();
+    uploadedImage.onerror = () => reject(new Error('지원하지 않는 이미지 형식입니다.'));
+    uploadedImage.onload = () => {
+      // Keep three-photo requests comfortably below common serverless body limits.
+      const maxSize = 1024;
+      const ratio = Math.min(1, maxSize / uploadedImage.width, maxSize / uploadedImage.height);
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(uploadedImage.width * ratio));
+      canvas.height = Math.max(1, Math.round(uploadedImage.height * ratio));
+      const context = canvas.getContext('2d');
+      if (!context) {
+        resolve(source);
+        return;
+      }
+      context.drawImage(uploadedImage, 0, 0, canvas.width, canvas.height);
+      resolve(canvas.toDataURL('image/jpeg', 0.76));
+    };
+    uploadedImage.src = source;
+  };
+  reader.readAsDataURL(file);
+});
 
 // Ensure Kakao SDK is typed
 declare global {
@@ -28,8 +69,10 @@ declare global {
 
 export default function App() {
   const location = useLocation();
+  const { notify } = useToast();
   const canUseTestMode = import.meta.env.DEV;
-  const [image, setImage] = useState<string | null>(null);
+  const [images, setImages] = useState<string[]>([]);
+  const image = images[0] || null;
   const [toBeImage, setToBeImage] = useState<string | null>(null);
   const [remedyArt, setRemedyArt] = useState<string | null>(null);
   const [interiorRemedyArt, setInteriorRemedyArt] = useState<string | null>(null);
@@ -43,12 +86,14 @@ export default function App() {
   const [currentAnalysisId, setCurrentAnalysisId] = useState<string | null>(null);
   const [sharedAnalysisMessage, setSharedAnalysisMessage] = useState<string | null>(null);
   const [history, setHistory] = useState<{
+    analysisId?: string | null;
     result: AnalysisResult;
     image: string;
     remedyArt: string;
     interiorRemedyArt?: string | null;
     interiorStyleId?: InteriorArtStyleId | null;
     zodiacImage: string | null;
+    metadata?: UserMetadata;
   }[]>([]);
   const { user, loading: authLoading } = useAuth();
   const userRef = useRef(user);
@@ -56,7 +101,12 @@ export default function App() {
 
   // Address Autocomplete States
   const [addressQuery, setAddressQuery] = useState('');
-  const [addressSuggestions, setAddressSuggestions] = useState<Array<{ place_name: string; address_name: string }>>([]);
+  const [addressSuggestions, setAddressSuggestions] = useState<Array<{
+    place_name: string;
+    address_name: string;
+    x: string;
+    y: string;
+  }>>([]);
   const [isSearchingAddress, setIsSearchingAddress] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -68,7 +118,7 @@ export default function App() {
       if (urlParams.get('onboarding') === 'true') {
         return true;
       }
-      return false;
+      return localStorage.getItem(ONBOARDING_COMPLETED_KEY) !== 'true';
     }
     return true;
   });
@@ -137,7 +187,7 @@ export default function App() {
         .then((data) => {
           if (data) {
             setResult(data.result);
-            setImage(data.image_url);
+            setImages(data.image_url ? [data.image_url] : []);
             setRemedyArt(data.remedy_art_url);
             setInteriorRemedyArt(data.interior_remedy_art_url || null);
             setInteriorStyleId(data.interior_style_id || null);
@@ -154,6 +204,18 @@ export default function App() {
           } else {
             setSharedAnalysisMessage(user ? '분석 결과를 찾을 수 없습니다.' : '로그인 후 구매한 공간비방서를 확인할 수 있습니다.');
             console.error('Shared analysis not found');
+            const fallback = readLocalHistory<typeof history[number]>()[0];
+            if (fallback) {
+              setResult(fallback.result);
+              setImages(fallback.image ? [fallback.image] : []);
+              setRemedyArt(fallback.remedyArt);
+              setInteriorRemedyArt(fallback.interiorRemedyArt || null);
+              setInteriorStyleId(fallback.interiorStyleId || null);
+              setZodiacImage(fallback.zodiacImage || null);
+              if (fallback.metadata) setMetadata(fallback.metadata);
+              setCurrentAnalysisId(fallback.analysisId || null);
+              setSharedAnalysisMessage('서버 결과를 열지 못해 이 기기에 저장된 최근 분석을 복원했습니다.');
+            }
           }
         })
         .finally(() => setLoading(false));
@@ -162,15 +224,17 @@ export default function App() {
     }
 
     // 3. Load local history
-    const savedHistory = localStorage.getItem('pungsoo_history');
-    const ensureTestSample = (items: {
+    const storedHistory = readLocalHistory<{
+      analysisId?: string | null;
       result: AnalysisResult;
       image: string;
       remedyArt: string;
       interiorRemedyArt?: string | null;
       interiorStyleId?: InteriorArtStyleId | null;
       zodiacImage: string | null;
-    }[]) => {
+      metadata?: UserMetadata;
+    }>();
+    const ensureTestSample = (items: typeof storedHistory): typeof storedHistory => {
       if (!isTestMode) return items;
       const sampleIndex = items.findIndex((item) => item.result?.analysis_summary === TEST_SAMPLE_ANALYSIS.analysis_summary);
       if (sampleIndex >= 0) {
@@ -181,11 +245,11 @@ export default function App() {
       return [TEST_SAMPLE_HISTORY_ITEM, ...items].slice(0, 10);
     };
 
-    if (savedHistory) {
+    if (storedHistory.length > 0) {
       try {
-        const parsedHistory = ensureTestSample(JSON.parse(savedHistory));
+        const parsedHistory = ensureTestSample(storedHistory);
         setHistory(parsedHistory);
-        localStorage.setItem('pungsoo_history', JSON.stringify(parsedHistory));
+        writeLocalHistory(parsedHistory);
         // Only load if there's no sharedId
         if (!sharedId) {
           if (location.state && typeof location.state.loadHistoryItem === 'number') {
@@ -193,24 +257,29 @@ export default function App() {
             if (parsedHistory[idx]) {
               const item = parsedHistory[idx];
               setResult(item.result);
-              setImage(item.image);
+              setImages(item.image ? [item.image] : []);
               setRemedyArt(item.remedyArt);
               setInteriorRemedyArt(item.interiorRemedyArt || null);
               setInteriorStyleId(item.interiorStyleId || null);
               setZodiacImage(item.zodiacImage || null);
               setToBeImage(null);
-              window.history.replaceState({}, document.title);
+              if (item.metadata) setMetadata(item.metadata);
+              setCurrentAnalysisId(item.analysisId || null);
+              replaceAnalysisIdInUrl(item.analysisId || null);
             }
-          } else if (localStorage.getItem('pending_payment_intent') && parsedHistory.length > 0) {
-            // 결제 중 로그인 후 복귀: 마지막 분석 결과 자동 복원
+          } else if (parsedHistory.length > 0) {
+            // 새로고침·결제 복귀·비로그인 상태 모두 최근 로컬 결과로 복원
             const latest = parsedHistory[0];
             setResult(latest.result);
-            setImage(latest.image);
+            setImages(latest.image ? [latest.image] : []);
             setRemedyArt(latest.remedyArt);
             setInteriorRemedyArt(latest.interiorRemedyArt || null);
             setInteriorStyleId(latest.interiorStyleId || null);
             setZodiacImage(latest.zodiacImage || null);
             setToBeImage(null);
+            if (latest.metadata) setMetadata(latest.metadata);
+            setCurrentAnalysisId(latest.analysisId || null);
+            if (latest.analysisId) replaceAnalysisIdInUrl(latest.analysisId);
           }
         }
       } catch (e) {
@@ -219,7 +288,7 @@ export default function App() {
     } else if (isTestMode) {
       const sampleHistory = [TEST_SAMPLE_HISTORY_ITEM];
       setHistory(sampleHistory);
-      localStorage.setItem('pungsoo_history', JSON.stringify(sampleHistory));
+      writeLocalHistory(sampleHistory);
     }
   }, [location.search, location.state, isTestMode, authLoading, user?.id]);
 
@@ -229,6 +298,10 @@ export default function App() {
     analysisType: 'internal',
     roomType: '침실',
     address: '',
+    locationConfirmed: false,
+    entranceBearingDegrees: null,
+    directionMethod: 'none',
+    directionConfidence: 'none',
     birthDate: settings.birthDate,
     gender: settings.gender,
     concern: '',
@@ -261,9 +334,13 @@ export default function App() {
             const data = await res.json();
             setAddressSuggestions(data.results || []);
             setShowSuggestions(true);
+          } else {
+            throw await apiErrorFromResponse(res, '주소 검색에 실패했습니다.');
           }
         } catch (error) {
           console.error("Failed to search address", error);
+          setAddressSuggestions([]);
+          notify(getActionableErrorMessage(error, '주소를 검색하지 못했습니다. 잠시 후 다시 시도해 주세요.'), 'error');
         } finally {
           setIsSearchingAddress(false);
         }
@@ -273,7 +350,7 @@ export default function App() {
       }
     }, 300);
     return () => clearTimeout(timer);
-  }, [addressQuery, isTestMode]);
+  }, [addressQuery, isTestMode, notify]);
 
   // Order Modal States
   const [isInquiryModalOpen, setIsInquiryModalOpen] = useState(false);
@@ -285,6 +362,7 @@ export default function App() {
   }>({ edition: 'signature', styleId: null, artworkUrl: null });
   const [orderFormData, setOrderFormData] = useState({ name: '', contact: '', message: '', objectSize: { width: 5, height: 5, depth: 5 } });
   const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
+  const inquiryModalRef = useModalFocusTrap(isInquiryModalOpen, () => setIsInquiryModalOpen(false));
   const isLoggedIn = !!user;
   const selectedPhysicalProduct = getProductDescriptor(metadata.analysisType, orderType);
   const orderCustomerName = isLoggedIn ? (user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email || '회원') : orderFormData.name;
@@ -317,45 +395,77 @@ export default function App() {
         })
       });
       if (response.ok) {
-        alert('의뢰가 성공적으로 접수되었습니다. 곧 연락드리겠습니다.');
+        notify('의뢰가 접수되었습니다. 입력한 연락처로 확인 안내를 드립니다.', 'success');
         setIsInquiryModalOpen(false);
         setOrderFormData({ name: '', contact: '', message: '', objectSize: { width: 5, height: 5, depth: 5 } });
-      } else { alert('의뢰 전송에 실패했습니다. 관리자에게 문의해주세요.'); }
-    } catch (error) { console.error(error); alert('오류가 발생했습니다. 다시 시도해주세요.'); }
+      } else {
+        throw await apiErrorFromResponse(response, '의뢰 전송에 실패했습니다.');
+      }
+    } catch (error) {
+      console.error(error);
+      notify(getActionableErrorMessage(error, '의뢰를 보내지 못했습니다. 입력 내용을 확인하고 다시 시도해 주세요.'), 'error');
+    }
     finally { setIsSubmittingOrder(false); }
   };
 
-  const handlePaymentFail = () => { alert('결제가 실패했거나 취소되었습니다.'); setIsInquiryModalOpen(false); };
+  const handlePaymentFail = () => {
+    notify('결제가 완료되지 않았습니다. 주문 내용은 유지되므로 준비되면 다시 시도해 주세요.', 'warning');
+    setIsInquiryModalOpen(false);
+  };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const img = new Image();
-        img.onload = () => {
-          const MAX_SIZE = 1024;
-          let { width, height } = img;
-          if (width > MAX_SIZE || height > MAX_SIZE) {
-            const ratio = Math.min(MAX_SIZE / width, MAX_SIZE / height);
-            width = Math.round(width * ratio); height = Math.round(height * ratio);
-          }
-          const canvas = document.createElement('canvas');
-          canvas.width = width; canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          if (ctx) { ctx.drawImage(img, 0, 0, width, height); setImage(canvas.toDataURL('image/jpeg', 0.8)); }
-          else { setImage(reader.result as string); }
-          setToBeImage(null); setRemedyArt(null); setInteriorRemedyArt(null); setInteriorStyleId(null); setZodiacImage(null); setResult(null);
-        };
-        img.src = reader.result as string;
-      };
-      reader.readAsDataURL(file);
+  const resetGeneratedResult = () => {
+    setToBeImage(null);
+    setRemedyArt(null);
+    setInteriorRemedyArt(null);
+    setInteriorStyleId(null);
+    setZodiacImage(null);
+    setResult(null);
+    setCurrentAnalysisId(null);
+    replaceAnalysisIdInUrl(null);
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = Array.from(e.target.files || []);
+    e.target.value = '';
+    if (selected.length === 0) return;
+
+    const availableSlots = MAX_INPUT_IMAGES - images.length;
+    if (availableSlots <= 0) {
+      notify('사진은 최대 3장까지 올릴 수 있습니다. 기존 사진을 지운 뒤 다시 선택해 주세요.', 'warning');
+      return;
+    }
+    if (selected.length > availableSlots) {
+      notify(`최대 3장까지만 가능해 앞의 ${availableSlots}장만 추가합니다.`, 'warning');
+    }
+
+    try {
+      const compressed = await Promise.all(selected.slice(0, availableSlots).map(compressImageFile));
+      setImages(current => [...current, ...compressed].slice(0, MAX_INPUT_IMAGES));
+      resetGeneratedResult();
+    } catch (error) {
+      console.error(error);
+      notify(getActionableErrorMessage(error, '사진을 처리하지 못했습니다. JPG, PNG 또는 WebP 파일로 다시 시도해 주세요.'), 'error');
     }
   };
 
   const handleAnalyze = async () => {
-    if (metadata.analysisType === 'internal' && !image) { alert("분석할 이미지를 업로드해주세요."); return; }
-    if (metadata.analysisType === 'external' && !metadata.address) { alert("지리적 입지 분석을 위한 주소를 입력해주세요."); return; }
+    if (metadata.analysisType === 'internal' && images.length === 0) {
+      notify('공간 전체가 보이는 사진을 한 장 이상 올려 주세요.', 'warning');
+      return;
+    }
+    if (metadata.analysisType === 'external' && !metadata.address) {
+      notify('외부 입지 분석을 위해 주소를 입력해 주세요.', 'warning');
+      return;
+    }
+    if (metadata.analysisType === 'external'
+      && (!Number.isFinite(metadata.latitude) || !Number.isFinite(metadata.longitude))) {
+      notify('주소 검색 결과에서 실제 분석할 위치를 선택해 주세요.', 'warning');
+      return;
+    }
+    if (metadata.analysisType === 'external' && metadata.locationConfirmed !== true) {
+      notify('위성 지도에서 핀 위치가 맞는지 확인한 뒤 위치 확인을 완료해 주세요.', 'warning');
+      return;
+    }
     trackEvent('analysis_started', {
       userId: userRef.current?.id,
       metadata: {
@@ -369,20 +479,25 @@ export default function App() {
     });
     setShowSuggestions(false); setLoading(true); setGeneratingVisuals(false); setResult(null); setCurrentAnalysisId(null); setToBeImage(null); setRemedyArt(null); setInteriorRemedyArt(null); setInteriorStyleId(null); setZodiacImage(null);
     try {
-      const analysis = await analyzeFengShui({ base64Image: image || undefined, address: metadata.address }, metadata);
+      const analysis = await analyzeFengShui({
+        base64Image: image || undefined,
+        base64Images: images,
+        address: metadata.address,
+      }, metadata);
       setResult(analysis);
       let savedAnalysisId: string | null = null;
 
       // Keep the free path low-cost. Paid fal.ai visuals are generated only after unlock.
-      const newHistory = [{
+      let newHistory = [{
+        analysisId: null as string | null,
         result: analysis,
         image: metadata.analysisType === 'internal' ? (image || '') : 'https://images.unsplash.com/photo-1524813686514-a57563d77965?auto=format&fit=crop&q=80&w=400',
         remedyArt: isTestMode ? TEST_SAMPLE_REMEDY_ART_IMAGE : '',
         interiorRemedyArt: null,
         interiorStyleId: null,
-        zodiacImage: isTestMode ? TEST_SAMPLE_ZODIAC_IMAGE : null
+        zodiacImage: isTestMode ? TEST_SAMPLE_ZODIAC_IMAGE : null,
+        metadata: { ...metadata },
       }, ...history].slice(0, 10);
-      setHistory(newHistory); localStorage.setItem('pungsoo_history', JSON.stringify(newHistory));
 
       // Save to Supabase — use session from SDK (primary) or userRef (fallback)
       const { data: { session: currentSession } } = await supabase.auth.getSession();
@@ -404,8 +519,16 @@ export default function App() {
         if (savedData) {
           savedAnalysisId = savedData.id;
           setCurrentAnalysisId(savedData.id);
+          replaceAnalysisIdInUrl(savedData.id);
+          newHistory = newHistory.map((item, index) => (
+            index === 0 ? { ...item, analysisId: savedData.id } : item
+          ));
+        } else {
+          notify('분석은 완료됐지만 서버 저장에 실패했습니다. 이 기기의 최근 기록으로 임시 보관합니다.', 'warning', 9000);
         }
       }
+      setHistory(newHistory);
+      writeLocalHistory(newHistory);
       trackEvent('analysis_completed', {
         userId: currentUserId,
         analysisId: savedAnalysisId,
@@ -426,13 +549,17 @@ export default function App() {
           isTestMode,
         },
       });
-      alert("분석 중 오류가 발생했습니다. 다시 시도해주세요.");
+      notify(getActionableErrorMessage(error, '분석 중 오류가 발생했습니다. 입력 내용을 유지했으니 다시 시도해 주세요.'), 'error', 9000);
     }
     finally { setLoading(false); setGeneratingVisuals(false); }
   };
 
   const handleRegenerateArt = async (requestedInteriorStyle?: InteriorArtStyleId | null) => {
     if (!result) return;
+    if (!currentAnalysisId) {
+      notify('로그인 후 서버에 저장된 분석 결과에서만 이미지를 생성할 수 있습니다.', 'warning');
+      return;
+    }
     setIsRegeneratingArt(true);
     if (!requestedInteriorStyle) setRemedyArt(null);
     trackEvent(requestedInteriorStyle ? 'interior_art_generation_started' : 'remedy_art_regeneration_started', {
@@ -445,7 +572,7 @@ export default function App() {
       },
     });
     try {
-      const newImage = await generateRemedyArtImage(result, metadata, requestedInteriorStyle);
+      const newImage = await generateRemedyArtImage(result, metadata, currentAnalysisId, requestedInteriorStyle);
       if (requestedInteriorStyle) {
         setInteriorRemedyArt(newImage);
         setInteriorStyleId(requestedInteriorStyle);
@@ -473,23 +600,27 @@ export default function App() {
           message: error instanceof Error ? error.message : String(error),
         },
       });
-      alert("이미지 재생성에 실패했습니다.");
+      notify(getActionableErrorMessage(error, '비방 이미지를 생성하지 못했습니다. 잠시 후 다시 시도해 주세요.'), 'error');
     }
     finally { setIsRegeneratingArt(false); }
   };
 
   const handleGenerateZodiacImage = async () => {
     if (!result?.zodiac_remedy_object) return;
+    if (!currentAnalysisId) {
+      notify('로그인 후 서버에 저장된 분석 결과에서만 수호 이미지를 생성할 수 있습니다.', 'warning');
+      return;
+    }
     setIsGeneratingZodiacImage(true); setZodiacImage(null);
     try {
-      const newImage = await generateZodiacArtImage(result.zodiac_remedy_object);
+      const newImage = await generateZodiacArtImage(result.zodiac_remedy_object, currentAnalysisId);
       setZodiacImage(newImage);
       if (currentAnalysisId) {
         await updateAnalysisVisuals(currentAnalysisId, { zodiac_image_url: newImage });
       }
     } catch (error) {
       console.error(error);
-      alert("12간지 비방 이미지 생성에 실패했습니다.");
+      notify(getActionableErrorMessage(error, '수호 이미지를 생성하지 못했습니다. 잠시 후 다시 시도해 주세요.'), 'error');
     } finally {
       setIsGeneratingZodiacImage(false);
     }
@@ -513,7 +644,19 @@ export default function App() {
         zodiacImage,
         toBeImage,
       });
-      if (!cancelled && savedData) setCurrentAnalysisId(savedData.id);
+      if (!cancelled && savedData) {
+        setCurrentAnalysisId(savedData.id);
+        replaceAnalysisIdInUrl(savedData.id);
+        setHistory(current => {
+          const updated = current.map((item, index) => (
+            index === 0 ? { ...item, analysisId: savedData.id } : item
+          ));
+          writeLocalHistory(updated);
+          return updated;
+        });
+      } else if (!cancelled) {
+        notify('로그인 결과를 서버에 저장하지 못했습니다. 현재 기기의 최근 기록은 유지됩니다.', 'warning', 9000);
+      }
     })().catch(err => console.error('[Supabase] save after login failed:', err));
 
     return () => { cancelled = true; };
@@ -644,15 +787,35 @@ export default function App() {
 
             {/* Input Section — Extracted Component */}
             <AnalysisForm
-              metadata={metadata} setMetadata={setMetadata} image={image} loading={loading} history={history}
+              metadata={metadata} setMetadata={setMetadata} images={images} loading={loading} history={history}
               addressQuery={addressQuery} setAddressQuery={setAddressQuery}
               addressSuggestions={addressSuggestions} isSearchingAddress={isSearchingAddress}
               showSuggestions={showSuggestions} setShowSuggestions={setShowSuggestions}
               onImageUpload={handleImageUpload}
-              onClearImage={() => { setImage(null); setResult(null); setToBeImage(null); setRemedyArt(null); setInteriorRemedyArt(null); setInteriorStyleId(null); setZodiacImage(null); }}
+              onRemoveImage={(index) => {
+                setImages(current => current.filter((_, imageIndex) => imageIndex !== index));
+                resetGeneratedResult();
+              }}
+              onClearImages={() => {
+                setImages([]);
+                resetGeneratedResult();
+              }}
               onAnalyze={handleAnalyze}
-              onLoadHistory={(idx) => { const item = history[idx]; setResult(item.result); setImage(item.image); setRemedyArt(item.remedyArt); setInteriorRemedyArt(item.interiorRemedyArt || null); setInteriorStyleId(item.interiorStyleId || null); setZodiacImage(item.zodiacImage || null); setToBeImage(null); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-              onClearHistory={() => { localStorage.removeItem('pungsoo_history'); setHistory([]); }}
+              onLoadHistory={(idx) => {
+                const item = history[idx];
+                setResult(item.result);
+                setImages(item.image ? [item.image] : []);
+                setRemedyArt(item.remedyArt);
+                setInteriorRemedyArt(item.interiorRemedyArt || null);
+                setInteriorStyleId(item.interiorStyleId || null);
+                setZodiacImage(item.zodiacImage || null);
+                setToBeImage(null);
+                setCurrentAnalysisId(item.analysisId || null);
+                replaceAnalysisIdInUrl(item.analysisId || null);
+                if (item.metadata) setMetadata(item.metadata);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              onClearHistory={() => { clearLocalHistory(); setHistory([]); }}
             />
 
             {/* Results Section — Extracted Component */}
@@ -679,11 +842,18 @@ export default function App() {
         {/* Inquiry Modal */}
         {isInquiryModalOpen && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-[#221e10]/95 backdrop-blur-xl border border-white/10 rounded-3xl max-w-md w-full p-8 shadow-2xl animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto custom-scrollbar">
+            <div
+              ref={inquiryModalRef}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="inquiry-modal-title"
+              tabIndex={-1}
+              className="bg-[#221e10]/95 backdrop-blur-xl border border-white/10 rounded-3xl max-w-lg w-full p-4 sm:p-7 shadow-2xl animate-in zoom-in-95 duration-200 max-h-[92vh] overflow-y-auto custom-scrollbar outline-none"
+            >
               <div className="mb-3 inline-flex rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-[11px] font-black tracking-wider text-primary">
                 {metadata.analysisType === 'internal' ? 'INTERIOR PRODUCT' : 'SITE PRODUCT'} · {selectedPhysicalProduct.sku}
               </div>
-              <h3 className="font-bold text-2xl text-white mb-2">{selectedPhysicalProduct.labelKo} 제작 의뢰</h3>
+              <h3 id="inquiry-modal-title" className="font-bold text-xl sm:text-2xl text-white mb-2">{selectedPhysicalProduct.labelKo} 제작 의뢰</h3>
               <p className="text-slate-300 text-sm mb-6 leading-relaxed">
                 {selectedPhysicalProduct.shortDescriptionKo} 권장 배치: {selectedPhysicalProduct.placementKo}.
               </p>
@@ -699,29 +869,30 @@ export default function App() {
               )}
               <form onSubmit={handleOrderSubmit} className="space-y-4 mb-6">
                 {!isLoggedIn && (<>
-                  <div><label className="block text-xs font-semibold text-slate-300 mb-1">이름</label>
-                    <input type="text" required value={orderFormData.name} onChange={(e) => setOrderFormData({ ...orderFormData, name: e.target.value })}
+                  <div><label htmlFor="inquiry-name" className="block text-xs font-semibold text-slate-300 mb-1">이름</label>
+                    <input id="inquiry-name" type="text" required value={orderFormData.name} onChange={(e) => setOrderFormData({ ...orderFormData, name: e.target.value })}
                       className="w-full bg-black/30 text-white border border-white/10 rounded-lg px-3 py-2 outline-none focus:border-primary" placeholder="의뢰자 성함" /></div>
-                  <div><label className="block text-xs font-semibold text-slate-300 mb-1">연락처 (이메일 또는 전화번호)</label>
-                    <input type="text" required value={orderFormData.contact} onChange={(e) => setOrderFormData({ ...orderFormData, contact: e.target.value })}
+                  <div><label htmlFor="inquiry-contact" className="block text-xs font-semibold text-slate-300 mb-1">연락처 (이메일 또는 전화번호)</label>
+                    <input id="inquiry-contact" type="text" required value={orderFormData.contact} onChange={(e) => setOrderFormData({ ...orderFormData, contact: e.target.value })}
                       className="w-full bg-black/30 text-white border border-white/10 rounded-lg px-3 py-2 outline-none focus:border-primary" placeholder="회신 받으실 연락처" /></div>
                 </>)}
                 {orderType === 'object' && (
                   <div className="bg-white/5 backdrop-blur-xl rounded-xl border border-primary/30 p-4 space-y-3">
-                    <label className="block text-xs font-semibold text-slate-300 uppercase mb-1 flex items-center gap-1.5"><Box className="w-3.5 h-3.5 text-primary" /> 제작 사이즈 (cm)</label>
+                    <p className="flex items-center gap-1.5 text-xs font-semibold uppercase text-slate-300"><Box className="w-3.5 h-3.5 text-primary" /> 제작 사이즈 (cm)</p>
                     <div className="flex flex-wrap gap-2">
                       {[{ label: '소형 (5×5×5)', w: 5, h: 5, d: 5 }, { label: '중형 (10×10×10)', w: 10, h: 10, d: 10 }, { label: '대형 (15×15×15)', w: 15, h: 15, d: 15 }].map((preset) => (
                         <button key={preset.label} type="button"
+                          aria-pressed={orderFormData.objectSize.width === preset.w && orderFormData.objectSize.height === preset.h && orderFormData.objectSize.depth === preset.d}
                           onClick={() => setOrderFormData({ ...orderFormData, objectSize: { width: preset.w, height: preset.h, depth: preset.d } })}
                           className={`px-3 py-1.5 rounded-lg border text-[11px] font-bold transition-all ${orderFormData.objectSize.width === preset.w && orderFormData.objectSize.height === preset.h && orderFormData.objectSize.depth === preset.d ? 'bg-[#d4af37] text-white border-primary shadow-md' : 'bg-white/5 backdrop-blur-md text-slate-200 border-white/10 hover:border-primary'}`}>
                           {preset.label}
                         </button>))}
                     </div>
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                       {[{ label: '가로 (W)', key: 'width' as const }, { label: '세로 (D)', key: 'height' as const }, { label: '높이 (H)', key: 'depth' as const }].map(({ label, key }) => (
-                        <div key={key}><label className="block text-[10px] font-semibold text-slate-400 mb-1">{label}</label>
+                        <div key={key}><label htmlFor={`object-size-${key}`} className="block text-[10px] font-semibold text-slate-400 mb-1">{label}</label>
                           <div className="flex items-center gap-1 bg-white/5 backdrop-blur-md border border-white/10 rounded-lg px-2 py-1.5 focus-within:border-primary transition-colors">
-                            <input type="number" min={1} max={100} value={orderFormData.objectSize[key]}
+                            <input id={`object-size-${key}`} type="number" min={1} max={100} value={orderFormData.objectSize[key]}
                               onChange={(e) => setOrderFormData({ ...orderFormData, objectSize: { ...orderFormData.objectSize, [key]: parseInt(e.target.value) || 1 } })}
                               className="w-full outline-none text-sm text-white font-bold bg-transparent" />
                             <span className="text-[10px] text-slate-400 shrink-0">cm</span>
@@ -742,8 +913,8 @@ export default function App() {
                     </div>
                   </div>
                 )}
-                <div><label className="block text-xs font-semibold text-slate-300 mb-1">추가 요청사항 (선택사항)</label>
-                  <textarea value={orderFormData.message} onChange={(e) => setOrderFormData({ ...orderFormData, message: e.target.value })}
+                <div><label htmlFor="inquiry-message" className="block text-xs font-semibold text-slate-300 mb-1">추가 요청사항 (선택사항)</label>
+                  <textarea id="inquiry-message" value={orderFormData.message} onChange={(e) => setOrderFormData({ ...orderFormData, message: e.target.value })}
                     className="w-full bg-black/30 text-white border border-white/10 rounded-lg px-3 py-2 outline-none focus:border-primary resize-none h-20"
                     placeholder={isLoggedIn ? `연락받으실 번호와 요청사항을 적어주세요.\n(예: 010-1234-5678, 배송은 주말에 해주세요.)` : "그 외 요청하실 사항을 적어주세요."} />
                 </div>
@@ -761,37 +932,41 @@ export default function App() {
                     이메일로 먼저 의뢰 접수하기 (나중에 결제)
                   </button>
 
-                  <div className="relative flex items-center py-2">
-                    <div className="flex-grow border-t border-white/10"></div>
-                    <span className="flex-shrink-0 mx-4 text-slate-500 text-xs">또는 즉시 결제</span>
-                    <div className="flex-grow border-t border-white/10"></div>
-                  </div>
+                  {ENABLE_PHYSICAL_PRODUCT_IMMEDIATE_PAYMENT && (
+                    <>
+                      <div className="relative flex items-center py-2">
+                        <div className="flex-grow border-t border-white/10"></div>
+                        <span className="flex-shrink-0 mx-4 text-slate-500 text-xs">또는 즉시 결제</span>
+                        <div className="flex-grow border-t border-white/10"></div>
+                      </div>
 
-                  <PaymentButton amount={orderType === 'frame' ? 49000 : 79000}
-                    orderName={`[풍수AI] ${selectedPhysicalProduct.labelKo} 제작 의뢰`}
-                    orderType={orderType}
-                    analysisScope={metadata.analysisType}
-                    productSku={selectedPhysicalProduct.sku}
-                    onSuccess={() => {
-                      localStorage.setItem('temp_order_name', orderCustomerName); localStorage.setItem('temp_order_contact', orderCustomerContact);
-                      localStorage.setItem('temp_order_message', orderFormData.message); localStorage.setItem('temp_order_type', orderType);
-                      localStorage.setItem('temp_order_analysisScope', metadata.analysisType); localStorage.setItem('temp_order_productSku', selectedPhysicalProduct.sku);
-                      localStorage.setItem('temp_order_userId', user?.id || '');
-                      if (currentAnalysisId) { localStorage.setItem('temp_order_analysisId', currentAnalysisId); }
-                      if (orderType === 'object') { localStorage.setItem('temp_order_objectSize', JSON.stringify(orderFormData.objectSize)); }
-                      if (result) {
-                        localStorage.setItem('temp_order_analysisData', JSON.stringify({
-                          remedyArtKeyword: result.remedy_art?.solution_keyword,
-                          deficiency: result.remedy_art?.deficiency,
-                          zodiacAnimal: result.zodiac_remedy_object?.animal,
-                          artEdition: orderType === 'frame' ? frameArtworkSelection.edition : null,
-                          interiorStyleId: orderType === 'frame' ? frameArtworkSelection.styleId : null,
-                          artworkUrl: orderType === 'frame' ? frameArtworkSelection.artworkUrl : null,
-                        }));
-                      }
-                    }}
-                    onFail={handlePaymentFail}
-                    disabled={!isLoggedIn ? (!orderFormData.name || !orderFormData.contact) : false} />
+                      <PaymentButton amount={orderType === 'frame' ? 49000 : 79000}
+                        orderName={`[풍수AI] ${selectedPhysicalProduct.labelKo} 제작 의뢰`}
+                        orderType={orderType}
+                        analysisScope={metadata.analysisType}
+                        productSku={selectedPhysicalProduct.sku}
+                        onSuccess={() => {
+                          localStorage.setItem('temp_order_name', orderCustomerName); localStorage.setItem('temp_order_contact', orderCustomerContact);
+                          localStorage.setItem('temp_order_message', orderFormData.message); localStorage.setItem('temp_order_type', orderType);
+                          localStorage.setItem('temp_order_analysisScope', metadata.analysisType); localStorage.setItem('temp_order_productSku', selectedPhysicalProduct.sku);
+                          localStorage.setItem('temp_order_userId', user?.id || '');
+                          if (currentAnalysisId) { localStorage.setItem('temp_order_analysisId', currentAnalysisId); }
+                          if (orderType === 'object') { localStorage.setItem('temp_order_objectSize', JSON.stringify(orderFormData.objectSize)); }
+                          if (result) {
+                            localStorage.setItem('temp_order_analysisData', JSON.stringify({
+                              remedyArtKeyword: result.remedy_art?.solution_keyword,
+                              deficiency: result.remedy_art?.deficiency,
+                              zodiacAnimal: result.zodiac_remedy_object?.animal,
+                              artEdition: orderType === 'frame' ? frameArtworkSelection.edition : null,
+                              interiorStyleId: orderType === 'frame' ? frameArtworkSelection.styleId : null,
+                              artworkUrl: orderType === 'frame' ? frameArtworkSelection.artworkUrl : null,
+                            }));
+                          }
+                        }}
+                        onFail={handlePaymentFail}
+                        disabled={!isLoggedIn ? (!orderFormData.name || !orderFormData.contact) : false} />
+                    </>
+                  )}
                 </div>
               </form>
               <button onClick={() => setIsInquiryModalOpen(false)} className="w-full py-3 bg-black/30 text-slate-300 font-bold rounded-xl hover:bg-white/10 transition-all">닫기</button>
@@ -800,15 +975,6 @@ export default function App() {
         )}
 
         {/* Stats Bar */}
-        <div className="border-t border-white/10 bg-[#221e10]/80 backdrop-blur-xl text-white">
-          <div className="mx-auto flex max-w-7xl flex-wrap justify-between gap-8 px-6 py-6 lg:px-8">
-            <div className="flex items-center gap-3"><span className="flex size-10 items-center justify-center rounded-lg bg-white/5 text-primary"><Compass className="w-5 h-5" /></span><div><p className="text-2xl font-bold leading-none">1,247</p><p className="text-xs text-slate-400 uppercase tracking-wider">총 분석</p></div></div>
-            <div className="flex items-center gap-3"><span className="flex size-10 items-center justify-center rounded-lg bg-white/5 text-primary"><Heart className="w-5 h-5" /></span><div><p className="text-2xl font-bold leading-none">892</p><p className="text-xs text-slate-400 uppercase tracking-wider">사용자</p></div></div>
-            <div className="flex items-center gap-3"><span className="flex size-10 items-center justify-center rounded-lg bg-white/5 text-primary"><Sparkles className="w-5 h-5" /></span><div><p className="text-2xl font-bold leading-none">3,841</p><p className="text-xs text-slate-400 uppercase tracking-wider">생성 아트</p></div></div>
-            <div className="hidden md:flex items-center gap-3 border-l border-white/10 pl-8"><p className="text-sm font-medium text-slate-300">서비스 상태:</p><span className="flex items-center gap-1.5 text-sm font-bold text-green-400"><span className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span> 정상 운영</span></div>
-          </div>
-        </div>
-
         <footer className="bg-[#221e10]/90 backdrop-blur-xl border-t border-white/10 py-12 px-4 text-center">
           <div className="max-w-4xl mx-auto">
             <p className="text-white font-bold mb-2">풍수지리 AI 대가</p>

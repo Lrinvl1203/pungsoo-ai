@@ -6,25 +6,45 @@ import {
     ArrowLeft, User, LogOut, Clock, ShoppingBag,
     Image as ImageIcon, Settings, Trash2, ShieldCheck, Download, RotateCcw
 } from 'lucide-react';
-import { AnalysisResult } from '../types';
+import { AnalysisResult, UserMetadata } from '../types';
 import { supabase } from '../services/supabaseClient';
 import { trackEvent } from '../services/analyticsService';
+import {
+    clearAllHistory,
+    deleteAnalysis,
+    getAnalysisHistory,
+} from '../services/analysisHistoryService';
+import {
+    clearLocalHistory,
+    readLocalHistory,
+    writeLocalHistory,
+} from '../services/localHistory';
+import { useToast } from '../components/ToastProvider';
+import { apiErrorFromResponse, getActionableErrorMessage } from '../utils/apiError';
 
 interface HistoryItem {
+    analysisId?: string | null;
     result: AnalysisResult;
     image: string;
     remedyArt: string;
+    interiorRemedyArt?: string | null;
+    interiorStyleId?: string | null;
     zodiacImage: string | null;
+    metadata?: UserMetadata;
 }
 
 export default function MyPage() {
     const navigate = useNavigate();
-    const { user, signOut, loading } = useAuth();
+    const { user, session, signOut, loading } = useAuth();
     const { settings, updateSettings } = useUserSettings();
+    const { notify } = useToast();
     const [history, setHistory] = useState<HistoryItem[]>([]);
     const [purchases, setPurchases] = useState<any[]>([]);
     const [activeTab, setActiveTab] = useState<'profile' | 'history' | 'orders' | 'gallery' | 'settings'>('history');
     const [requestingRefundId, setRequestingRefundId] = useState<string | null>(null);
+    const [pendingDelete, setPendingDelete] = useState<{ type: 'one'; index: number } | { type: 'all' } | null>(null);
+    const [refundDraft, setRefundDraft] = useState<{ purchase: any; reason: string } | null>(null);
+    const [refundFallbackMailto, setRefundFallbackMailto] = useState<string | null>(null);
 
     const fetchPurchases = useCallback(async () => {
         if (!user) return;
@@ -40,6 +60,33 @@ export default function MyPage() {
         }
     }, [user]);
 
+    const loadHistory = useCallback(async () => {
+        if (!user) return;
+
+        const localHistory = readLocalHistory<HistoryItem>();
+        const databaseRows = await getAnalysisHistory(user.id, 20);
+        const databaseHistory: HistoryItem[] = databaseRows.map(row => ({
+            analysisId: row.id,
+            result: row.result,
+            image: row.image_url || '',
+            remedyArt: row.remedy_art_url || '',
+            interiorRemedyArt: row.interior_remedy_art_url || null,
+            interiorStyleId: row.interior_style_id || null,
+            zodiacImage: row.zodiac_image_url || null,
+            metadata: row.metadata,
+        }));
+        const databaseFingerprints = new Set(databaseHistory.map(item => (
+            `${item.result.analysis_summary}:${item.result.feng_shui_score}`
+        )));
+        const localOnly = localHistory.filter(item => !databaseFingerprints.has(
+            `${item.result?.analysis_summary}:${item.result?.feng_shui_score}`,
+        ));
+        const mergedHistory = [...databaseHistory, ...localOnly].slice(0, 20);
+
+        setHistory(mergedHistory);
+        writeLocalHistory(mergedHistory);
+    }, [user]);
+
     useEffect(() => {
         if (loading) return;
         if (!user) {
@@ -47,17 +94,9 @@ export default function MyPage() {
             return;
         }
 
-        const savedHistory = localStorage.getItem('pungsoo_history');
-        if (savedHistory) {
-            try {
-                setHistory(JSON.parse(savedHistory));
-            } catch (e) {
-                console.error('Failed to parse history', e);
-            }
-        }
-
+        loadHistory();
         fetchPurchases();
-    }, [user, loading, navigate, fetchPurchases]);
+    }, [user, loading, navigate, fetchPurchases, loadHistory]);
 
     const handleSignOut = async () => {
         try {
@@ -65,24 +104,40 @@ export default function MyPage() {
             navigate('/');
         } catch (e) {
             console.error(e);
-            alert('로그아웃 처리 중 오류가 발생했습니다.');
+            notify('로그아웃하지 못했습니다. 잠시 후 다시 시도해 주세요.', 'error');
         }
     };
 
-    const handleDeleteHistoryItem = (index: number) => {
-        if (window.confirm('이 분석 기록을 삭제하시겠습니까?')) {
+    const confirmDeleteHistory = async () => {
+        if (!pendingDelete) return;
+        if (pendingDelete.type === 'one') {
+            const index = pendingDelete.index;
+            const target = history[index];
+            if (target?.analysisId && user) {
+                const deleted = await deleteAnalysis(target.analysisId, user.id);
+                if (!deleted) {
+                    notify('서버 분석 기록을 삭제하지 못했습니다. 잠시 후 다시 시도해 주세요.', 'error');
+                    return;
+                }
+            }
             const newHistory = [...history];
             newHistory.splice(index, 1);
             setHistory(newHistory);
-            localStorage.setItem('pungsoo_history', JSON.stringify(newHistory));
+            writeLocalHistory(newHistory);
+            setPendingDelete(null);
+            notify('분석 기록을 삭제했습니다.', 'success');
+            return;
         }
-    };
 
-    const handleClearHistory = () => {
-        if (window.confirm('모든 분석 기록을 삭제하시겠습니까?')) {
-            setHistory([]);
-            localStorage.removeItem('pungsoo_history');
+        const deleted = await clearAllHistory(user.id);
+        if (!deleted) {
+            notify('서버 분석 기록을 삭제하지 못했습니다. 잠시 후 다시 시도해 주세요.', 'error');
+            return;
         }
+        setHistory([]);
+        clearLocalHistory();
+        setPendingDelete(null);
+        notify('모든 분석 기록을 삭제했습니다.', 'success');
     };
 
     const downloadImage = (dataUrl: string, filename: string) => {
@@ -213,19 +268,25 @@ export default function MyPage() {
         return '비방 오브제 제작 의뢰';
     };
 
-    const handleRefundRequest = async (purchase: any) => {
-        const reason = window.prompt('환불 사유를 입력해 주세요. 관리자 확인 후 처리됩니다.');
-        if (reason === null) return;
+    const handleRefundRequest = async () => {
+        if (!refundDraft) return;
+        const { purchase, reason } = refundDraft;
         if (!reason.trim()) {
-            alert('환불 사유를 입력해야 요청할 수 있습니다.');
+            notify('환불 사유를 입력해야 요청할 수 있습니다.', 'warning');
             return;
         }
 
         setRequestingRefundId(purchase.order_id);
         try {
+            if (!session?.access_token) {
+                throw new Error('로그인 세션이 만료되었습니다. 다시 로그인해 주세요.');
+            }
             const response = await fetch('/api/send-order', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${session.access_token}`,
+                },
                 body: JSON.stringify({
                     orderType: 'refund',
                     name: displayName,
@@ -242,19 +303,14 @@ export default function MyPage() {
             });
 
             if (!response.ok) {
-                let message = '환불 요청 접수 중 오류가 발생했습니다.';
-                try {
-                    const data = await response.json();
-                    if (data.error) message = data.error;
-                } catch {
-                    // keep default message
-                }
-                throw new Error(message);
+                throw await apiErrorFromResponse(response, '환불 요청 접수 중 오류가 발생했습니다.');
             }
 
-            alert('환불 요청이 접수되었습니다. 관리자 확인 후 처리됩니다.');
+            notify('환불 요청이 접수되었습니다. 관리자 확인 후 처리 상태가 갱신됩니다.', 'success');
             await fetchPurchases();
             setActiveTab('orders');
+            setRefundDraft(null);
+            setRefundFallbackMailto(null);
             trackEvent('refund_requested', {
                 userId: user.id,
                 analysisId: purchase.analysis_id,
@@ -285,8 +341,8 @@ export default function MyPage() {
                 `분석ID: ${purchase.analysis_id || '-'}`,
                 `환불 사유: ${reason || ''}`,
             ].join('\n'));
-            alert(`${error.message || '환불 요청 접수에 실패했습니다.'}\n메일 작성 화면으로 연결합니다.`);
-            window.location.href = `mailto:lrinvl1203@gmail.com?subject=${mailSubject}&body=${mailBody}`;
+            notify(getActionableErrorMessage(error, '환불 요청 접수에 실패했습니다. 아래 이메일 문의 경로를 이용해 주세요.'), 'error', 9000);
+            setRefundFallbackMailto(`mailto:lrinvl1203@gmail.com?subject=${mailSubject}&body=${mailBody}`);
         } finally {
             setRequestingRefundId(null);
         }
@@ -397,13 +453,31 @@ export default function MyPage() {
                                     <h3 className="text-2xl md:text-3xl font-black text-white tracking-tight">나의 풍수 분석 기록</h3>
                                     {history.length > 0 && (
                                         <button
-                                            onClick={handleClearHistory}
+                                            onClick={() => setPendingDelete({ type: 'all' })}
                                             className="text-xs font-bold text-slate-500 hover:text-red-400 flex items-center gap-1 transition-colors px-3 py-1.5 rounded-lg hover:bg-red-500/10"
                                         >
                                             <Trash2 className="w-4 h-4" /> 전체 삭제
                                         </button>
                                     )}
                                 </div>
+                                {pendingDelete && (
+                                    <div role="alert" className="mb-6 rounded-2xl border border-red-400/30 bg-red-950/40 p-4">
+                                        <p className="font-bold text-red-100">
+                                            {pendingDelete.type === 'all'
+                                                ? '모든 분석 기록을 서버와 이 기기에서 삭제할까요?'
+                                                : '선택한 분석 기록을 서버와 이 기기에서 삭제할까요?'}
+                                        </p>
+                                        <p className="mt-1 text-xs leading-relaxed text-red-200/70">삭제한 기록은 복구할 수 없습니다.</p>
+                                        <div className="mt-4 flex flex-wrap gap-2">
+                                            <button type="button" onClick={confirmDeleteHistory} className="rounded-lg bg-red-500 px-4 py-2 text-xs font-black text-white hover:bg-red-400">
+                                                삭제하기
+                                            </button>
+                                            <button type="button" onClick={() => setPendingDelete(null)} className="rounded-lg border border-white/15 px-4 py-2 text-xs font-bold text-slate-200 hover:bg-white/10">
+                                                취소
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
 
                                 {history.length === 0 ? (
                                     <div className="bg-[#1a1508]/50 border-2 border-dashed border-white/10 rounded-3xl p-10 md:p-16 text-center">
@@ -430,7 +504,8 @@ export default function MyPage() {
                                                             {item.result.feng_shui_score}점
                                                         </span>
                                                         <button
-                                                            onClick={() => handleDeleteHistoryItem(idx)}
+                                                            onClick={() => setPendingDelete({ type: 'one', index: idx })}
+                                                            aria-label="이 분석 기록 삭제"
                                                             className="text-slate-600 hover:text-red-400 p-2 rounded-lg hover:bg-red-500/10 transition-colors"
                                                         >
                                                             <Trash2 className="w-4 h-4" />
@@ -460,6 +535,51 @@ export default function MyPage() {
                         {activeTab === 'orders' && (
                             <div className="space-y-6 animate-in fade-in duration-300">
                                 <h3 className="text-2xl md:text-3xl font-black text-white tracking-tight mb-8">의뢰 및 주문 내역</h3>
+                                {refundDraft && (
+                                    <div className="rounded-2xl border border-primary/30 bg-primary/10 p-5">
+                                        <h4 className="font-black text-white">환불 요청 사유</h4>
+                                        <p className="mt-1 text-xs leading-relaxed text-slate-300">
+                                            주문번호 {refundDraft.purchase.order_id}의 환불 사유를 입력해 주세요. 운영자 확인 후 처리됩니다.
+                                        </p>
+                                        <label htmlFor="refund-reason" className="mt-4 block text-xs font-bold text-primary">환불 사유</label>
+                                        <textarea
+                                            id="refund-reason"
+                                            value={refundDraft.reason}
+                                            onChange={(event) => {
+                                                setRefundDraft({ ...refundDraft, reason: event.target.value });
+                                                setRefundFallbackMailto(null);
+                                            }}
+                                            className="mt-2 min-h-24 w-full resize-y rounded-xl border border-white/10 bg-black/35 px-4 py-3 text-sm text-white outline-none focus:border-primary"
+                                            placeholder="환불을 요청하는 이유를 적어 주세요."
+                                            maxLength={1000}
+                                        />
+                                        {refundFallbackMailto && (
+                                            <a href={refundFallbackMailto} className="mt-3 inline-flex rounded-lg border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-xs font-bold text-amber-200 hover:bg-amber-500/20">
+                                                이메일로 환불 문의 작성하기
+                                            </a>
+                                        )}
+                                        <div className="mt-4 flex flex-wrap gap-2">
+                                            <button
+                                                type="button"
+                                                onClick={handleRefundRequest}
+                                                disabled={!refundDraft.reason.trim() || requestingRefundId === refundDraft.purchase.order_id}
+                                                className="rounded-lg bg-primary px-4 py-2 text-xs font-black text-[#0c0a06] disabled:cursor-not-allowed disabled:opacity-50"
+                                            >
+                                                {requestingRefundId ? '접수 중...' : '환불 요청 접수'}
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setRefundDraft(null);
+                                                    setRefundFallbackMailto(null);
+                                                }}
+                                                className="rounded-lg border border-white/15 px-4 py-2 text-xs font-bold text-slate-200 hover:bg-white/10"
+                                            >
+                                                취소
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
                                 {visiblePurchases.length === 0 ? (
                                     <div className="bg-[#1a1508]/50 border-2 border-dashed border-white/10 rounded-3xl p-10 md:p-16 text-center shadow-lg">
                                         <div className="w-20 h-20 bg-black/40 rounded-3xl flex items-center justify-center mx-auto mb-6 border border-white/5 shadow-inner">
@@ -528,7 +648,10 @@ export default function MyPage() {
                                                     <p className="text-[10px] text-slate-500 font-mono mt-1.5 bg-black/30 px-2 py-1 rounded border border-white/5">주문번호: {purchase.order_id.split('_').pop()}</p>
                                                     {purchase.status === 'COMPLETED' && (
                                                         <button
-                                                            onClick={() => handleRefundRequest(purchase)}
+                                                            onClick={() => {
+                                                                setRefundDraft({ purchase, reason: '' });
+                                                                setRefundFallbackMailto(null);
+                                                            }}
                                                             disabled={requestingRefundId === purchase.order_id || hasRefundRequestFor(purchase)}
                                                             className="mt-3 inline-flex items-center justify-center gap-1.5 rounded-lg border border-red-500/25 bg-red-500/10 px-3 py-2 text-xs font-bold text-red-300 transition-colors hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-60"
                                                         >
@@ -579,11 +702,12 @@ export default function MyPage() {
                                 <div className="bg-[#1a1508] border border-white/5 rounded-3xl p-6 md:p-8 shadow-2xl space-y-8">
 
                                     <div>
-                                        <label className="block text-xs font-black text-primary uppercase tracking-widest mb-2">
+                                        <label htmlFor="settings-birth-year" className="block text-xs font-black text-primary uppercase tracking-widest mb-2">
                                             기본 출생연도
                                         </label>
                                         <p className="text-sm text-slate-400 mb-4 font-medium">풍수 감정 시 기본으로 입력될 출생연도를 설정합니다.</p>
                                         <input
+                                            id="settings-birth-year"
                                             type="number"
                                             min={1940}
                                             max={2010}
@@ -595,12 +719,14 @@ export default function MyPage() {
                                     </div>
 
                                     <div className="pt-6 border-t border-white/10">
-                                        <label className="block text-xs font-black text-primary uppercase tracking-widest mb-2">
+                                        <span id="settings-gender-label" className="block text-xs font-black text-primary uppercase tracking-widest mb-2">
                                             기본 성별
-                                        </label>
-                                        <div className="flex gap-3 max-w-xs mt-4">
+                                        </span>
+                                        <div className="flex gap-3 max-w-xs mt-4" role="radiogroup" aria-labelledby="settings-gender-label">
                                             <button
                                                 type="button"
+                                                role="radio"
+                                                aria-checked={settings.gender === 'male'}
                                                 onClick={() => updateSettings({ gender: 'male' })}
                                                 className={`flex-1 py-4 rounded-xl border-2 text-sm font-bold transition-all shadow-sm ${settings.gender === 'male'
                                                     ? 'bg-primary text-[#0c0a06] border-primary shadow-primary/20'
@@ -609,6 +735,8 @@ export default function MyPage() {
                                             >남성</button>
                                             <button
                                                 type="button"
+                                                role="radio"
+                                                aria-checked={settings.gender === 'female'}
                                                 onClick={() => updateSettings({ gender: 'female' })}
                                                 className={`flex-1 py-4 rounded-xl border-2 text-sm font-bold transition-all shadow-sm ${settings.gender === 'female'
                                                     ? 'bg-primary text-[#0c0a06] border-primary shadow-primary/20'
@@ -619,9 +747,9 @@ export default function MyPage() {
                                     </div>
 
                                     <div className="pt-6 border-t border-white/10">
-                                        <label className="block text-xs font-black text-primary uppercase tracking-widest mb-2">
+                                        <p className="block text-xs font-black text-primary uppercase tracking-widest mb-2">
                                             비방 디자인 방식
-                                        </label>
+                                        </p>
                                         <p className="text-sm text-slate-400 mb-4 font-medium">
                                             화풍을 미리 고르지 않습니다. 비방서가 오행·공간·고민·수호동물을 해석해 작품군을 자동 선정합니다.
                                         </p>

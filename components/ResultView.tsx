@@ -10,6 +10,8 @@ import { supabase } from '../services/supabaseClient';
 import { trackEvent } from '../services/analyticsService';
 import { DIGITAL_PRODUCT_TOTAL_KRW, formatKrw } from '../services/pricing';
 import { InteriorArtStyleId } from '../utils/remedyArt';
+import { escapeHtml } from '../utils/escapeHtml';
+import { useToast } from './ToastProvider';
 
 interface ResultViewProps {
     result: AnalysisResult | null;
@@ -82,16 +84,6 @@ function renderParagraphText(paragraph: string) {
     ));
 }
 
-function escapeHtml(value: string): string {
-    return value.replace(/[&<>"']/g, char => ({
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        "'": '&#039;',
-    }[char] || char));
-}
-
 function premiumReportToHtml(report?: string): string {
     return parsePremiumReport(report).map(section => {
         const paragraphs = section.paragraphs
@@ -161,11 +153,22 @@ export default function ResultView({
 }: ResultViewProps) {
     // Paywall mock states
     const [isReportUnlocked, setIsReportUnlocked] = useState(false);
+    const { notify } = useToast();
 
     // Auth and Modals
     const { user, loading: authLoading } = useAuth();
     const [showLoginModal, setShowLoginModal] = useState(false);
     const [showPaymentModal, setShowPaymentModal] = useState(false);
+    const hasEstimatedDirection = metadata.analysisType === 'external'
+        && metadata.directionMethod === 'map_arrow'
+        && Number.isFinite(metadata.entranceBearingDegrees);
+    const normalizedBearing = hasEstimatedDirection
+        ? Math.round((((metadata.entranceBearingDegrees as number) % 360) + 360) % 360)
+        : null;
+    const analysisGradeTitle = hasEstimatedDirection ? '추정 방위 분석' : '초견 분석';
+    const analysisGradeDescription = hasEstimatedDirection
+        ? `진북 기준 지도 화살표 ${normalizedBearing}° · 사용자 추정치 · 신뢰도 낮음`
+        : '실측 방위 데이터 없음 · 관찰 가능한 공간·입지 근거 중심';
 
     // 로그인 후 복귀 시 결제 모달 자동 오픈
     React.useEffect(() => {
@@ -261,18 +264,31 @@ export default function ResultView({
 
     const handlePrintPDF = () => {
         if (!result) return;
-        const printWindow = window.open('', '_blank');
-        if (!printWindow) { alert('팝업이 차단되었습니다. 팝업 허용 후 다시 시도해주세요.'); return; }
 
         // Five elements data from result (with fallback)
-        const fe = (result as any).five_elements || { fire: 50, water: 50, wood: 50, earth: 50, metal: 50, deficient: '-', excess: '-', advice: '' };
+        const rawFiveElements = (result as any).five_elements || {};
+        const safePercentage = (value: unknown) => {
+            const numeric = Number(value);
+            return Number.isFinite(numeric) ? Math.min(100, Math.max(0, Math.round(numeric))) : 50;
+        };
+        const fe = {
+            fire: safePercentage(rawFiveElements.fire),
+            water: safePercentage(rawFiveElements.water),
+            wood: safePercentage(rawFiveElements.wood),
+            earth: safePercentage(rawFiveElements.earth),
+            metal: safePercentage(rawFiveElements.metal),
+            deficient: String(rawFiveElements.deficient || '-'),
+            excess: String(rawFiveElements.excess || '-'),
+            advice: String(rawFiveElements.advice || ''),
+        };
+        const safeScore = safePercentage(result.feng_shui_score);
 
         // Diagnosis cards HTML
         const diagnosisHTML = (result.diagnosis ?? []).map(diag => {
             const isGood = diag.type.includes('길');
             return `<div class="diag-card ${isGood ? 'good' : 'bad'}">
-                <div class="diag-header">${isGood ? '✅' : '⚠️'} ${diag.keyword}</div>
-                <p>${diag.description}</p>
+                <div class="diag-header">${isGood ? '✅' : '⚠️'} ${escapeHtml(diag.keyword)}</div>
+                <p>${escapeHtml(diag.description)}</p>
             </div>`;
         }).join('');
 
@@ -280,9 +296,9 @@ export default function ResultView({
 
         const today = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
 
-        printWindow.document.write(`<!DOCTYPE html>
+        const printHtml = `<!DOCTYPE html>
 <html lang="ko"><head><meta charset="utf-8"/>
-<title>풍수AI 초정밀 감명서</title>
+<title>풍수AI ${escapeHtml(analysisGradeTitle)} 감명서</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;700;900&family=Manrope:wght@300;400;600&display=swap" rel="stylesheet"/>
 <style>
   :root { --gold:#D4AF37; --gold-dark:#8B7355; --ink:#1A1A1A; --paper:#FDF9EF; --red:#B81D2E; --green:#2D7F5E; }
@@ -298,6 +314,9 @@ export default function ResultView({
   .score-badge .number { font-family:'Noto Serif KR',serif; font-size:52px; font-weight:900; color:var(--gold); line-height:1; }
   .score-badge .unit { font-size:16px; color:var(--gold); opacity:0.8; }
   .score-badge .label { font-size:10px; color:#a09882; letter-spacing:3px; margin-top:4px; text-transform:uppercase; }
+  .trust-note { margin:20px auto 0; max-width:560px; border:1px solid rgba(212,175,55,0.45); background:rgba(212,175,55,0.08); padding:12px 16px; }
+  .trust-note strong { display:block; color:var(--gold); font-size:13px; letter-spacing:2px; }
+  .trust-note span { display:block; margin-top:4px; color:#d7cba9; font-size:11px; line-height:1.6; }
   
   /* Body */
   .body { padding:48px 40px; }
@@ -362,7 +381,11 @@ export default function ResultView({
   <h1>풍 수 감 정 서</h1>
   <div class="score-badge">
     <div class="label">종합 풍수 점수</div>
-    <div><span class="number">${result.feng_shui_score || 0}</span><span class="unit">점</span></div>
+    <div><span class="number">${escapeHtml(safeScore)}</span><span class="unit">점</span></div>
+  </div>
+  <div class="trust-note">
+    <strong>${escapeHtml(analysisGradeTitle)}</strong>
+    <span>${escapeHtml(analysisGradeDescription)}</span>
   </div>
 </div>
 
@@ -370,7 +393,7 @@ export default function ResultView({
   <!-- Summary -->
   <div class="section">
     <div class="quote">
-      <div class="text">${result.analysis_summary || ''}</div>
+      <div class="text">${escapeHtml(result.analysis_summary || '')}</div>
       <div class="meaning">— 청풍 도사의 감평</div>
     </div>
   </div>
@@ -396,19 +419,19 @@ export default function ResultView({
       <h3 style="font-family:'Noto Serif KR',serif;font-size:20px;font-weight:700;letter-spacing:2px;">오행(五行) 균형 분석</h3>
     </div>
     <div class="elements">
-      <div class="el-item"><div class="el-icon">🔥</div><div class="el-name">火</div><div class="el-bar"><div class="el-fill" style="width:${fe.fire}%;background:#DC2626;"></div></div><div class="el-pct">${fe.fire}%</div></div>
-      <div class="el-item"><div class="el-icon">💧</div><div class="el-name">水</div><div class="el-bar"><div class="el-fill" style="width:${fe.water}%;background:#2563EB;"></div></div><div class="el-pct">${fe.water}%</div></div>
-      <div class="el-item"><div class="el-icon">🌿</div><div class="el-name">木</div><div class="el-bar"><div class="el-fill" style="width:${fe.wood}%;background:#16A34A;"></div></div><div class="el-pct">${fe.wood}%</div></div>
-      <div class="el-item"><div class="el-icon">⛰️</div><div class="el-name">土</div><div class="el-bar"><div class="el-fill" style="width:${fe.earth}%;background:#CA8A04;"></div></div><div class="el-pct">${fe.earth}%</div></div>
-      <div class="el-item"><div class="el-icon">🪙</div><div class="el-name">金</div><div class="el-bar"><div class="el-fill" style="width:${fe.metal}%;background:#6B7280;"></div></div><div class="el-pct">${fe.metal}%</div></div>
+      <div class="el-item"><div class="el-icon">🔥</div><div class="el-name">火</div><div class="el-bar"><div class="el-fill" style="width:${escapeHtml(fe.fire)}%;background:#DC2626;"></div></div><div class="el-pct">${escapeHtml(fe.fire)}%</div></div>
+      <div class="el-item"><div class="el-icon">💧</div><div class="el-name">水</div><div class="el-bar"><div class="el-fill" style="width:${escapeHtml(fe.water)}%;background:#2563EB;"></div></div><div class="el-pct">${escapeHtml(fe.water)}%</div></div>
+      <div class="el-item"><div class="el-icon">🌿</div><div class="el-name">木</div><div class="el-bar"><div class="el-fill" style="width:${escapeHtml(fe.wood)}%;background:#16A34A;"></div></div><div class="el-pct">${escapeHtml(fe.wood)}%</div></div>
+      <div class="el-item"><div class="el-icon">⛰️</div><div class="el-name">土</div><div class="el-bar"><div class="el-fill" style="width:${escapeHtml(fe.earth)}%;background:#CA8A04;"></div></div><div class="el-pct">${escapeHtml(fe.earth)}%</div></div>
+      <div class="el-item"><div class="el-icon">🪙</div><div class="el-name">金</div><div class="el-bar"><div class="el-fill" style="width:${escapeHtml(fe.metal)}%;background:#6B7280;"></div></div><div class="el-pct">${escapeHtml(fe.metal)}%</div></div>
     </div>
-    ${fe.advice ? `<div class="el-summary">부족: <strong>${fe.deficient}</strong> · 과잉: <strong>${fe.excess}</strong><br/>${fe.advice}</div>` : ''}
+    ${fe.advice ? `<div class="el-summary">부족: <strong>${escapeHtml(fe.deficient)}</strong> · 과잉: <strong>${escapeHtml(fe.excess)}</strong><br/>${escapeHtml(fe.advice)}</div>` : ''}
   </div>
 
   <!-- Overall Advice -->
   <div class="section" style="margin-top:32px;">
     <div class="quote" style="text-align:center;">
-      <div class="text" style="font-size:15px;">${result.overall_advice || ''}</div>
+      <div class="text" style="font-size:15px;">${escapeHtml(result.overall_advice || '')}</div>
       <div class="meaning">— 청풍 · 명월 두 대가의 총평</div>
     </div>
   </div>
@@ -418,20 +441,55 @@ export default function ResultView({
 <div class="footer">
   <div class="seal"><div class="seal-inner">天地人居士</div></div>
   <div class="footer-text">풍수지리 AI 대가 — 천지인 거사 감정</div>
-  <div class="footer-date">${today} 발행</div>
+  <div class="footer-date">${escapeHtml(today)} 발행</div>
   <div style="margin-top:16px;font-size:9px;color:#bbb;">© 풍수AI · 본 문서는 AI 분석 결과이며, 전문가의 현장 감정을 대체하지 않습니다.</div>
 </div>
 
-</body></html>`);
-        printWindow.document.close();
-        printWindow.focus();
-        setTimeout(() => { printWindow.print(); }, 800);
+</body></html>`;
+        const printWindow = window.open('', '_blank');
+        if (printWindow) {
+            printWindow.document.write(printHtml);
+            printWindow.document.close();
+            printWindow.focus();
+            setTimeout(() => { printWindow.print(); }, 800);
+            return;
+        }
+
+        notify('팝업이 차단되어 현재 화면 안에서 인쇄 창을 엽니다. 인쇄 창에서 “PDF로 저장”을 선택해 주세요.', 'warning', 9000);
+        const printFrame = document.createElement('iframe');
+        printFrame.title = '풍수 감정서 인쇄용 보기';
+        printFrame.style.position = 'fixed';
+        printFrame.style.inset = '0';
+        printFrame.style.width = '100%';
+        printFrame.style.height = '100%';
+        printFrame.style.border = '0';
+        printFrame.style.zIndex = '250';
+        printFrame.style.background = '#FDF9EF';
+        document.body.appendChild(printFrame);
+
+        const frameDocument = printFrame.contentDocument;
+        const frameWindow = printFrame.contentWindow;
+        if (!frameDocument || !frameWindow) {
+            printFrame.remove();
+            notify('인쇄용 화면을 열지 못했습니다. 브라우저 메뉴에서 이 페이지 인쇄를 선택해 주세요.', 'error');
+            return;
+        }
+        frameDocument.open();
+        frameDocument.write(printHtml);
+        frameDocument.close();
+        const cleanup = () => printFrame.remove();
+        frameWindow.addEventListener('afterprint', cleanup, { once: true });
+        window.setTimeout(() => {
+            frameWindow.focus();
+            frameWindow.print();
+            window.setTimeout(cleanup, 30000);
+        }, 800);
     };
 
 
     const handleShare = async () => {
         if (!currentAnalysisId) {
-            alert('저장된 분석 결과가 없습니다. 다시 시도해주세요.');
+            notify('공유 링크는 로그인 후 서버에 저장된 분석 결과에서 만들 수 있습니다.', 'warning');
             return;
         }
         const shareUrl = `${window.location.origin}/analyze?id=${currentAnalysisId}`;
@@ -440,7 +498,7 @@ export default function ResultView({
         const Kakao = (window as any).Kakao;
         if (!Kakao || !Kakao.isInitialized()) {
             console.error('카카오 SDK가 초기화되지 않았습니다.');
-            alert('카카오톡 공유를 준비 중입니다. 잠시 후 다시 시도해주세요.');
+            notify('카카오톡 공유 기능을 준비하지 못했습니다. 잠시 후 다시 시도하거나 링크 복사를 이용해 주세요.', 'warning');
             return;
         }
 
@@ -460,8 +518,11 @@ export default function ResultView({
         if (!currentAnalysisId) return;
         const shareUrl = `${window.location.origin}/analyze?id=${currentAnalysisId}`;
         navigator.clipboard.writeText(shareUrl).then(() => {
-            alert('링크가 복사되었습니다!');
-        }).catch(err => console.error('링크 복사 실패:', err));
+            notify('분석 결과 링크를 복사했습니다.', 'success');
+        }).catch(err => {
+            console.error('링크 복사 실패:', err);
+            notify('링크를 복사하지 못했습니다. 브라우저 주소창의 주소를 직접 복사해 주세요.', 'error');
+        });
     };
 
     const diagnosisItems = result?.diagnosis ?? [];
@@ -471,10 +532,10 @@ export default function ResultView({
     const fiveElements = result ? ((result as any).five_elements || null) : null;
     const effectiveReportUnlocked = isReportUnlocked || premiumPreviewUnlocked;
     const lockedReportPreview = result ? [
-        '## 제1장 좌향과 기맥 판독',
+        hasEstimatedDirection ? '## 제1장 추정 좌향과 기맥 판독' : '## 제1장 시각 근거와 방위 한계',
         `${result.analysis_summary}`,
         '',
-        '## 제2장 길흉 지점 정밀 해석',
+        '## 제2장 관찰 근거와 길흉 참고 해석',
         goodDiagnosis ? `길한 흐름: ${goodDiagnosis.keyword}` : '길한 흐름: 프리미엄 본문에서 공개',
         badDiagnosis ? `막힌 기운: ${badDiagnosis.keyword}` : '막힌 기운: 프리미엄 본문에서 공개',
         '',
@@ -519,6 +580,20 @@ export default function ResultView({
 
             {result && (
                 <div className="space-y-10 relative mt-8">
+                    <div className={`rounded-xl border px-5 py-4 ${hasEstimatedDirection ? 'border-amber-300/35 bg-amber-300/10' : 'border-sky-300/30 bg-sky-300/10'}`}>
+                        <div className="flex items-start gap-3">
+                            <Compass className={`mt-0.5 h-5 w-5 shrink-0 ${hasEstimatedDirection ? 'text-amber-300' : 'text-sky-300'}`} />
+                            <div>
+                                <div className="text-sm font-black text-white">{analysisGradeTitle}</div>
+                                <p className="mt-1 text-xs leading-relaxed text-slate-300">{analysisGradeDescription}</p>
+                                <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
+                                    {hasEstimatedDirection
+                                        ? '24산 분류는 입력 각도에 따라 결정론적으로 계산했지만, 현장 나침반 실측을 대체하지 않습니다.'
+                                        : '동서사택·길흉방·좌향은 확정하지 않으며, 화면에서 관찰 가능한 창·문·도로·녹지 배치를 중심으로 해석합니다.'}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
 
                     {/* 1. Free Preview: First Reading Scroll */}
                     <section className="relative overflow-hidden rounded-2xl border border-[#d4af37]/50 bg-[#f2e4c2] text-[#26190b] shadow-2xl stagger-item" style={{ animationDelay: '0.1s' }}>
@@ -617,10 +692,18 @@ export default function ResultView({
                                             <div className="text-[#d4af37] text-[12px] font-black tracking-[0.3em] mb-3">청풍명월 합감</div>
                                             <h3 className="text-3xl md:text-4xl font-black leading-tight mb-4">공간비방서</h3>
                                             <p className="text-[14px] leading-relaxed text-[#d9caa0] mb-7">
-                                                초견첩의 단편 징후를 넘어 공간의 길흉, 오행 결핍, 실전 비보 배치까지 한 권의 감명서로 엮었습니다.
+                                                {hasEstimatedDirection
+                                                    ? '지도에서 지정한 추정 방위와 관찰 근거를 분리해, 오행 결핍과 비보 배치를 한 권의 감명서로 엮었습니다.'
+                                                    : '실측 방위가 없는 초견 분석의 한계를 밝히고, 관찰 가능한 징후와 오행 결핍·비보 배치를 한 권의 감명서로 엮었습니다.'}
                                             </p>
                                             <div className="space-y-3 text-[13px]">
-                                                {['제1장 좌향과 기맥 판독', '제2장 길흉 지점 정밀 해석', '제3장 오행 결핍과 과잉', '제4장 맞춤 비보 처방', '제5장 실행 순서와 보관용 PDF'].map((chapter) => (
+                                                {[
+                                                    hasEstimatedDirection ? '제1장 추정 좌향과 기맥 판독' : '제1장 시각 근거와 방위 한계',
+                                                    '제2장 관찰 근거와 길흉 참고 해석',
+                                                    '제3장 오행 결핍과 과잉',
+                                                    '제4장 맞춤 비보 처방',
+                                                    '제5장 실행 순서와 보관용 PDF',
+                                                ].map((chapter) => (
                                                     <div key={chapter} className="flex items-center gap-3 border-b border-[#d4af37]/10 pb-3 text-[#f4e6bd]">
                                                         <FileText className="w-4 h-4 text-[#d4af37] shrink-0" />
                                                         <span className="font-bold">{chapter}</span>
@@ -630,7 +713,7 @@ export default function ResultView({
                                             {fiveElements && (
                                                 <div className="mt-7 border border-[#d4af37]/20 p-4 bg-black/20">
                                                     <div className="text-[11px] font-black tracking-[0.22em] text-[#d4af37] mb-3">五行 BALANCE</div>
-                                                    <div className="grid grid-cols-5 gap-2 text-center">
+                                                    <div className="grid grid-cols-2 gap-3 text-center sm:grid-cols-5">
                                                         {[
                                                             ['火', fiveElements.fire ?? 50, '#dc2626'],
                                                             ['水', fiveElements.water ?? 50, '#2563eb'],
@@ -638,7 +721,7 @@ export default function ResultView({
                                                             ['土', fiveElements.earth ?? 50, '#ca8a04'],
                                                             ['金', fiveElements.metal ?? 50, '#94a3b8']
                                                         ].map(([label, value, color]) => (
-                                                            <div key={label as string}>
+                                                            <div key={label as string} className="rounded-lg border border-[#d4af37]/10 bg-black/15 p-2 last:col-span-2 sm:last:col-span-1">
                                                                 <div className="text-[#f4e6bd] font-black mb-1">{label}</div>
                                                                 <div className="h-16 bg-white/10 flex items-end">
                                                                     <div className="w-full" style={{ height: `${value}%`, backgroundColor: color as string }}></div>
@@ -701,9 +784,9 @@ export default function ResultView({
                                                 <div className="bg-[#1d150c]/95 backdrop-blur-xl p-6 rounded-2xl border border-[#d4af37]/55 shadow-2xl w-[92%] max-w-sm text-center">
                                                     <Lock className="w-8 h-8 mx-auto text-[#d4af37] mb-3" />
                                                     <h4 className="text-lg font-black text-white mb-2">공간비방서 봉인 중</h4>
-                                                    <p className="text-sm text-[#d9caa0] mb-4 leading-relaxed">한 번 결제로 아래 잠금 영역이 모두 열립니다.</p>
+                                                    <p className="text-sm text-[#d9caa0] mb-4 leading-relaxed">공간비방서 결제로 본문·오행·전체 처방이 열립니다. 비방화와 수호 오브제는 별도 구매입니다.</p>
                                                     <div className="mb-5 grid gap-2 text-left">
-                                                        {['상세 감명서 전체 본문', '오행 균형표와 원인 해석', '비방 아트·수호 오브제 해설'].map((item) => (
+                                                        {['상세 감명서 전체 본문', '오행 균형표와 원인 해석', '전체 비보 처방과 배치 위치'].map((item) => (
                                                             <div key={item} className="flex items-center gap-2 rounded-xl border border-[#d4af37]/20 bg-[#d4af37]/10 px-3 py-2 text-[12px] font-bold text-[#f4e6bd]">
                                                                 <CheckCircle2 className="h-4 w-4 shrink-0 text-[#d4af37]" />
                                                                 {item}
@@ -928,7 +1011,7 @@ export default function ResultView({
                 isOpen={showPaymentModal}
                 onClose={() => setShowPaymentModal(false)}
                 amount={DIGITAL_PRODUCT_TOTAL_KRW}
-                orderName="초정밀 도사 감명서 프리미엄 열람"
+                orderName={`${analysisGradeTitle} 도사 감명서 프리미엄 열람`}
                 orderType="report"
                 analysisId={currentAnalysisId}
                 analysisScope={metadata.analysisType}

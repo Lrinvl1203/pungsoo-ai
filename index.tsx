@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import ErrorBoundary from './components/ErrorBoundary';
 import PWAInstallPrompt from './components/PWAInstallPrompt';
 import { Analytics } from '@vercel/analytics/react';
+import { ToastProvider } from './components/ToastProvider';
 
 const AnalyzeRoute = React.lazy(() => import('./pages/AnalyzeRoute'));
 const Landing = React.lazy(() => import('./pages/Landing'));
@@ -39,22 +40,24 @@ root.render(
   <React.StrictMode>
     <ErrorBoundary>
       <BrowserRouter>
-        <Suspense fallback={<PageLoader />}>
-          <Routes>
-            <Route path="/" element={<Landing />} />
-            <Route path="/analyze" element={<AnalyzeRoute />} />
-            <Route path="/mypage" element={<MyPageRoute />} />
-            <Route path="/payment/success" element={<PaymentSuccess />} />
-            <Route path="/payment/fail" element={<PaymentFail />} />
-            <Route path="/latpeed/claim" element={<LatpeedClaimRoute />} />
-            <Route path="/terms" element={<Terms />} />
-            <Route path="/privacy" element={<Privacy />} />
-            <Route path="/refund" element={<Refund />} />
-            <Route path="/admin" element={<AdminRoute />} />
-          </Routes>
-        </Suspense>
-        <PWAInstallPrompt />
-        {import.meta.env.PROD && <Analytics />}
+        <ToastProvider>
+          <Suspense fallback={<PageLoader />}>
+            <Routes>
+              <Route path="/" element={<Landing />} />
+              <Route path="/analyze" element={<AnalyzeRoute />} />
+              <Route path="/mypage" element={<MyPageRoute />} />
+              <Route path="/payment/success" element={<PaymentSuccess />} />
+              <Route path="/payment/fail" element={<PaymentFail />} />
+              <Route path="/latpeed/claim" element={<LatpeedClaimRoute />} />
+              <Route path="/terms" element={<Terms />} />
+              <Route path="/privacy" element={<Privacy />} />
+              <Route path="/refund" element={<Refund />} />
+              <Route path="/admin" element={<AdminRoute />} />
+            </Routes>
+          </Suspense>
+          <PWAInstallPrompt />
+          {import.meta.env.PROD && <Analytics />}
+        </ToastProvider>
       </BrowserRouter>
     </ErrorBoundary>
   </React.StrictMode>

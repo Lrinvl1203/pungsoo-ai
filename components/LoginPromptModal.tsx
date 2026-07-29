@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { X, Lock, Key } from 'lucide-react';
+import { useToast } from './ToastProvider';
+import { useModalFocusTrap } from '../hooks/useModalFocusTrap';
 
 interface Props {
     isOpen: boolean;
@@ -10,7 +12,9 @@ interface Props {
 
 export default function LoginPromptModal({ isOpen, onClose, message = '프리미엄 콘텐츠를 열람하기 위해 로그인이 필요합니다.' }: Props) {
     const { signInWithKakao, signInWithGoogle } = useAuth();
+    const { notify } = useToast();
     const [isSigningIn, setIsSigningIn] = useState(false);
+    const modalRef = useModalFocusTrap(isOpen, onClose);
 
     if (!isOpen) return null;
 
@@ -27,16 +31,24 @@ export default function LoginPromptModal({ isOpen, onClose, message = '프리미
             // On success, redirecting happens so no need to stop spinner usually
         } catch (e) {
             console.error(e);
-            alert('로그인 처리 중 오류가 발생했습니다.');
+            notify('로그인을 시작하지 못했습니다. 네트워크 상태를 확인하고 다시 시도해 주세요.', 'error');
             setIsSigningIn(false);
         }
     };
 
     return (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-[100] animate-in fade-in duration-200">
-            <div className="bg-[#1a1508] border border-primary/30 rounded-3xl w-full max-w-sm p-8 relative shadow-2xl text-center transform animate-in slide-in-from-bottom-8 duration-300">
+            <div
+                ref={modalRef}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="login-modal-title"
+                tabIndex={-1}
+                className="bg-[#1a1508] border border-primary/30 rounded-3xl w-full max-w-sm p-8 relative shadow-2xl text-center transform animate-in slide-in-from-bottom-8 duration-300 outline-none"
+            >
                 <button
                     onClick={onClose}
+                    aria-label="로그인 창 닫기"
                     className="absolute right-4 top-4 text-slate-400 hover:text-white transition-colors"
                 >
                     <X className="w-6 h-6" />
@@ -46,7 +58,7 @@ export default function LoginPromptModal({ isOpen, onClose, message = '프리미
                     <Lock className="w-8 h-8 text-primary" />
                 </div>
 
-                <h3 className="text-xl font-bold text-white mb-2">계정 연동 후 바로 이어집니다</h3>
+                <h3 id="login-modal-title" className="text-xl font-bold text-white mb-2">계정 연동 후 바로 이어집니다</h3>
                 <p className="text-sm text-slate-300 mb-8 leading-relaxed">
                     {message}<br />로그인 후 결제창이 자동으로 다시 열립니다.
                 </p>
