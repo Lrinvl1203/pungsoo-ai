@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "docs:check": "node scripts/check-project-docs.mjs"
   },
   "dependencies": {
     "@fal-ai/client": "^1.9.4",

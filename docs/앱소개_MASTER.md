@@ -1,4 +1,8 @@
 # 풍수지리 AI — 완벽 앱 소개서
+
+> 역할: 서비스 전체 참고서
+> 현재 구현·제품·TODO의 정본은 [PROJECT_STATE.md](./PROJECT_STATE.md),
+> 프롬프트 정본은 [PROMPT_INDEX.md](./PROMPT_INDEX.md)를 우선한다.
 > "공간의 기운을 예술로 치유하다"
 
 ---
