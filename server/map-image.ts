@@ -1,7 +1,74 @@
 export const MAP_IMAGE_WIDTH = 600;
 export const MAP_IMAGE_HEIGHT = 400;
 export const MAP_LONGITUDE_DELTA = 0.008;
-export const MAP_LATITUDE_DELTA = MAP_LONGITUDE_DELTA * 0.7;
+
+const KILOMETERS_PER_LONGITUDE_DEGREE_AT_EQUATOR = 111.320;
+const KILOMETERS_PER_LATITUDE_DEGREE = 110.574;
+
+export interface NormalizedMapPoint {
+    x: number;
+    y: number;
+}
+
+export interface MapCoordinate {
+    latitude: number;
+    longitude: number;
+}
+
+export interface MapBounds {
+    west: number;
+    south: number;
+    east: number;
+    north: number;
+}
+
+export const calculateMapLatitudeDelta = (
+    centerLatitude: number,
+    longitudeDelta = MAP_LONGITUDE_DELTA,
+) => (
+    longitudeDelta
+    * Math.cos(centerLatitude * Math.PI / 180)
+    * (MAP_IMAGE_HEIGHT / MAP_IMAGE_WIDTH)
+    * (KILOMETERS_PER_LONGITUDE_DEGREE_AT_EQUATOR / KILOMETERS_PER_LATITUDE_DEGREE)
+);
+
+export const buildMapBounds = (
+    latitude: number,
+    longitude: number,
+    longitudeDelta = MAP_LONGITUDE_DELTA,
+): MapBounds => {
+    const latitudeDelta = calculateMapLatitudeDelta(latitude, longitudeDelta);
+    return {
+        west: longitude - longitudeDelta,
+        south: latitude - latitudeDelta,
+        east: longitude + longitudeDelta,
+        north: latitude + latitudeDelta,
+    };
+};
+
+export const normalizedMapPointToCoordinates = (
+    point: NormalizedMapPoint,
+    center: MapCoordinate,
+    longitudeDelta = MAP_LONGITUDE_DELTA,
+): MapCoordinate => {
+    const latitudeDelta = calculateMapLatitudeDelta(center.latitude, longitudeDelta);
+    return {
+        longitude: center.longitude + (point.x - 0.5) * longitudeDelta * 2,
+        latitude: center.latitude - (point.y - 0.5) * latitudeDelta * 2,
+    };
+};
+
+export const mapCoordinatesToNormalizedPoint = (
+    coordinate: MapCoordinate,
+    center: MapCoordinate,
+    longitudeDelta = MAP_LONGITUDE_DELTA,
+): NormalizedMapPoint => {
+    const latitudeDelta = calculateMapLatitudeDelta(center.latitude, longitudeDelta);
+    return {
+        x: 0.5 + (coordinate.longitude - center.longitude) / (longitudeDelta * 2),
+        y: 0.5 - (coordinate.latitude - center.latitude) / (latitudeDelta * 2),
+    };
+};
 
 export type ArcGisMapService = 'World_Imagery' | 'World_Street_Map';
 
@@ -23,12 +90,8 @@ export const buildArcGisMapUrl = (
         throw new Error('Invalid map coordinates.');
     }
 
-    const bbox = [
-        longitude - MAP_LONGITUDE_DELTA,
-        latitude - MAP_LATITUDE_DELTA,
-        longitude + MAP_LONGITUDE_DELTA,
-        latitude + MAP_LATITUDE_DELTA,
-    ].join(',');
+    const bounds = buildMapBounds(latitude, longitude);
+    const bbox = [bounds.west, bounds.south, bounds.east, bounds.north].join(',');
 
     return `https://server.arcgisonline.com/ArcGIS/rest/services/${service}/MapServer/export`
         + `?bbox=${bbox}&bboxSR=4326&imageSR=4326`

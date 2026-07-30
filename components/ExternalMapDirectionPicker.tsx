@@ -1,8 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Check, Compass, Crosshair, Loader2, MapPin, Navigation, RotateCcw } from 'lucide-react';
-
-const MAP_LONGITUDE_DELTA = 0.008;
-const MAP_LATITUDE_DELTA = MAP_LONGITUDE_DELTA * 0.7;
+import { normalizedMapPointToCoordinates } from '../server/map-image';
+import { bearingFromNormalizedOffset } from '../utils/bearing';
 
 type EditMode = 'pin' | 'direction';
 
@@ -66,10 +65,14 @@ export default function ExternalMapDirectionPicker({
     };
 
     const updateDirection = (position: { x: number; y: number }) => {
+        const rect = mapRef.current?.getBoundingClientRect();
+        if (!rect || rect.width <= 0 || rect.height <= 0) return;
         const dx = position.x - pinPosition.x;
         const dy = position.y - pinPosition.y;
-        if (Math.hypot(dx, dy) < 0.04) return;
-        const bearing = (Math.atan2(dx, -dy) * 180 / Math.PI + 360) % 360;
+        const aspectRatio = rect.width / rect.height;
+        const correctedDx = dx * aspectRatio;
+        if (Math.hypot(correctedDx, dy) < 0.04) return;
+        const bearing = bearingFromNormalizedOffset(dx, dy, aspectRatio);
         onBearingChange(Math.round(bearing));
     };
 
@@ -103,13 +106,10 @@ export default function ExternalMapDirectionPicker({
         setDragging(false);
         if (!position || editMode !== 'pin') return;
 
-        const nextLongitude = previewCenter.longitude
-            + (position.x - 0.5) * MAP_LONGITUDE_DELTA * 2;
-        const nextLatitude = previewCenter.latitude
-            - (position.y - 0.5) * MAP_LATITUDE_DELTA * 2;
+        const nextCoordinate = normalizedMapPointToCoordinates(position, previewCenter);
         onLocationChange(
-            Math.round(nextLatitude * 1_000_000) / 1_000_000,
-            Math.round(nextLongitude * 1_000_000) / 1_000_000,
+            Math.round(nextCoordinate.latitude * 1_000_000) / 1_000_000,
+            Math.round(nextCoordinate.longitude * 1_000_000) / 1_000_000,
         );
     };
 
