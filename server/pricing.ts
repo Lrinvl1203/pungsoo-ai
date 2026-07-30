@@ -5,6 +5,8 @@ export const ORDER_PRICE_KRW: Record<PungsooOrderType, number> = {
     report: DIGITAL_PRODUCT_TOTAL_KRW,
     remedy: DIGITAL_PRODUCT_TOTAL_KRW,
     zodiac: DIGITAL_PRODUCT_TOTAL_KRW,
+    // 실물 상품도 VAT 포함 단일 금액이다. 현재 즉시결제는 feature flag로 꺼져 있고
+    // 이메일 제작 의뢰만 노출한다(D-022).
     frame: 49000,
     object: 79000,
 };

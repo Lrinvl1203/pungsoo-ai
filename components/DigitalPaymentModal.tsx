@@ -81,7 +81,7 @@ export default function DigitalPaymentModal({ isOpen, onClose, amount, orderName
                     <div className="mb-6 p-4 rounded-xl bg-black/40 border border-white/5 text-center">
                         <p className="text-slate-300 text-sm mb-1">최종 결제 예상 금액</p>
                         <p className="text-3xl font-black text-primary">{amount.toLocaleString()}<span className="text-lg text-slate-400 ml-1">원</span></p>
-                        <p className="mt-1 text-[11px] font-bold text-slate-500">한국 결제 기준 {DIGITAL_PRODUCT_TAX_NOTE}</p>
+                        <p className="mt-1 text-[11px] font-bold text-slate-500">{DIGITAL_PRODUCT_TAX_NOTE}</p>
                     </div>
 
                     <div className="mb-5 rounded-2xl border border-primary/25 bg-primary/10 p-4">

@@ -78,14 +78,13 @@ INSERT 정책 부재, UNIQUE 제약, `api_usage` RLS와 service role 전용 RPC
 - 사용자 확인 후 커밋을 push하고 Vercel에 배포한다.
 - 로그인/비로그인 분석 한도와 한도 초과 429, 전역 상한 503을 확인한다.
 - 내부 1장·3장 분석, 외부 지도 핀·화살표·무방위 초견 분석을 확인한다.
-- 실제 활성 결제사 상품가가 서버 정가 10,890원인지 맞춘다.
+- 실제 활성 결제사 상품가가 서버 정가 9,900원인지 확인한다.
 - 결제 성공, 웹훅 재전송/중복, 언락, 타인 분석·환불 차단, 환불 완료,
   마이페이지 DB 삭제를 확인한다.
 - 모바일 실기기에서 지도 드래그, 모달 키보드·Escape, PDF 저장과 팝업
   차단 fallback을 확인한다.
-- AI Studio 임시 배경 원본을 별도로 확보해
-  `public/bg-hanok-cosmos.jpg`로 저장하고 `App.tsx`의 외부 URL을 제거한다.
-  현재 실행 환경에서는 해당 원본 URL 접근이 차단되어 미완료다.
+- AI Studio 임시 배경은 `public/bg-hanok-cosmos.png`로 자체 호스팅을 마쳤다.
+  `App.tsx`에 외부 URL이 남아 있지 않다.
 - CSP 위반을 관찰한 뒤 SDK를 깨지 않도록 nonce/hash를 도입해
   `unsafe-inline`을 제거한다.
 
