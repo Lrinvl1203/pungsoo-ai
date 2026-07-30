@@ -185,6 +185,23 @@ Status: `SECURED IN CODE`, 운영 DB 적용·프로덕션 검증 필요
 - HTML/PDF/관리자 이메일의 사용자·Gemini 입력은 공용 `escapeHtml`로
   이스케이프한다.
 
+### 분석 응답성과 입력 오류 UX
+
+- `api/analyze.ts`와 `api/analyze-location.ts`는 실제 심층 리포트 생성과
+  지도 수집 시간을 고려해 Vercel `maxDuration: 120`을 사용한다.
+  클라이언트 분석 fetch에는 별도 AbortController 제한이 없어 서버보다 먼저
+  중단되지 않으며, 로딩 UI는 최대 2분 소요 가능성을 안내한다.
+- Gemini가 사진을 처리하지 못한 4xx는 내부 원인을 서버 로그에 남기고
+  `422 IMAGE_UNPROCESSABLE`로 변환한다. 사용자는 다른 선명한 사진이나
+  주소·지도 위치를 다시 선택하라는 안내를 받는다.
+- 외부 주소 자동완성은 combobox/listbox 의미를 제공하며 ArrowDown·ArrowUp,
+  Enter 선택과 Escape 닫기를 지원한다.
+- 전체 화면 배경은 아직 AI Studio의 `lh3.googleusercontent.com/aida-public`
+  임시 URL을 사용한다. 로컬 파일 확보가 차단되어 자체 호스팅 전환이 남아
+  있으며, 배포 전 `public/bg-hanok-cosmos.jpg`로 교체해야 한다.
+- CSP의 `*.googleusercontent.com`은 배경 때문이 아니라 Google OAuth가
+  반환하는 `avatar_url`/`picture` 프로필 사진을 위해 유지한다.
+
 ### 테스트
 
 - Vitest를 devDependency로 사용하며 `npm test`가 실제 assertion을 가진
@@ -233,6 +250,8 @@ Status: `SECURED IN CODE`, 운영 DB 적용·프로덕션 검증 필요
   10,890원 정합 확인
 - 모바일 실기기에서 3장 업로드, 지도 드래그, 모달 포커스, PDF 인쇄와
   팝업 차단 fallback 확인
+- AI Studio 임시 배경 이미지를 로컬 자산으로 확보해 자체 호스팅하고 외부
+  배경 요청 제거
 - CSP 위반을 관찰하고 결제·Kakao SDK 호환을 유지하며
   `unsafe-inline`을 nonce/hash 방식으로 제거
 

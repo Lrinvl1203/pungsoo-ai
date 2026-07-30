@@ -32,6 +32,8 @@ Last updated: 2026-07-30
   PDF 팝업 차단 fallback, 모달 접근성과 모바일 레이아웃을 정리했다.
 - 액자·오브제 미검증 실물 SKU 즉시결제는 feature flag로 껐으며 이메일
   제작 의뢰만 노출한다.
+- 분석 함수의 Vercel 실행시간을 120초로 맞추고, Gemini 이미지 처리 실패를
+  422로 안내하며, 주소 자동완성을 키보드 combobox로 보강했다.
 
 ## 3. 즉시 가능한 다음 작업
 
@@ -81,6 +83,9 @@ INSERT 정책 부재, UNIQUE 제약, `api_usage` RLS와 service role 전용 RPC
   마이페이지 DB 삭제를 확인한다.
 - 모바일 실기기에서 지도 드래그, 모달 키보드·Escape, PDF 저장과 팝업
   차단 fallback을 확인한다.
+- AI Studio 임시 배경 원본을 별도로 확보해
+  `public/bg-hanok-cosmos.jpg`로 저장하고 `App.tsx`의 외부 URL을 제거한다.
+  현재 실행 환경에서는 해당 원본 URL 접근이 차단되어 미완료다.
 - CSP 위반을 관찰한 뒤 SDK를 깨지 않도록 nonce/hash를 도입해
   `unsafe-inline`을 제거한다.
 
