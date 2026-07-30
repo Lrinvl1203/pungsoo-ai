@@ -25,3 +25,6 @@ dist-ssr
 
 .vercel
 tmp/
+
+# E2E 산출물(스크린샷·요약)은 재생성 가능하므로 추적하지 않는다
+artifacts/e2e/
