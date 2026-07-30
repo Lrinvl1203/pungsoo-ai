@@ -49,6 +49,40 @@ export default function AnalysisForm({
     onLoadHistory,
     onClearHistory,
 }: AnalysisFormProps) {
+    const [activeSuggestionIndex, setActiveSuggestionIndex] = React.useState(-1);
+    const addressListboxId = 'external-address-suggestions';
+
+    React.useEffect(() => {
+        if (!showSuggestions || addressSuggestions.length === 0) {
+            setActiveSuggestionIndex(-1);
+            return;
+        }
+        setActiveSuggestionIndex(current => (
+            current >= addressSuggestions.length ? addressSuggestions.length - 1 : current
+        ));
+    }, [showSuggestions, addressSuggestions.length]);
+
+    const selectAddressSuggestion = (suggestion: AddressSuggestion) => {
+        const fullAddress = suggestion.place_name !== suggestion.address_name
+            ? `${suggestion.place_name} (${suggestion.address_name})`
+            : suggestion.address_name;
+        const latitude = Number(suggestion.y);
+        const longitude = Number(suggestion.x);
+        setMetadata({
+            ...metadata,
+            address: fullAddress,
+            latitude,
+            longitude,
+            locationConfirmed: false,
+            entranceBearingDegrees: null,
+            directionMethod: 'none',
+            directionConfidence: 'none',
+        });
+        setAddressQuery(fullAddress);
+        setShowSuggestions(false);
+        setActiveSuggestionIndex(-1);
+    };
+
     return (
         <div className="space-y-8">
             {/* Analysis Type Toggle */}
@@ -153,6 +187,15 @@ export default function AnalysisForm({
                         <input
                             id="external-address"
                             type="text"
+                            role="combobox"
+                            aria-autocomplete="list"
+                            aria-expanded={showSuggestions && addressSuggestions.length > 0}
+                            aria-controls={addressListboxId}
+                            aria-activedescendant={
+                                showSuggestions && activeSuggestionIndex >= 0
+                                    ? `${addressListboxId}-option-${activeSuggestionIndex}`
+                                    : undefined
+                            }
                             placeholder="예: 강남역, 스타벅스 성수점, 테헤란로 123"
                             value={addressQuery || metadata.address || ''}
                             onChange={(e) => {
@@ -168,6 +211,36 @@ export default function AnalysisForm({
                                     directionConfidence: 'none',
                                 });
                                 setShowSuggestions(true);
+                                setActiveSuggestionIndex(-1);
+                            }}
+                            onKeyDown={(event) => {
+                                if (event.key === 'Escape') {
+                                    setShowSuggestions(false);
+                                    setActiveSuggestionIndex(-1);
+                                    return;
+                                }
+                                if (addressSuggestions.length === 0) return;
+
+                                if (event.key === 'ArrowDown') {
+                                    event.preventDefault();
+                                    setShowSuggestions(true);
+                                    setActiveSuggestionIndex(current => (
+                                        current < addressSuggestions.length - 1 ? current + 1 : 0
+                                    ));
+                                } else if (event.key === 'ArrowUp') {
+                                    event.preventDefault();
+                                    setShowSuggestions(true);
+                                    setActiveSuggestionIndex(current => (
+                                        current > 0 ? current - 1 : addressSuggestions.length - 1
+                                    ));
+                                } else if (
+                                    event.key === 'Enter'
+                                    && showSuggestions
+                                    && activeSuggestionIndex >= 0
+                                ) {
+                                    event.preventDefault();
+                                    selectAddressSuggestion(addressSuggestions[activeSuggestionIndex]);
+                                }
                             }}
                             onFocus={() => {
                                 if (addressSuggestions.length > 0) setShowSuggestions(true);
@@ -183,31 +256,26 @@ export default function AnalysisForm({
                             </div>
                         )}
                         {showSuggestions && addressSuggestions.length > 0 && (
-                            <ul className="absolute z-10 w-full mt-1 bg-white/5 backdrop-blur-md border border-white/10 rounded-lg shadow-lg max-h-60 overflow-auto custom-scrollbar">
+                            <ul
+                                id={addressListboxId}
+                                role="listbox"
+                                aria-label="주소 검색 결과"
+                                className="absolute z-10 w-full mt-1 bg-white/5 backdrop-blur-md border border-white/10 rounded-lg shadow-lg max-h-60 overflow-auto custom-scrollbar"
+                            >
                                 {addressSuggestions.map((suggestion, idx) => (
                                     <li
-                                        key={idx}
-                                        onMouseDown={(e) => {
-                                            e.preventDefault();
-                                            const fullAddress = suggestion.place_name !== suggestion.address_name ?
-                                                `${suggestion.place_name} (${suggestion.address_name})` :
-                                                suggestion.address_name;
-                                            const latitude = Number(suggestion.y);
-                                            const longitude = Number(suggestion.x);
-                                            setMetadata({
-                                                ...metadata,
-                                                address: fullAddress,
-                                                latitude,
-                                                longitude,
-                                                locationConfirmed: false,
-                                                entranceBearingDegrees: null,
-                                                directionMethod: 'none',
-                                                directionConfidence: 'none',
-                                            });
-                                            setAddressQuery(fullAddress);
-                                            setShowSuggestions(false);
+                                        key={`${suggestion.x}-${suggestion.y}-${idx}`}
+                                        id={`${addressListboxId}-option-${idx}`}
+                                        role="option"
+                                        aria-selected={activeSuggestionIndex === idx}
+                                        onMouseEnter={() => setActiveSuggestionIndex(idx)}
+                                        onMouseDown={(event) => {
+                                            event.preventDefault();
+                                            selectAddressSuggestion(suggestion);
                                         }}
-                                        className="px-4 py-3 hover:bg-black/30 text-white cursor-pointer border-b border-white/10 last:border-b-0"
+                                        className={`px-4 py-3 text-white cursor-pointer border-b border-white/10 last:border-b-0 ${
+                                            activeSuggestionIndex === idx ? 'bg-black/40' : 'hover:bg-black/30'
+                                        }`}
                                     >
                                         <div className="font-bold text-white text-sm">{suggestion.place_name}</div>
                                         {suggestion.address_name !== suggestion.place_name && (
@@ -402,7 +470,16 @@ export default function AnalysisForm({
                 disabled={loading || (metadata.analysisType === 'internal' && images.length === 0) || (metadata.analysisType === 'external' && !metadata.address)}
                 className={`w-full py-4 rounded-xl font-bold shadow-lg transition-all flex items-center justify-center gap-2 ${loading || (metadata.analysisType === 'internal' && images.length === 0) || (metadata.analysisType === 'external' && !metadata.address) ? 'bg-slate-700 text-slate-400 cursor-not-allowed' : 'bg-primary text-[#221e10] hover:bg-yellow-400 hover:scale-[1.02] active:scale-95 hover:shadow-primary/30 hover:shadow-xl'}`}
             >
-                {loading ? <><Loader2 className="w-5 h-5 animate-spin" /> 감명 중...</> : <><Send className="w-5 h-5" /> 무료 풍수 감정 시작</>}
+                {loading ? (
+                    <span className="flex flex-col items-center gap-1">
+                        <span className="flex items-center gap-2">
+                            <Loader2 className="w-5 h-5 animate-spin" /> 감명 중...
+                        </span>
+                        <span className="text-[11px] font-medium text-slate-300">
+                            심층 감정은 최대 2분 정도 걸릴 수 있습니다.
+                        </span>
+                    </span>
+                ) : <><Send className="w-5 h-5" /> 무료 풍수 감정 시작</>}
             </button>
         </div>
     );

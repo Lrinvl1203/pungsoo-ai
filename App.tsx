@@ -673,7 +673,7 @@ export default function App() {
       )}
       {!showOnboarding && <DailyFengShui />}
       {/* Background Image Layer */}
-      <div className="fixed inset-0 z-0 bg-cover bg-center bg-no-repeat" style={{ backgroundImage: 'linear-gradient(to bottom, rgba(34, 30, 16, 0.3), rgba(34, 30, 16, 0.95)), url("https://lh3.googleusercontent.com/aida-public/AB6AXuCvWHIjiF4g5DNNRn-SXcwt2avj0BLQtkpRNkxzW4yaTcZygH6W75Mgm8xZfJMFwgDl3ZzUlc6mIm4DU7KMOq9ZA8y3P28VLj1AWm2fRSFz2W-eyaA8d3S-LT53x4KMyKZpWH97cfzWmHsYvjueHKf65AAHWn-QMjARhiNGq2m8jJxhg0Z_jHAroZMcVI7Cnqw_qBdC3swN5eLsbl34fGk8Nfx5AJ9q5f5qB6fz36r-sNjy-iST8wYDkl9viWeX0tRoiIMznIsyWmEx")' }}></div>
+      <div className="fixed inset-0 z-0 bg-cover bg-center bg-no-repeat" style={{ backgroundImage: 'linear-gradient(to bottom, rgba(34, 30, 16, 0.3), rgba(34, 30, 16, 0.95)), url("/bg-hanok-cosmos.png")' }}></div>
       {/* Floating Particles */}
       <div className="fixed inset-0 z-[1] pointer-events-none overflow-hidden">
         <div className="particle particle-1"></div><div className="particle particle-2"></div><div className="particle particle-3"></div><div className="particle particle-4"></div><div className="particle particle-5"></div>
