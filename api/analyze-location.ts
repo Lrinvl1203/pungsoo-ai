@@ -15,6 +15,7 @@ import {
     sendRateLimitUnavailableResponse,
 } from "../server/rate-limit.js";
 import { validateAndNormalizeAnalysis } from "../server/validateAnalysis.js";
+import { isGeminiImageInputError } from "../server/gemini-error.js";
 
 export default async function handler(req: any, res: any) {
     if (req.method !== 'POST') {
@@ -234,6 +235,12 @@ ${hasDirectionData ? `- 사택 분류: ${mingongCtx.group === 'east' ? '동사�
 
     } catch (error: any) {
         console.error("VERCEL FUNCTION CRASH LOG:", error);
+        if (isGeminiImageInputError(error)) {
+            return res.status(422).json({
+                error: '지도 이미지를 인식할 수 없습니다. 주소와 위치를 다시 선택해 주세요.',
+                code: 'MAP_IMAGE_UNPROCESSABLE',
+            });
+        }
         return res.status(500).json({
             error: '입지 분석 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.',
             code: 'EXTERNAL_ANALYSIS_FAILED',

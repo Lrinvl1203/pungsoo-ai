@@ -3,6 +3,12 @@
     "outputDirectory": "dist",
     "framework": "vite",
     "functions": {
+        "api/analyze.ts": {
+            "maxDuration": 120
+        },
+        "api/analyze-location.ts": {
+            "maxDuration": 120
+        },
         "api/generate-visuals.ts": {
             "maxDuration": 120
         }

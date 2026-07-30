@@ -44,6 +44,9 @@ describe('Vercel 보안 헤더', () => {
             'https://*.tile.openstreetmap.org',
             'https://fonts.googleapis.com',
             'https://fonts.gstatic.com',
+            // Google OAuth can return avatar_url/picture hosted on googleusercontent.com.
+            // Keep this source for authenticated profile photos, not the app background.
+            'https://*.googleusercontent.com',
             'https://vitals.vercel-insights.com',
         ]) {
             expect(csp).toContain(requiredSource);
@@ -53,4 +56,14 @@ describe('Vercel 보안 헤더', () => {
         expect(csp).toContain("frame-ancestors 'none'");
         expect(csp).not.toContain('*;');
     });
+});
+
+
+describe('Vercel 분석 함수 실행시간', () => {
+    it.each(['api/analyze.ts', 'api/analyze-location.ts'])(
+        '%s에 2분 실행시간을 허용한다',
+        (functionPath) => {
+            expect(vercelConfig.functions[functionPath]?.maxDuration).toBe(120);
+        },
+    );
 });

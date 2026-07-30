@@ -34,6 +34,16 @@ describe('API error UX', () => {
     expect(message).not.toBe('서버 메시지');
   });
 
+  it('422 이미지 처리 오류에 재촬영 안내를 제공한다', () => {
+    const message = getActionableErrorMessage(
+      new ApiRequestError('서버 메시지', 422, 'IMAGE_UNPROCESSABLE'),
+      '기본 안내',
+    );
+
+    expect(message).toContain('다른 사진');
+    expect(message).toContain('선명한');
+  });
+
   it('uses the supplied fallback for unknown values', () => {
     expect(getActionableErrorMessage(null, '다시 시도해 주세요.')).toBe('다시 시도해 주세요.');
   });
