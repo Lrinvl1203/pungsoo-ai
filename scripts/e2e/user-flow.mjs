@@ -72,7 +72,10 @@ const main = async () => {
         else if (!/Failed to load resource/i.test(text)) consoleErrors.push(text);
     });
     page.on('requestfailed', (req) => {
-        failedRequests.push(`${req.method()} ${req.url()} — ${req.failure()?.errorText ?? 'failed'}`);
+        const reason = req.failure()?.errorText ?? 'failed';
+        // 화면 전환 중 브라우저가 취소한 요청은 앱 결함이 아니다.
+        if (reason.includes('ERR_ABORTED')) return;
+        failedRequests.push(`${req.method()} ${req.url()} — ${reason}`);
     });
 
     try {
@@ -165,10 +168,14 @@ const main = async () => {
             const addressInput = page.locator('#external-address');
             await addressInput.click();
             await addressInput.type('서울특별시 중구 세종대로 110', { delay: 35 });
-            await page.waitForTimeout(2500); // 300ms 디바운스 + Kakao 검색
 
+            // 디바운스 300ms + Kakao 왕복. 배포 환경은 로컬보다 느리므로 고정
+            // 대기 대신 제안이 실제로 뜰 때까지 기다린다.
             const suggestion = page.locator('li').filter({ hasText: /서울/ }).first();
-            const hasSuggestion = await suggestion.isVisible().catch(() => false);
+            const hasSuggestion = await suggestion
+                .waitFor({ state: 'visible', timeout: 20000 })
+                .then(() => true)
+                .catch(() => false);
             record('주소 자동완성 제안 표시', hasSuggestion);
             await shot(page, 'address-suggestions');
 
@@ -195,7 +202,8 @@ const main = async () => {
 
             if (hasSuggestion) {
                 await suggestion.click();
-                await page.waitForTimeout(3000); // 지도 미리보기 로드
+                await page.locator('[role="application"]').first().waitFor({state:'visible',timeout:30000}).catch(()=>{});
+                await page.waitForTimeout(2000); // 타일 렌더 여유
                 await shot(page, 'map-preview');
 
                 const mapVisible = await page
@@ -206,9 +214,16 @@ const main = async () => {
                 record('위성지도 확인 UI 표시', mapVisible);
 
                 const mapImg = page.locator('[role="application"] img').first();
-                const mapLoaded = await mapImg.evaluate(
-                    (el) => el.complete && el.naturalWidth > 0,
-                ).catch(() => false);
+                const mapLoaded = await mapImg
+                    .evaluate((el) => (el.complete && el.naturalWidth > 0)
+                        ? true
+                        : new Promise((resolve) => {
+                            const done = (ok) => resolve(ok);
+                            el.addEventListener('load', () => done(el.naturalWidth > 0), { once: true });
+                            el.addEventListener('error', () => done(false), { once: true });
+                            setTimeout(() => done(el.complete && el.naturalWidth > 0), 30000);
+                        }))
+                    .catch(() => false);
                 record('위성지도 이미지 실제 로드', mapLoaded);
 
                 if (mapVisible) {
