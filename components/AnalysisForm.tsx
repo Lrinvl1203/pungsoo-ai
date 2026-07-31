@@ -255,12 +255,14 @@ export default function AnalysisForm({
                                 <Loader2 className="w-5 h-5 text-primary animate-spin" />
                             </div>
                         )}
+                        {/* 반투명 배경은 아래 안내문과 지도 패널의 글자가 비쳐 읽기 어렵다.
+                            불투명 표면을 쓰고 다른 카드 위로 확실히 올린다. */}
                         {showSuggestions && addressSuggestions.length > 0 && (
                             <ul
                                 id={addressListboxId}
                                 role="listbox"
                                 aria-label="주소 검색 결과"
-                                className="absolute z-10 w-full mt-1 bg-white/5 backdrop-blur-md border border-white/10 rounded-lg shadow-lg max-h-60 overflow-auto custom-scrollbar"
+                                className="absolute z-30 w-full mt-1 bg-[#1a1508] border border-white/15 rounded-lg shadow-xl shadow-black/60 max-h-60 overflow-auto custom-scrollbar"
                             >
                                 {addressSuggestions.map((suggestion, idx) => (
                                     <li
