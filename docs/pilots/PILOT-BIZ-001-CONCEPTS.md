@@ -2,7 +2,7 @@
 
 Last updated: 2026-08-11
 
-Status: `6 CONCEPTS GENERATED`, 선택·출력·STL 미진행
+Status: `ART WALL V2 GENERATED`, 선택·출력·STL 미진행
 
 실제 주소·좌표는 기록하지 않는다. 이 문서는 비식별화한 Site Remedy
 Identity를 아트월과 제품으로 번역한 결과와 재생성 프롬프트를 보존한다.
@@ -35,7 +35,33 @@ Identity를 아트월과 제품으로 번역한 결과와 재생성 프롬프트
 
 ## 2. 생성 결과
 
-### 아트월
+### 아트월 v2 — 현재 후보
+
+사용자 검토에서 v1의 개가 실제 반려견 초상처럼 보여 비방화의 신비성,
+영물성, 화풍 차이를 잃었다고 판정했다. v2는 수호동물의 종을 알아볼 수 있는
+단서만 남기고 몸을 매체와 공간 구조로 변환한다.
+
+1. `Veiled Earth Spirit` — 추상 회화형. 지형을 두 번째로 볼 때 개가 드러남
+
+   ![Veiled Earth Spirit](../assets/pilots/pilot-biz-001/artwall-v2-01-abstract-veiled-earth-spirit.png)
+
+2. `Spirit of the Warm Gate` — 현대 민화·아르누보형. 식물·광물 무늬의 영물
+
+   ![Spirit of the Warm Gate](../assets/pilots/pilot-biz-001/artwall-v2-02-minhwa-spirit-warm-gate.png)
+
+3. `Breath at the Threshold` — 수묵 여백형. 안개와 산수가 몸이 되는 영물
+
+   ![Breath at the Threshold](../assets/pilots/pilot-biz-001/artwall-v2-03-ink-breath-threshold.png)
+
+4. `Silent Sentinel Totem` — 기하 토템형. 건축적 수호 구조로 변환된 영물
+
+   ![Silent Sentinel Totem](../assets/pilots/pilot-biz-001/artwall-v2-04-totem-silent-sentinel.png)
+
+### 아트월 v1 — 폐기 후보, 실패 기록
+
+아래 3안은 팔레트와 Remedy Identity 연결은 맞지만 털·눈·코와 실제 견종
+묘사가 강해 `영물형 비방화`로 채택하지 않는다. 향후 프롬프트 회귀 비교용으로만
+보존한다.
 
 1. `Quiet Gate` — 밝은 기본형, 현대 민화 선묘와 유기적 추상
 
@@ -64,6 +90,28 @@ Identity를 아트월과 제품으로 번역한 결과와 재생성 프롬프트
    ![Pocket Guardian](../assets/pilots/pilot-biz-001/object-03-pocket-guardian.png)
 
 ## 3. 아트월 메타 프롬프트
+
+### v2 영물 추상화 잠금
+
+```text
+SPIRIT ABSTRACTION LOCK
+The guardian is a supernatural presence, never a realistic animal portrait.
+Preserve species readability with only three or four silhouette cues: ears,
+muzzle, grounded chest, and one tail. Translate the rest of the body into the
+selected medium and composition: terrain, mist, ink bleed, mineral field,
+botanical ribbon, carved void, or geometric relief.
+
+The art style must control anatomy, surface, space, and mood—not merely color.
+Do not render realistic fur, photographic eyes, a wet nose, breed-specific
+details, wildlife illustration, pet art, a cute mascot, or a fantasy-game
+creature. The guardian should be discovered gradually but remain identifiable.
+```
+
+이 잠금은 `guardian_visibility`와 사실성을 분리한다. 가시성 65~80은 털과
+얼굴을 사실적으로 그리라는 뜻이 아니라, 선택 화풍 안에서 종별 단서가 충분히
+읽혀야 한다는 뜻이다.
+
+### v1 메타 프롬프트
 
 ```text
 Use case: stylized-concept
@@ -146,13 +194,15 @@ tourist-shop souvenir, glossy cheap plastic, impossible undercuts.
 
 ## 5. 평가와 다음 제작 단계
 
-- 아트월 1안은 가장 범용적이고 실제 미니 액자 후속 테스트에 적합하다.
-- 아트월 2안은 어두운 로비에 강하지만 실물 출력 전 암부 뭉침 시험이 필요하다.
-- 아트월 3안은 발견성과 젊은 인상이 강해 복도·객실 번호 구역 확장에 적합하다.
+- v2 현대 민화형은 기존 실물 액자의 흐름과 가장 자연스럽게 이어져 1차
+  미니 액자 후속 테스트 후보로 적합하다.
+- v2 추상형은 가장 인테리어 친화적이며 동물을 바로 드러내지 않는 선택지다.
+- v2 수묵형은 여백이 커서 차분하지만 밝은 벽과 충분한 출력 농도가 필요하다.
+- v2 기하 토템형은 현관 사인·오브제와 연결하기 가장 쉽고 인상이 강하다.
+- v1 아트월 3안은 사실적인 동물 초상 문제로 제작 후보에서 제외한다.
 - Desk Guardian은 1차 3D 제작 후보로 가장 구조가 단순하고 상품성이 높다.
 - Gate Guardian 렌더의 장식 외곽판은 실제 DFM에서 더 단순화해야 한다.
 - Pocket Guardian은 귀·상단 연결공·꼬리 안쪽의 최소 두께를 CAD에서 검증한다.
 - 생성 이미지는 제품 콘셉트 렌더이며 STL·CAD 원본이 아니다.
 - 선택안이 정해지면 정면·측면·후면 턴어라운드 → 메시 생성 → CAD/메시 보정
   → 소형 출력 → 도색·걸이 내구 시험 순서로 진행한다.
-
