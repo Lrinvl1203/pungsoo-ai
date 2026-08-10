@@ -38,6 +38,11 @@ Status: `EXTERNAL PRELIMINARY`, 내부 미평가
   비스듬히 지나가 기운이 머물지 않고 흩어질 수 있다.
 - 로드뷰상 현관 앞 설비·적치물과 공사 요소는 진입선과 첫인상을 막는다.
 - 주변 고층 매스의 그늘과 압박감은 밝은 입구·사인·재료로 보정할 필요가 있다.
+- 비식별화한 주변 시설 거리 분석에서 철도·지하철 거점 세 곳이 직선거리
+  약 420~510m, 주요 간선도로가 약 140m, 도시 하천이 남쪽 약 630m,
+  소규모 공원이 약 510m 범위에 있다. 도보 동선 거리는 이보다 길 수 있다.
+- 광역 이동축은 가까우나 건물은 한 겹 안쪽의 저층 골목 조직에 있어, 이동의
+  기운을 받으면서도 대로와 철도의 직접 충격은 일부 걸러지는 입지다.
 
 이 관찰은 지도·로드뷰에서 보이는 범위에 한정하며 실제 보행량, 소음, 경사,
 야간 조도와 현장 체감 풍향을 확정하지 않는다.
@@ -52,6 +57,8 @@ Status: `EXTERNAL PRELIMINARY`, 내부 미평가
   전면 서사를 제공한다.
 - 작은 전면 완충 공간은 정리만 잘하면 호스텔의 도착감과 `작은 명당` 역할을
   만들 수 있다.
+- 복수의 이동 거점과 주요 도로가 도보권에 있어 호스텔에 필요한 방문 흐름의
+  원천은 충분한 편이다.
 
 ### 위험
 
@@ -61,6 +68,8 @@ Status: `EXTERNAL PRELIMINARY`, 내부 미평가
   수 있다.
 - 방위가 24산 경계에서 4.5° 떨어져 있으나 현재 추정 오차로 인접 산으로
   바뀔 가능성이 남아 있다.
+- 교통 접근성이 강한 대신 골목까지 들어온 방문객을 입구에서 멈추고 안심하게
+  만드는 표식·조명·리셉션 시야가 약하면 흐름이 그대로 빠져나갈 수 있다.
 
 ## 4. 공사 단계 처방
 
@@ -83,28 +92,33 @@ Status: `EXTERNAL PRELIMINARY`, 내부 미평가
 {
   "analysis_scope": "external",
   "product_identity": "Space Guardian",
-  "target_element": "wood",
-  "secondary_element": "earth",
-  "element_condition": "stagnant_and_fragmented_urban_flow",
-  "energy_mode": "CIRCULATE",
-  "secondary_mode": "STABILIZE",
+  "target_element": "earth",
+  "secondary_element": "wood",
+  "element_condition": "fast_fragmented_metal_and_water_flow",
+  "energy_mode": "STABILIZE",
+  "secondary_mode": "CIRCULATE",
   "remedy_goal": "스쳐 지나가는 골목 흐름을 밝고 안정적인 호스텔 도착 경험으로 전환",
-  "guardian_animal": "dragon",
+  "guardian_animal": "dog",
   "placement": "gate_and_reception",
   "recommended_direction_degrees": 138,
   "direction_method": "map_arrow",
   "direction_confidence": "low",
-  "primary_color": "muted celadon",
-  "secondary_color": "warm sand and charcoal",
+  "primary_color": "warm sand and ochre",
+  "secondary_color": "muted celadon and charcoal",
   "accent": "restrained brass",
-  "pose": "grounded S-loop around a protected center",
-  "form_language": "circulating_loop_with_stable_base",
+  "pose": "seated alert guardian with the tail closing a protected loop",
+  "form_language": "grounded_shield_loop",
   "guardian_visibility": 80
 }
 ```
 
 이 수호동물과 색은 외부 Site 상품의 잠정 정체성이다. 완공 후 내부 Room
 분석은 별도로 수행하며 내부 결과를 외부 점수와 평균내지 않는다.
+
+외관 한 장만 본 초기 초견의 용·순환 후보는 주변 이동 거점·간선도로·하천을
+함께 검토한 뒤 폐기했다. 방문 흐름 자체는 충분하고 이를 안정적으로 붙잡는
+것이 우선이므로 토 기운의 개 수호동물과 `STABILIZE`를 최종 Site 권장안으로
+삼는다. 이는 사용자의 출생 띠가 아니라 공간 기반 `Space Guardian`이다.
 
 ## 6. 자동 분석 실행 상태
 
@@ -118,6 +132,7 @@ Status: `EXTERNAL PRELIMINARY`, 내부 미평가
 1. 외부 분석 지도 폴백을 복구하고 같은 익명 파일럿을 자동 분석으로 재실행한다.
 2. 위 초견과 자동 결과를 가린 상태로 비교해 오행·모드·수호동물 일치와 근거
    품질을 평가한다.
-3. 잠정 Remedy Identity로 Site 비방화 3안과 Gate/Reception 오브제 3안을
+3. 잠정 Remedy Identity로 개 수호동물 Site 비방화 3안과
+   Gate/Reception 오브제 3안을
    생성한다.
 4. 평면 또는 공사 중 핵심 공간 사진이 생기면 내부 Room 초견을 별도로 추가한다.
