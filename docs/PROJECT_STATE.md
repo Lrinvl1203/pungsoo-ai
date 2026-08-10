@@ -134,7 +134,7 @@ Status: `MESH DONE`, 주문은 `DEFERRED`
 
 ## 6.1 신규 사업장 실제 파일럿
 
-Status: `MINIMAL INTAKE DESIGNED`, 통합 빠른 분석 구현 전
+Status: `PILOT STARTED`, 통합 빠른 분석 구현 전·외부 API 장애 발견
 
 - 사용자의 신규 사업장을 익명 ID `PILOT-BIZ-001`로 첫 실제 사업장
   검증에 사용한다.
@@ -149,6 +149,10 @@ Status: `MINIMAL INTAKE DESIGNED`, 통합 빠른 분석 구현 전
 - 개인 주소·사주 원본은 Git에 기록하지 않는다.
 - 운영 지표는 관찰값이며 풍수와 매출의 인과를 주장하지 않는다.
 - 실행 정본: `docs/NEW_BUSINESS_PILOT_PROTOCOL.md`
+- 2026-08-11 첫 공사 전 호스텔 입력에서 주소 검색은 성공했으나 프로덕션
+  외부 분석은 `EXTERNAL_ANALYSIS_FAILED`를 반환했다. 독립 재현에서
+  ArcGIS `World_Street_Map` export는 HTTP 500, `World_Imagery`는 성공했다.
+  실제 주소·좌표는 Git에 기록하지 않는다.
 
 ## 7. 결제와 운영
 
@@ -283,6 +287,9 @@ Status: `SECURED IN CODE`, 운영 DB 적용·프로덕션 검증 필요
   방위를 한 번만 수집
 - 기존 내부·외부 별도 UI를 사진 1~2장·위치·방위 한 번으로 두 분석을
   실행하는 `빠른 사업장 분석`으로 통합하되 결과와 근거는 분리
+- 외부 분석의 지도 이미지 수집을 한 제공자·두 이미지의 동시 성공에
+  의존하지 않게 하고, 도로지도 실패 시 위성 단독 또는 대체 지도 폴백을
+  사용하도록 복구한 뒤 `PILOT-BIZ-001`로 재검증
 - 외부 Site와 내부 Room 비방서를 각각 생성하고 `Remedy Identity`를 고정
 - 저비용 공간 처방 → 비방화 → 오브제를 최소 7일 간격으로 적용·관찰
 
