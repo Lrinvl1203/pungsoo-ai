@@ -1,6 +1,6 @@
 # PUNGSOO AI 프롬프트 정본 인덱스
 
-Last updated: 2026-07-30
+Last updated: 2026-08-11
 
 Status: `ACTIVE`
 
@@ -125,6 +125,15 @@ blind test 전에는 모델명을 변경하지 않는다(D-024).
 - 수호동물 가시성 기준
 
 ## 4. 오브제 렌더 프롬프트
+
+연구·제품 설계 정본은 `OBJECT_REMEDY_DESIGN_SYSTEM.md`다. 해당 문서는
+`Remedy Identity` 입력 구조, 오행·에너지 모드의 조형 번역, 2026-08-03
+생성한 10종 대표 비방 샘플, 공통 3D 제품 렌더 프롬프트와 제조 가능성
+심사 기준을 보존한다. 10종은 실제 비방서 10건의 런타임 출력이 아니라
+대표 조합 연구 샘플이다.
+
+실제 서비스에서 프롬프트를 자동 생성할 때는 비방서 결과를 먼저 구조화된
+`Remedy Identity`로 고정한 뒤 비방화와 오브제에 같은 값을 전달한다.
 
 현재 런타임 정본은 `api/generate-visuals.ts`의 `type === 'zodiac'` 분기와
 `server/sanitize-visual-input.ts`다.

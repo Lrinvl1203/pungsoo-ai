@@ -1,6 +1,6 @@
 # PUNGSOO AI 프로젝트 정본 인덱스
 
-Last updated: 2026-07-30
+Last updated: 2026-08-11
 
 이 문서는 Codex, Claude Code와 사람이 동일한 맥락에서 작업하기 위한 문서
 지도다. 새 세션은 대화 전체를 옮기지 말고 이 인덱스와 연결된 정본을 읽는다.
@@ -52,6 +52,10 @@ Last updated: 2026-07-30
 ### 실물 상품
 
 - `physical-product-mvp-status.md`: 액자·오브제 실물 검증 정본
+- `OBJECT_REMEDY_DESIGN_SYSTEM.md`: 비방서의 오행·에너지 모드·수호동물을
+  실제 3D 오브제 형태와 색으로 번역하는 규칙, 10종 대표 샘플과 프롬프트
+- `NEW_BUSINESS_PILOT_PROTOCOL.md`: 신규 사업장의 외부·내부 분석, 비방화,
+  오브제와 설치 전후 관찰을 검증하는 첫 실제 파일럿 절차
 - `국내_비방화_출력_액자_주문처_조사_2026-07-27.md`: 국내 액자 업체 조사
 - `3D_AI_STL_PIPELINE.md`: TripoSR 기반 실제 메시·STL 파이프라인
 - `현관_수호동물_3D프린팅_예상견적_2026-07-28.md`: 국내 출력 예상 견적

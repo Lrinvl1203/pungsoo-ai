@@ -1,6 +1,6 @@
 # PUNGSOO AI 현재 상태
 
-Last updated: 2026-07-30
+Last updated: 2026-08-11
 
 Status: `ACTIVE`
 
@@ -124,6 +124,26 @@ Status: `MESH DONE`, 주문은 `DEFERRED`
 - 검증: 35,608 faces, 단일 solid, watertight, winding consistent
 - 남은 생산 보정: 뒷면 평탄화, 걸이 구멍 둘레, 최소 두께, 문 보호 패드
 - 발주 TODO: `gate-guardian-production-todo.md`
+- 비방서 → 오브제 디자인 시스템:
+  `docs/OBJECT_REMEDY_DESIGN_SYSTEM.md`
+- 2026-08-03 대표 비방 조합 10종을 생성해
+  `artifacts/3d-concepts/2026-08-03-remedy-guardian-collection-v1/`에
+  저장했다. 실제 고객 비방서 10건의 출력은 아니며 변환 문법 테스트다.
+- 실제 생성에서는 `Remedy Identity`의 목표 오행·상태·에너지 모드·목적·
+  수호동물·배치·색·자세를 비방화와 오브제에 동일하게 전달한다.
+
+## 6.1 신규 사업장 실제 파일럿
+
+Status: `READY FOR INTAKE`
+
+- 사용자의 신규 사업장을 익명 ID `PILOT-BIZ-001`로 첫 실제 사업장
+  검증에 사용한다.
+- 외부 입지와 내부 공간은 각각 분석하고 총점으로 합치지 않는다.
+- 비방서 확정 후 `Remedy Identity`를 고정하고 비방화·오브제 일치와
+  설치 전후 공간 적합성을 검증한다.
+- 개인 주소·사주 원본은 Git에 기록하지 않는다.
+- 운영 지표는 관찰값이며 풍수와 매출의 인과를 주장하지 않는다.
+- 실행 정본: `docs/NEW_BUSINESS_PILOT_PROTOCOL.md`
 
 ## 7. 결제와 운영
 
@@ -254,6 +274,10 @@ Status: `SECURED IN CODE`, 운영 DB 적용·프로덕션 검증 필요
   배경 요청 제거
 - CSP 위반을 관찰하고 결제·Kakao SDK 호환을 유지하며
   `unsafe-inline`을 nonce/hash 방식으로 제거
+- `PILOT-BIZ-001`의 업종·목표, 앱의 지도 핀·현관 화살표, 외부 교차검증
+  사진·나침반 3회, 내부 3장과 설치 전 기준 사진을 수집
+- 외부 Site와 내부 Room 비방서를 각각 생성하고 `Remedy Identity`를 고정
+- 저비용 공간 처방 → 비방화 → 오브제를 최소 7일 간격으로 적용·관찰
 
 ### DEFERRED
 
