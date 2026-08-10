@@ -134,7 +134,7 @@ Status: `MESH DONE`, 주문은 `DEFERRED`
 
 ## 6.1 신규 사업장 실제 파일럿
 
-Status: `PILOT STARTED`, 통합 빠른 분석 구현 전·외부 API 장애 발견
+Status: `PILOT CONCEPTS GENERATED`, 내부 분석·실물 제작 전
 
 - 사용자의 신규 사업장을 익명 ID `PILOT-BIZ-001`로 첫 실제 사업장
   검증에 사용한다.
@@ -153,6 +153,13 @@ Status: `PILOT STARTED`, 통합 빠른 분석 구현 전·외부 API 장애 발�
   외부 분석은 `EXTERNAL_ANALYSIS_FAILED`를 반환했다. 독립 재현에서
   ArcGIS `World_Street_Map` export는 HTTP 500, `World_Imagery`는 성공했다.
   실제 주소·좌표는 Git에 기록하지 않는다.
+- 외부 사진·추정 방위·비식별 지도 맥락을 사람이 직접 검토해 토 중심,
+  목 보조, `STABILIZE` 우선, 개 `Space Guardian`을 잠정 Remedy Identity로
+  확정했다.
+- 같은 정체성으로 아트월 3안과 책상·현관·키링 오브제 3안을 생성했다.
+  이미지와 재생성 메타 프롬프트는
+  `docs/pilots/PILOT-BIZ-001-CONCEPTS.md`에 보존한다. 제품 렌더는 STL이
+  아니며 선택 후 턴어라운드·메시·DFM·소형 출력 검증이 필요하다.
 
 ## 7. 결제와 운영
 

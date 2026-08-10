@@ -58,6 +58,8 @@ Last updated: 2026-08-11
   오브제와 설치 전후 관찰을 검증하는 첫 실제 파일럿 절차
 - `pilots/PILOT-BIZ-001.md`: 실제 주소를 제외한 공사 전 호스텔의 외부 입지
   초견, 잠정 Remedy Identity와 자동 분석 장애 기록
+- `pilots/PILOT-BIZ-001-CONCEPTS.md`: 해당 호스텔용 아트월 3안·오브제 3안,
+  공통 Remedy Identity, 재생성 메타 프롬프트와 제작 판단
 - `국내_비방화_출력_액자_주문처_조사_2026-07-27.md`: 국내 액자 업체 조사
 - `3D_AI_STL_PIPELINE.md`: TripoSR 기반 실제 메시·STL 파이프라인
 - `현관_수호동물_3D프린팅_예상견적_2026-07-28.md`: 국내 출력 예상 견적
