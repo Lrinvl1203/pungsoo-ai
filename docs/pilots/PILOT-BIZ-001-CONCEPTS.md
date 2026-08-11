@@ -2,7 +2,7 @@
 
 Last updated: 2026-08-11
 
-Status: `ART WALL V2 GENERATED`, 선택·출력·STL 미진행
+Status: `ART WALL V2 6 STYLES GENERATED`, 선택·출력·STL 미진행
 
 실제 주소·좌표는 기록하지 않는다. 이 문서는 비식별화한 Site Remedy
 Identity를 아트월과 제품으로 번역한 결과와 재생성 프롬프트를 보존한다.
@@ -57,6 +57,16 @@ Identity를 아트월과 제품으로 번역한 결과와 재생성 프롬프트
 
    ![Silent Sentinel Totem](../assets/pilots/pilot-biz-001/artwall-v2-04-totem-silent-sentinel.png)
 
+5. `The Hound Beneath the Wind` — 일본 민화·에도 목판형. 바람·소나무·물결이
+   몸을 이루는 길목의 영물
+
+   ![The Hound Beneath the Wind](../assets/pilots/pilot-biz-001/artwall-v2-05-japanese-folk-wind-hound.png)
+
+6. `The Hound of the Hidden Orchard` — 유럽 중세 태피스트리·상징주의형.
+   오래된 과수원과 문턱을 지키는 성스러운 수호견
+
+   ![The Hound of the Hidden Orchard](../assets/pilots/pilot-biz-001/artwall-v2-06-european-myth-hidden-orchard.png)
+
 ### 아트월 v1 — 폐기 후보, 실패 기록
 
 아래 3안은 팔레트와 Remedy Identity 연결은 맞지만 털·눈·코와 실제 견종
@@ -110,6 +120,17 @@ creature. The guardian should be discovered gradually but remain identifiable.
 이 잠금은 `guardian_visibility`와 사실성을 분리한다. 가시성 65~80은 털과
 얼굴을 사실적으로 그리라는 뜻이 아니라, 선택 화풍 안에서 종별 단서가 충분히
 읽혀야 한다는 뜻이다.
+
+세계 화풍 확장 규칙:
+
+| 화풍 | 매체·구도 번역 | 정체성 이탈 방지 |
+|---|---|---|
+| 일본 민화·에도 목판 | 판각선, 평면 색면, 화선·바람·소나무·물결, 화지 섬유 | 여우·다중 꼬리·코마이누·시사 금지, 짧고 강한 개 주둥이 유지 |
+| 유럽 중세 신화·상징주의 | 태피스트리, 템페라, 오래된 숲의 아치, 꼬리 미궁 | 케르베로스·지옥견·늑대 공격성·날개·게임 판타지 금지 |
+
+두 화풍 모두 한국 풍수에서 결정된 Remedy Identity를 바꾸지 않는다. 문화권
+화풍은 표면과 서사를 번역할 뿐 오행, 에너지 모드, 수호동물과 보호 고리는
+고정한다.
 
 ### v1 메타 프롬프트
 
@@ -199,6 +220,9 @@ tourist-shop souvenir, glossy cheap plastic, impossible undercuts.
 - v2 추상형은 가장 인테리어 친화적이며 동물을 바로 드러내지 않는 선택지다.
 - v2 수묵형은 여백이 커서 차분하지만 밝은 벽과 충분한 출력 농도가 필요하다.
 - v2 기하 토템형은 현관 사인·오브제와 연결하기 가장 쉽고 인상이 강하다.
+- v2 일본 민화형은 움직임과 패턴이 풍부해 복도·공용부의 시선 유도에 좋다.
+- v2 유럽 신화형은 가장 서사적이고 고급스럽지만 어두운 공간에서는 출력
+  암부와 얼굴의 늑대화 여부를 교정해야 한다.
 - v1 아트월 3안은 사실적인 동물 초상 문제로 제작 후보에서 제외한다.
 - Desk Guardian은 1차 3D 제작 후보로 가장 구조가 단순하고 상품성이 높다.
 - Gate Guardian 렌더의 장식 외곽판은 실제 DFM에서 더 단순화해야 한다.
