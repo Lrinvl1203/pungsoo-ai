@@ -2,7 +2,7 @@
 
 Last updated: 2026-08-11
 
-Status: `ART WALL V2 6 STYLES GENERATED`, 선택·출력·STL 미진행
+Status: `ART WALL V2 9 IMAGES GENERATED`, 선택·출력·STL 미진행
 
 실제 주소·좌표는 기록하지 않는다. 이 문서는 비식별화한 Site Remedy
 Identity를 아트월과 제품으로 번역한 결과와 재생성 프롬프트를 보존한다.
@@ -66,6 +66,27 @@ Identity를 아트월과 제품으로 번역한 결과와 재생성 프롬프트
    오래된 과수원과 문턱을 지키는 성스러운 수호견
 
    ![The Hound of the Hidden Orchard](../assets/pilots/pilot-biz-001/artwall-v2-06-european-myth-hidden-orchard.png)
+
+### 우키요에 세부 변형 3안
+
+7. `Guardian of the Earthen Pass` — 낮의 산수 대경관형. 산세·소나무·물길과
+   수호견이 하나의 거대한 입지 영물로 결합
+
+   ![Guardian of the Earthen Pass](../assets/pilots/pilot-biz-001/artwall-v2-07-ukiyoe-earthen-pass.png)
+
+8. `Indigo Watch at the Empty Gate` — 아이즈리 야행형. 비 내리는 빈 문과
+   안개를 먼저 보고 나서 수호견 형상을 발견하는 가장 미스터리한 안
+
+   ![Indigo Watch at the Empty Gate](../assets/pilots/pilot-biz-001/artwall-v2-08-ukiyoe-indigo-empty-gate.png)
+
+9. `The Amber Seal` — 고급 스리모노형. 빈 종이 여백, 압인, 운모와 금속성
+   안료로 만든 개인 의식화 같은 수집품형
+
+   ![The Amber Seal](../assets/pilots/pilot-biz-001/artwall-v2-09-ukiyoe-surimono-amber-seal.png)
+
+`The Amber Seal`의 최초 생성은 귀와 좁은 주둥이 때문에 여우로 읽힐 위험이
+있어 폐기했다. 최종 파일은 구도·질감은 보존하고 머리 폭, 주둥이 길이와 귀
+비율만 개 영물로 교정한 버전이다.
 
 ### 아트월 v1 — 폐기 후보, 실패 기록
 
@@ -131,6 +152,14 @@ creature. The guardian should be discovered gradually but remain identifiable.
 두 화풍 모두 한국 풍수에서 결정된 Remedy Identity를 바꾸지 않는다. 문화권
 화풍은 표면과 서사를 번역할 뿐 오행, 에너지 모드, 수호동물과 보호 고리는
 고정한다.
+
+우키요에 세부 라우팅:
+
+| 변형 | 공간·에너지 표현 | 인쇄 특징 |
+|---|---|---|
+| 산수 대경관 | 빠른 접근 흐름이 산길과 물길을 따라 원형 웅덩이에 안정 | 판각선, 넓은 하늘, 보카시 하늘 |
+| 아이즈리 야행 | 비·안개·문 속에 형상을 숨기고 하단 보호 원만 희미하게 강조 | 프러시안 인디고 중심, 저채도, 60% 암부·여백 |
+| 스리모노 | 몸을 소나무·갈라진 흙·청자 구름·기하 파도로 접어 보호 인장화 | 가라즈리 압인, 운모, 무문자 여백, 절제된 금속 안료 |
 
 ### v1 메타 프롬프트
 
